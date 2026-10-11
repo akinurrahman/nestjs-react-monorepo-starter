@@ -562,6 +562,12 @@ fires one for every rejected mutation, unless something already showed the
 error (a `Form` marks the errors it maps) or the mutation defines its own
 `onError`, which replaces it. So feature hooks define `onSuccess` only.
 
+An `onError` passed per call, `mutate(values, { onError })`, does not
+suppress the global toast: it never reaches the cache, so the person sees the
+toast and whatever that callback shows. A caller that shows the error itself
+opts out on the mutation with `meta: { handledError: true }`, or calls
+`markErrorHandled(error)` from `@/systems/api` on the error it put on screen.
+
 Invalidate `KEYS.lists()`, not `KEYS.all`. `.all` also refetches every open
 detail query, which is wasted requests and sometimes a visible flash. Patch the
 detail cache with `setQueryData` when the response contains the updated record.

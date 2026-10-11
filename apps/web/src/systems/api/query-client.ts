@@ -3,6 +3,16 @@ import { toast } from 'sonner';
 import { getErrorMessage, isApiError } from '@/lib/api/api-error';
 import { isErrorHandled } from './handled-errors';
 
+declare module '@tanstack/react-query' {
+  interface Register {
+    mutationMeta: {
+      // The caller shows this mutation's errors itself, so the global
+      // toast stays quiet.
+      handledError?: boolean;
+    };
+  }
+}
+
 const MAX_RETRIES = 2;
 
 function isClientError(error: unknown): boolean {
@@ -26,7 +36,10 @@ export function createQueryClient(): QueryClient {
     }),
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
-        if (mutation.options.onError) return;
+        // Only the mutation's own options count. An onError passed to
+        // mutate(vars, { onError }) never reaches the cache, so that caller
+        // opts out with meta instead.
+        if (mutation.options.onError || mutation.meta?.handledError) return;
         // This runs before mutateAsync rejects, so a Form awaiting the
         // mutation has not caught and shown the error yet. Its catch runs in
         // the same microtask chain, so one macrotask later it has.

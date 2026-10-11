@@ -92,13 +92,26 @@ function failPeopleList() {
   );
 }
 
-function SaveButton({ onError }: { onError?: () => void }) {
+function SaveButton({
+  onError,
+  callOnError,
+  handledError,
+}: {
+  onError?: () => void;
+  // Passed to mutate() for this call only, not to useMutation.
+  callOnError?: () => void;
+  handledError?: boolean;
+}) {
   const mutation = useMutation({
     mutationFn: () => apiCall<void>('/thing', { method: 'POST' }),
     onError,
+    meta: handledError ? { handledError } : undefined,
   });
   return (
-    <button type="button" onClick={() => mutation.mutate()}>
+    <button
+      type="button"
+      onClick={() => mutation.mutate(undefined, { onError: callOnError })}
+    >
       Save
     </button>
   );
@@ -220,6 +233,29 @@ describe('mutation error toast', () => {
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
     await settle();
     expect(toasts()).toHaveLength(0);
+  });
+
+  it('skips a mutation that opts out with meta', async () => {
+    countRequests(409, conflict);
+    renderWithQuery(<SaveButton handledError />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await settle();
+    expect(toasts()).toHaveLength(0);
+  });
+
+  it('still toasts, once, beside a per-call onError', async () => {
+    countRequests(409, conflict);
+    const callOnError = vi.fn();
+    renderWithQuery(<SaveButton callOnError={callOnError} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(callOnError).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(conflict.message)).toBeInTheDocument();
+    await settle();
+    expect(toasts()).toHaveLength(1);
   });
 
   it('toasts a rejection a caller catches outside any form', async () => {

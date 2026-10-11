@@ -970,8 +970,9 @@ network and malformed responses. `ErrorState` and `Form` both use it.
 `createQueryClient()` sets the defaults so features never repeat them (queries:
 `staleTime` 30 seconds, up to two retries except on a 4xx, refetch on window
 focus; mutations: no retry), plus one global error toast so no mutation fails
-silently. That toast skips a mutation with its own `onError` and any error
-something already showed. Its `QueryCache` toasts a refetch that fails while
+silently. That toast skips a mutation with its own `onError` or
+`meta: { handledError: true }`, and any error something already showed. A
+per-call `mutate(values, { onError })` does not skip it. Its `QueryCache` toasts a refetch that fails while
 data is on screen, once per message; a first load that fails is left to the
 page's `ErrorState`.
 
