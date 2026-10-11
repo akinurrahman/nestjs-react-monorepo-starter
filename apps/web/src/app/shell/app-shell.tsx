@@ -6,6 +6,8 @@ import type { AppRouteObject } from '@/systems/router';
 import { ThemeToggle } from '@/systems/theme';
 import { AppSidebar } from './app-sidebar';
 import { Breadcrumbs } from './breadcrumbs';
+import { CommandPalette, PaletteButton } from './command-palette';
+import { useNavGroups } from './use-nav-groups';
 import { UserMenu } from './user-menu';
 
 const MAIN_ID = 'main-content';
@@ -28,6 +30,8 @@ export function AppShell({
 }: {
   navRoutes: readonly AppRouteObject[];
 }) {
+  const navGroups = useNavGroups(navRoutes);
+
   return (
     <SidebarProvider className={SHELL_VARS}>
       <a
@@ -37,13 +41,14 @@ export function AppShell({
       >
         Skip to content
       </a>
-      <AppSidebar routes={navRoutes} />
+      <AppSidebar groups={navGroups} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-background px-(--page-padding)">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 h-4 self-center!" />
           <Breadcrumbs routes={navRoutes} />
           <div className="ml-auto flex items-center gap-1">
+            <PaletteButton />
             <ThemeToggle />
             <UserMenu />
           </div>
@@ -56,6 +61,7 @@ export function AppShell({
           <Outlet />
         </main>
       </div>
+      <CommandPalette navGroups={navGroups} />
     </SidebarProvider>
   );
 }

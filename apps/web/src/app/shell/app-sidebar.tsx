@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import {
   Sidebar,
@@ -13,24 +13,17 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
-import type { AppRouteObject } from '@/systems/router';
-import { useSession } from '@/systems/session';
-import { APP_NAME, NAV_GROUPS } from '../config';
-import { buildNav } from './nav';
+import { APP_NAME } from '../config';
+import type { NavGroup } from './nav';
 
 // NavLink sets aria-current on the active entry, so the active style keys off
 // that instead of a second match.
 const ACTIVE =
   'aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground';
 
-export function AppSidebar({ routes }: { routes: readonly AppRouteObject[] }) {
-  const { user } = useSession();
+export function AppSidebar({ groups }: { groups: readonly NavGroup[] }) {
   const { pathname } = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
-  const groups = useMemo(
-    () => buildNav(routes, user, NAV_GROUPS),
-    [routes, user],
-  );
 
   // The mobile sheet closes once a navigation commits, whatever started it.
   useEffect(() => {
