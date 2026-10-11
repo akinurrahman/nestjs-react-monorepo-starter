@@ -79,6 +79,18 @@ describe.each([
     expect(trigger()).toHaveAccessibleName(LABEL);
   });
 
+  it('ends in a chevron that opens the list', async () => {
+    servePeople();
+    const { user } = renderForm(fields, { schema });
+    const host = multi
+      ? screen.getByRole('button', { name: 'Show options' })
+      : trigger();
+
+    expect(host.querySelector('svg[class*="chevron-down"]')).not.toBeNull();
+    await user.click(host);
+    expect(await screen.findByRole('listbox')).toBeInTheDocument();
+  });
+
   it('submits its value', async () => {
     servePeople();
     const { user, onSubmit } = renderForm(fields, { schema });

@@ -291,8 +291,12 @@ function ComboboxSeparator({
   );
 }
 
+// Ends in the same chevron as the single selects. It opens the list on
+// click; Base UI keeps it out of the tab order, since the input already
+// opens the list from the keyboard.
 function ComboboxChips({
   className,
+  children,
   ...props
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
   ComboboxPrimitive.Chips.Props) {
@@ -300,11 +304,20 @@ function ComboboxChips({
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        'flex min-h-10 flex-wrap sm:min-h-9 items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1 dark:bg-input/30 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40',
+        'flex min-h-10 flex-wrap sm:min-h-9 items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding py-1 pr-2 pl-2.5 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:pl-1 dark:bg-input/30 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40',
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      <ComboboxPrimitive.Trigger
+        data-slot="combobox-chips-trigger"
+        aria-label="Show options"
+        className="ml-auto flex shrink-0 items-center self-center outline-none disabled:cursor-not-allowed"
+      >
+        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+      </ComboboxPrimitive.Trigger>
+    </ComboboxPrimitive.Chips>
   );
 }
 

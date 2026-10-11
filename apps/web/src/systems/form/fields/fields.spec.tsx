@@ -293,6 +293,36 @@ describe('InputField password', () => {
   });
 });
 
+describe('SelectField chevron', () => {
+  it.each([
+    { title: 'single', multi: false },
+    { title: 'multi', multi: true },
+  ])('$title ends in a chevron that opens the list', async ({ multi }) => {
+    const { user } = renderAlone(
+      <SelectField name="value" label="Pick" options={OPTIONS} multi={multi} />,
+    );
+    const host = multi
+      ? screen.getByRole('button', { name: 'Show options' })
+      : screen.getByRole('combobox', { name: 'Pick' });
+
+    expect(host.querySelector('svg[class*="chevron-down"]')).not.toBeNull();
+    await user.click(host);
+    expect(
+      await screen.findByRole('option', { name: 'Alpha' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the multi chevron out of the tab order', () => {
+    renderAlone(
+      <SelectField name="value" label="Pick" options={OPTIONS} multi />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Show options' }),
+    ).toHaveAttribute('tabindex', '-1');
+  });
+});
+
 describe('SelectField optionsFn', () => {
   it('derives its options from live form values', async () => {
     const { user } = renderAlone(

@@ -284,6 +284,18 @@ describe('FilterPopover', () => {
     await waitFor(() => expect(searchParams().has('owner')).toBe(false));
   });
 
+  it('ends the multi-select in a chevron that opens the list', async () => {
+    const { user } = renderPopover();
+    const popup = within(await openPopover(user));
+    const chevron = popup.getByRole('button', { name: 'Show options' });
+
+    expect(chevron.querySelector('svg[class*="chevron-down"]')).not.toBeNull();
+    await user.click(chevron);
+    expect(
+      await screen.findByRole('option', { name: 'Alpha' }),
+    ).toBeInTheDocument();
+  });
+
   it('writes a list field as repeated params', async () => {
     const { user, searchParams } = renderPopover();
     await openPopover(user);
