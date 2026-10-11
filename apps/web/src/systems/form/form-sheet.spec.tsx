@@ -61,4 +61,28 @@ describe('FormSheet', () => {
     expect(screen.getByRole('button', { name: 'Saving' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
+
+  const overlay = () => document.querySelector('[data-slot="sheet-overlay"]')!;
+
+  it('closes on Escape and the overlay while idle', async () => {
+    const { user, onOpenChange } = renderSheet(vi.fn());
+
+    await user.keyboard('{Escape}');
+    await user.click(overlay());
+
+    expect(onOpenChange.mock.calls).toEqual([[false], [false]]);
+  });
+
+  it('stays open on Escape, the overlay and the close button while saving', async () => {
+    const { user, onOpenChange } = renderSheet(vi.fn(), true);
+
+    await user.keyboard('{Escape}');
+    await user.click(overlay());
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('dialog', { name: 'New team' }),
+    ).toBeInTheDocument();
+  });
 });

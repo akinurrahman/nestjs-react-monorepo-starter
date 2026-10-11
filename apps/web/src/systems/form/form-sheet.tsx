@@ -57,7 +57,15 @@ export function FormSheet<S extends FormSchema>({
   className,
 }: FormSheetProps<S>) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      // Escape, the overlay and the close button would drop the sheet while
+      // the write is still in flight, and its result would land on nothing.
+      onOpenChange={(next) => {
+        if (!next && isPending) return;
+        onOpenChange(next);
+      }}
+    >
       <SheetContent className={cn('w-full gap-0 p-0 sm:max-w-md', className)}>
         <SheetHeader className="border-b border-border p-6">
           <SheetTitle>{title}</SheetTitle>
