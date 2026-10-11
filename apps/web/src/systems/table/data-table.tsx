@@ -67,10 +67,10 @@ const HIDE_BELOW = {
   lg: 'hidden lg:table-cell',
 } as const;
 
-// Its own background so rows scrolling under it do not show through, matched
-// to the row's hover and focus tint.
-const STICKY_CELL =
-  'sticky z-10 bg-background group-has-focus-visible/row:bg-[color-mix(in_oklab,var(--color-muted)_50%,var(--color-background))] group-data-interactive/row:group-hover/row:bg-[color-mix(in_oklab,var(--color-muted)_50%,var(--color-background))]';
+// An opaque background so rows scrolling under it do not show through. The
+// row tint TableCell paints sits on top of it, the same tint the other cells
+// show over the table's own bg-background, so the colors match exactly.
+const STICKY_CELL = 'sticky z-10 bg-background';
 
 const STICKY_EDGE =
   'after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border';
@@ -273,7 +273,7 @@ export function DataTable<TData extends RowData>({
         <TableBody className={cn('transition-opacity', dimmed && 'opacity-60')}>
           {showSkeleton
             ? Array.from({ length: skeletonRows }, (_, rowIndex) => (
-                <TableRow key={`skeleton-${rowIndex}`} className="group/row">
+                <TableRow key={`skeleton-${rowIndex}`}>
                   {leafColumns.map((column) => {
                     const meta = column.columnDef.meta;
                     return (
@@ -299,7 +299,6 @@ export function DataTable<TData extends RowData>({
                 // record's column is the keyboard path.
                 <TableRow
                   key={row.id}
-                  className="group/row"
                   data-interactive={onRowClick ? '' : undefined}
                   onClick={
                     onRowClick

@@ -68,12 +68,18 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
 
 // Hover only on rows that open something, so a read-only table does not
 // promise a click. A keyboard focus inside the row lights it the same way.
+// The row only sets --row-tint and every cell paints it, so an opaque sticky
+// cell and a see-through one blend the same tint over the same background.
+const ROW_TINT =
+  '[--row-tint:transparent] [--row-hover:color-mix(in_oklab,var(--color-muted)_50%,transparent)] has-focus-visible:[--row-tint:var(--row-hover)] has-aria-expanded:[--row-tint:var(--row-hover)] data-interactive:hover:[--row-tint:var(--row-hover)] data-[state=selected]:[--row-tint:var(--color-muted)]';
+
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   return (
     <tr
       data-slot="table-row"
       className={cn(
-        'border-b transition-colors has-focus-visible:bg-muted/50 has-aria-expanded:bg-muted/50 data-interactive:cursor-pointer data-interactive:hover:bg-muted/50 data-[state=selected]:bg-muted',
+        'border-b data-interactive:cursor-pointer',
+        ROW_TINT,
         className,
       )}
       {...props}
@@ -99,7 +105,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
     <td
       data-slot="table-cell"
       className={cn(
-        'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+        'bg-[linear-gradient(var(--row-tint),var(--row-tint))] p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0',
         className,
       )}
       {...props}

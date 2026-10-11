@@ -278,6 +278,39 @@ describe('DataTable column meta', () => {
     );
   });
 
+  // jsdom cannot compute the colors, so this checks the shape that makes them
+  // match: the row only sets --row-tint, every cell paints it the same way,
+  // and a pinned cell adds nothing but an opaque bg-background under it.
+  it('gives pinned and unpinned cells the same row tint', () => {
+    render(
+      <DataTable
+        columns={META_COLUMNS}
+        data={PEOPLE}
+        label={LABEL}
+        onRowClick={vi.fn()}
+        isFetching
+      />,
+    );
+    const tint = 'bg-[linear-gradient(var(--row-tint),var(--row-tint))]';
+    const colorClasses = (element: Element) =>
+      element.className.split(/\s+/).filter((name) => /(^|:)bg-/.test(name));
+
+    bodyRows().forEach((row) => {
+      expect(colorClasses(row)).toEqual([]);
+      row.querySelectorAll('td').forEach((cell) => {
+        expect(cell).toHaveClass(tint);
+      });
+    });
+    columnCells(0).forEach((cell) =>
+      expect(colorClasses(cell!).sort()).toEqual(
+        [tint, 'bg-background'].sort(),
+      ),
+    );
+    columnCells(1).forEach((cell) =>
+      expect(colorClasses(cell!)).toEqual([tint]),
+    );
+  });
+
   it('offsets a second sticky column by the width of the first', () => {
     const columns = helper.columns([
       helper.accessor('id', {
