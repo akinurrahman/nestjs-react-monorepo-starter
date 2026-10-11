@@ -1,13 +1,15 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { z } from 'zod';
-import { apiCall } from '@/lib/api/api-call';
+import { apiCall, apiCallPaginated } from '@/lib/api/api-call';
 import { conflict, notFound, validationFailed } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
 import { renderWithQuery } from '@/test/render-with-query';
 import { Form, FormError, InputField } from '@/systems/form';
+import { createColumnHelper, DataTable } from '@/systems/table';
+import { ErrorState } from '@/systems/ui';
 
 function countRequests(status: number, body: object) {
   const count = { value: 0 };
@@ -33,6 +35,61 @@ function Thing() {
   });
   if (query.isError) return <p>failed</p>;
   return <p>{query.isSuccess ? 'loaded' : 'loading'}</p>;
+}
+
+type Person = { id: string; name: string };
+
+const helper = createColumnHelper<Person>();
+const COLUMNS = helper.columns([helper.accessor('name', { header: 'Name' })]);
+
+// The reference list page's query states: ErrorState only when nothing
+// loaded, the table otherwise.
+function PeoplePage() {
+  const { data, error, isLoadingError, isLoading, isFetching, refetch } =
+    useQuery({
+      queryKey: ['people', 'list'],
+      queryFn: ({ signal }) => apiCallPaginated<Person>('/people', { signal }),
+    });
+
+  if (isLoadingError) {
+    return <ErrorState error={error} onRetry={() => void refetch()} />;
+  }
+
+  return (
+    <DataTable
+      label="People"
+      columns={COLUMNS}
+      data={data?.data ?? []}
+      isLoading={isLoading}
+      isFetching={isFetching}
+    />
+  );
+}
+
+function servePeopleList() {
+  server.use(
+    http.get('/api/people', () =>
+      HttpResponse.json({
+        data: [{ id: 'p-1', name: 'Ada' }],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+          hasPrevious: false,
+          hasNext: false,
+        },
+      }),
+    ),
+  );
+}
+
+function failPeopleList() {
+  server.use(
+    http.get('/api/people', () =>
+      HttpResponse.json(unavailable, { status: 503 }),
+    ),
+  );
 }
 
 function SaveButton({ onError }: { onError?: () => void }) {
@@ -103,6 +160,40 @@ describe('query retries', () => {
 
     expect(await screen.findByText('failed')).toBeInTheDocument();
     expect(count.value).toBe(3);
+  });
+});
+
+describe('query errors', () => {
+  it('keeps loaded rows when a refetch fails, and toasts once', async () => {
+    servePeopleList();
+    const { client } = renderWithQuery(<PeoplePage />);
+    expect(
+      await screen.findByRole('cell', { name: 'Ada' }),
+    ).toBeInTheDocument();
+
+    failPeopleList();
+    await act(() => client.refetchQueries({ queryKey: ['people'] }));
+
+    expect(
+      await screen.findByText(
+        'Something went wrong on our side. Please try again.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Ada' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await settle();
+    expect(toasts()).toHaveLength(1);
+  });
+
+  it('shows ErrorState, not a toast, when the first load fails', async () => {
+    failPeopleList();
+    renderWithQuery(<PeoplePage />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Couldn't load this data",
+    );
+    await settle();
+    expect(toasts()).toHaveLength(0);
   });
 });
 

@@ -1,4 +1,4 @@
-import { MutationCache, QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getErrorMessage, isApiError } from '@/lib/api/api-error';
 import { isErrorHandled } from './handled-errors';
@@ -11,6 +11,19 @@ function isClientError(error: unknown): boolean {
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
+    queryCache: new QueryCache({
+      // A first load that fails is the page's ErrorState (isLoadingError).
+      // A refetch that fails after its retries keeps the data on screen,
+      // so this toast is the only sign it is stale. Only an ApiError is
+      // reported: a cancellation is not one, and is not a failure. The id
+      // folds identical messages, as when every open query fails at once on
+      // a window focus while offline.
+      onError: (error, query) => {
+        if (query.state.data === undefined || !isApiError(error)) return;
+        const message = getErrorMessage(error);
+        toast.error(message, { id: `query-refetch:${message}` });
+      },
+    }),
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
         if (mutation.options.onError) return;

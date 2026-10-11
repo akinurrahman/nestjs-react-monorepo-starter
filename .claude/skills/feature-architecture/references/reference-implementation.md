@@ -460,7 +460,7 @@ export default function ClassListPage() {
   const confirm = useConfirm();
   const { filters, setFilter, isFiltered, resetFilters } =
     useUrlFilters(CLASS_FILTER_SPEC);
-  const { data, error, isError, isLoading, isFetching, refetch } =
+  const { data, error, isLoadingError, isLoading, isFetching, refetch } =
     useClassList(filters);
   const deleteClass = useDeleteClass();
 
@@ -515,7 +515,7 @@ export default function ClassListPage() {
     [navigate, confirm, deleteClass],
   );
 
-  if (isError)
+  if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;
 
   return (
@@ -574,8 +574,11 @@ export default function ClassListPage() {
 behaviour. Changing several filters at once goes through `setFilters({ ... })`,
 which is one navigation and one history entry rather than three.
 
-The page owns the error state. Loading and empty belong to `DataTable`, so do
-not render an empty state above a table that already has one. `onConfirm`
+The page owns the error state, and only for a load that never succeeded:
+`isLoadingError`, not `isError`, so a failed refetch leaves the rows on screen
+and the global query toast reports it. Loading and empty belong to
+`DataTable`, so do not render an empty state above a table that already has
+one. `onConfirm`
 returns the delete's promise, so the confirm dialog shows its pending state and
 stays open if the delete fails while the global toast reports why.
 
@@ -612,9 +615,10 @@ function CreateClass() {
 function EditClass({ id }: { id: string }) {
   const navigate = useNavigate();
   const back = () => void navigate('/academic/classes');
-  const { data: classItem, error, isError, isLoading, refetch } = useClass(id);
+  const { data: classItem, error, isLoadingError, isLoading, refetch } =
+    useClass(id);
 
-  if (isError)
+  if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;
   if (isLoading) return <Skeleton className="h-96 w-full max-w-2xl" />;
   if (!classItem) return <NotFoundState />;
@@ -967,7 +971,9 @@ network and malformed responses. `ErrorState` and `Form` both use it.
 `staleTime` 30 seconds, up to two retries except on a 4xx, refetch on window
 focus; mutations: no retry), plus one global error toast so no mutation fails
 silently. That toast skips a mutation with its own `onError` and any error
-something already showed.
+something already showed. Its `QueryCache` toasts a refetch that fails while
+data is on screen, once per message; a first load that fails is left to the
+page's `ErrorState`.
 
 ### `systems/ui/lookup-badge.tsx`
 

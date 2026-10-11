@@ -618,14 +618,23 @@ or a store into a query.
 Detail-shaped pages, in this order, before touching the record:
 
 ```tsx
-if (isError) return <ErrorState error={error} onRetry={refetch} />;
+if (isLoadingError) return <ErrorState error={error} onRetry={refetch} />;
 if (isLoading) return <Skeleton className="h-64 w-full" />;
 if (!classItem) return <NotFoundState />;
 ```
 
-List-shaped pages handle `isError` at the page level and pass `isLoading` and
-`isFetching` down to `DataTable`, which owns the row skeleton and the empty
-row. Do not render an empty state above a table that already has one.
+List-shaped pages handle `isLoadingError` at the page level and pass
+`isLoading` and `isFetching` down to `DataTable`, which owns the row skeleton
+and the empty row. Do not render an empty state above a table that already
+has one.
+
+Branch on `isLoadingError`, never `isError`. `isError` is also true when a
+refetch fails (a window focus while offline, an expired session) and would
+swap a loaded list for an error screen. `isLoadingError` is React Query's
+`isError && data === undefined`, which is why it beats a hand-written
+`isError && !data`: an endpoint that legitimately loads `null` is still
+loaded. A failed refetch keeps the data on screen, and the `QueryCache` in
+`createQueryClient` reports it with one error toast.
 
 A component that receives data as props renders it. It does not check
 `isLoading` on data it was handed.
