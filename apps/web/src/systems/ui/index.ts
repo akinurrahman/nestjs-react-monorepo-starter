@@ -1,3 +1,4 @@
+export { AccessDeniedState } from './access-denied-state';
 export { EmptyState } from './empty-state';
 export { ErrorState } from './error-state';
 export { LookupBadge } from './lookup-badge';
