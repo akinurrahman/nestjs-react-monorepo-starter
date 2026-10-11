@@ -79,3 +79,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Popup zoom, sheet slide, skeleton pulse and the sidebar's width change all
+   run on tw-animate and transitions. Under reduced motion they finish in one
+   frame instead of being removed, so the animationend and transitionend that
+   Base UI waits on before unmounting a closing popup still fire. Spinners
+   keep turning, since a still one reads as a hang. The navigation progress
+   bar has its own motion-reduce classes. Unlayered, so it beats every
+   utility layer. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
