@@ -1,5 +1,5 @@
 import { ERROR_CODES } from '@starter/shared';
-import { Inbox, Plus } from 'lucide-react';
+import { House, Inbox, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,18 @@ export function StatesSection() {
         </Frame>
         <Frame label="ErrorState, unknown error, no retry">
           <ErrorState title="This page could not be shown" />
+        </Frame>
+        <Frame label="ErrorState with actions">
+          <ErrorState
+            title="This page could not be shown"
+            onRetry={retry}
+            action={
+              <Button variant="outline" size="lg">
+                <House />
+                Go home
+              </Button>
+            }
+          />
         </Frame>
         <Frame label="NotFoundState">
           <NotFoundState

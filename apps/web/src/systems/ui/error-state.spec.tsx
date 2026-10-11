@@ -43,4 +43,17 @@ describe('ErrorState', () => {
 
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('renders its action beside retry', () => {
+    render(
+      <ErrorState
+        onRetry={vi.fn()}
+        action={<button type="button">Go home</button>}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole('button').map((button) => button.textContent),
+    ).toEqual(['Retry', 'Go home']);
+  });
 });

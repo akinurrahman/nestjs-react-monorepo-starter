@@ -72,6 +72,19 @@ describe('route errors', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('offers Reload and Go home from a page error', async () => {
+    const user = userEvent.setup();
+    renderApp(pages, '/throws');
+    const alert = await screen.findByRole('alert');
+
+    expect(
+      within(alert).getByRole('button', { name: 'Reload' }),
+    ).toBeInTheDocument();
+    await user.click(within(alert).getByRole('link', { name: 'Go home' }));
+
+    expect(await screen.findByText('home page')).toBeInTheDocument();
+  });
+
   it('shows error details in dev', async () => {
     renderApp(pages, '/throws');
 

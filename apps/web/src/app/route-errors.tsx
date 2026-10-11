@@ -1,6 +1,6 @@
-import { RefreshCw } from 'lucide-react';
-import { isRouteErrorResponse, useRouteError } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { House, RefreshCw } from 'lucide-react';
+import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { isChunkLoadError } from '@/lib/chunk-error';
 import { EmptyState, ErrorState, NotFoundState } from '@/systems/ui';
 
@@ -10,6 +10,20 @@ function describeError(error: unknown): string {
   }
   if (error instanceof Error) return error.stack ?? error.message;
   return String(error);
+}
+
+function ReloadButton() {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="lg"
+      onClick={() => window.location.reload()}
+    >
+      <RefreshCw />
+      Reload
+    </Button>
+  );
 }
 
 // Sits on the pathless route inside the layout, so a page that throws is
@@ -23,17 +37,7 @@ export function RouteErrorBoundary() {
         icon={RefreshCw}
         title="A new version is available"
         description="This page could not load, most likely because the app was updated. Reload to get the latest version."
-        action={
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={() => window.location.reload()}
-          >
-            <RefreshCw />
-            Reload
-          </Button>
-        }
+        action={<ReloadButton />}
       />
     );
   }
@@ -44,10 +48,26 @@ export function RouteErrorBoundary() {
 
   return (
     <div>
-      <ErrorState title="This page could not be shown" error={error} />
+      <ErrorState
+        title="This page could not be shown"
+        error={error}
+        action={
+          <>
+            <ReloadButton />
+            {/* A link, not a Button rendering one: Base UI would give the
+                anchor role="button" and hide that it navigates. */}
+            <Link
+              to="/"
+              className={buttonVariants({ variant: 'outline', size: 'lg' })}
+            >
+              <House />
+              Go home
+            </Link>
+          </>
+        }
+      />
       {import.meta.env.DEV ? (
-        <pre className="mx-auto max-w-3xl overflow-auto rounded-lg bg-muted p-4 text-xs text-muted-foreground"
-        >
+        <pre className="mx-auto max-w-3xl overflow-auto rounded-lg bg-muted p-4 text-xs text-muted-foreground">
           {describeError(error)}
         </pre>
       ) : null}
