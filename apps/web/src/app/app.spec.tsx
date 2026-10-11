@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { useConfirm } from '@/systems/confirmation';
 import { useConfirmationStore } from '@/systems/confirmation/confirmation-store';
+import { useThemeStore } from '@/systems/theme/theme-store';
 import { renderApp } from '@/test/render-app';
 
 function ProvidersPage() {
@@ -25,6 +26,7 @@ function ProvidersPage() {
 describe('App providers', () => {
   beforeEach(() => {
     useConfirmationStore.setState(useConfirmationStore.getInitialState(), true);
+    useThemeStore.setState(useThemeStore.getInitialState(), true);
   });
 
   it('renders a toast from a page', async () => {
@@ -33,6 +35,19 @@ describe('App providers', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Toast' }));
 
     expect(await screen.findByText('Saved')).toBeInTheDocument();
+  });
+
+  it('gives the Toaster the resolved theme', async () => {
+    useThemeStore.setState({ theme: 'dark' });
+    renderApp([{ index: true, Component: ProvidersPage }]);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Toast' }));
+    await screen.findByText('Saved');
+
+    expect(document.querySelector('[data-sonner-toaster]')).toHaveAttribute(
+      'data-sonner-theme',
+      'dark',
+    );
   });
 
   it('renders a confirm dialog from a page', async () => {

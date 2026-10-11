@@ -3,11 +3,18 @@ import type { DataRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { Toaster } from '@/components/ui/sonner';
 import { ConfirmationHost } from '@/systems/confirmation';
+import { ThemeSync, useResolvedTheme } from '@/systems/theme';
 
 type AppProps = {
   router: DataRouter;
   queryClient: QueryClient;
 };
+
+// Its own component, so a theme change re-renders the Toaster and not the
+// router.
+function ThemedToaster() {
+  return <Toaster theme={useResolvedTheme()} />;
+}
 
 /**
  * QueryClientProvider is outermost, so every route component can use the
@@ -18,12 +25,16 @@ type AppProps = {
  * route, so a toast or a dialog survives any route error boundary, the root
  * one included. They have no router context: confirm() content must not use
  * Link or other router hooks.
+ *
+ * ThemeSync keeps the .dark class current after the inline script in
+ * index.html has set the first one.
  */
 export function App({ router, queryClient }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeSync />
       <RouterProvider router={router} />
-      <Toaster />
+      <ThemedToaster />
       <ConfirmationHost />
     </QueryClientProvider>
   );

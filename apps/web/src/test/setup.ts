@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
+import { installMatchMedia } from './match-media';
 import { server } from './msw-server';
 
 const unhandledRequests: string[] = [];
+
+// A fresh viewport and color scheme, and no persisted stores, per test.
+beforeEach(() => {
+  installMatchMedia();
+  localStorage.clear();
+  document.documentElement.classList.remove('dark');
+});
 
 beforeAll(() => {
   server.listen({
