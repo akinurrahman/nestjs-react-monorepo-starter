@@ -5,10 +5,33 @@ import { Dialog as SheetPrimitive } from '@base-ui/react/dialog';
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
+import { useTrackedModalOpen } from '@/components/ui/modal-registry';
 import { XIcon } from 'lucide-react';
 
-function Sheet({ ...props }: SheetPrimitive.Root.Props) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+function Sheet({
+  open,
+  defaultOpen,
+  onOpenChange,
+  trackModal = true,
+  ...props
+}: SheetPrimitive.Root.Props & {
+  // false keeps this sheet out of the open-modal registry, for the sidebar
+  // sheet, which the command palette closes instead of yielding to.
+  trackModal?: boolean;
+}) {
+  const handleOpenChange = useTrackedModalOpen(
+    { open, defaultOpen, onOpenChange },
+    trackModal,
+  );
+  return (
+    <SheetPrimitive.Root
+      data-slot="sheet"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 }
 
 function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {

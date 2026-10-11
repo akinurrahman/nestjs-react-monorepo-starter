@@ -185,7 +185,13 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      <Sheet
+        open={openMobile}
+        onOpenChange={setOpenMobile}
+        // The command palette closes this sheet instead of yielding to it.
+        trackModal={false}
+        {...props}
+      >
         <SheetContent
           dir={dir}
           data-sidebar="sidebar"

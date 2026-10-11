@@ -5,9 +5,28 @@ import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
+import { useTrackedModalOpen } from '@/components/ui/modal-registry';
 
-function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
+function AlertDialog({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: AlertDialogPrimitive.Root.Props) {
+  const handleOpenChange = useTrackedModalOpen({
+    open,
+    defaultOpen,
+    onOpenChange,
+  });
+  return (
+    <AlertDialogPrimitive.Root
+      data-slot="alert-dialog"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 }
 
 function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {

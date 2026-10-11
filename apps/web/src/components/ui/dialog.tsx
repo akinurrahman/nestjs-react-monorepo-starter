@@ -3,10 +3,29 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
+import { useTrackedModalOpen } from '@/components/ui/modal-registry';
 import { XIcon } from 'lucide-react';
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+function Dialog({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props) {
+  const handleOpenChange = useTrackedModalOpen({
+    open,
+    defaultOpen,
+    onOpenChange,
+  });
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
