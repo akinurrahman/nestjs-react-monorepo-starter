@@ -3,6 +3,7 @@ import { apiCallPaginated } from '@/lib/api/api-call';
 import { fromPaginated } from '@/systems/form/lib/from-paginated';
 import type { AsyncOptionsSource } from '@/systems/form/types';
 import { server } from './msw-server';
+import { paginateFixture } from './paginate';
 
 type Person = { id: string; name: string; team: string };
 
@@ -70,19 +71,8 @@ export function servePeople({ failOn = [], laterDelayMs }: ServeOptions = {}) {
           person.name.toLowerCase().includes(search) &&
           (!team || person.team === team),
       );
-      const totalPages = Math.max(1, Math.ceil(matches.length / limit));
 
-      return HttpResponse.json({
-        data: matches.slice((page - 1) * limit, page * limit),
-        pagination: {
-          page,
-          limit,
-          total: matches.length,
-          totalPages,
-          hasPrevious: page > 1,
-          hasNext: page < totalPages,
-        },
-      });
+      return HttpResponse.json(paginateFixture(matches, page, limit));
     }),
   );
 

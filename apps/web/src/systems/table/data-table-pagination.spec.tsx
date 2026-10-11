@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MAX_PAGE_LIMIT, type PaginationMeta } from '@starter/shared';
 import { defineUrlFilters, pagingSpec, useUrlFilters } from '@/systems/filters';
+import { paginateFixture } from '@/test/paginate';
 import { renderWithRouter } from '@/test/render-with-router';
 import { createColumnHelper } from './columns';
 import { DataTable } from './data-table';
@@ -253,6 +254,44 @@ describe('DataTable pagination wiring', () => {
     );
 
     expect(onPageChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the empty state for an empty result in the api shape', () => {
+    const onPageChange = vi.fn();
+    const empty = paginateFixture<Row>([], 1, 20);
+    render(
+      <DataTable
+        columns={COLUMNS}
+        data={empty.data}
+        label="Rows"
+        pagination={empty.pagination}
+        onPageChange={onPageChange}
+        emptyState={<p>Nothing yet</p>}
+      />,
+    );
+
+    expect(empty.pagination).toMatchObject({ total: 0, totalPages: 0 });
+    expect(screen.getByText('Nothing yet')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination' }),
+    ).not.toBeInTheDocument();
+    expect(onPageChange).not.toHaveBeenCalled();
+  });
+
+  it('clamps past the last page of a real result', () => {
+    const onPageChange = vi.fn();
+    const stale = paginateFixture(ROWS, 4, 20);
+    render(
+      <DataTable
+        columns={COLUMNS}
+        data={stale.data}
+        label="Rows"
+        pagination={stale.pagination}
+        onPageChange={onPageChange}
+      />,
+    );
+
+    expect(onPageChange).toHaveBeenCalledExactlyOnceWith(1);
   });
 
   it('does not clamp a page in range or an empty result', () => {

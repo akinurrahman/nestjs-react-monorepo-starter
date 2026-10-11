@@ -112,6 +112,19 @@ describe('useAsyncOptions', () => {
     expect(requests[1]!.get('limit')).toBe('20');
   });
 
+  it('ends paging on a search with no matches', async () => {
+    const requests = servePeople();
+    const { result } = renderOptions();
+    await waitFor(() => expect(result.current.options).toHaveLength(20));
+
+    act(() => result.current.setSearch('nobody'));
+
+    await waitFor(() => expect(requests).toHaveLength(2));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.options).toEqual([]);
+    expect(result.current.hasMore).toBe(false);
+  });
+
   it('shares one request between two pickers on the same source', async () => {
     const requests = servePeople();
     const client = createTestQueryClient();

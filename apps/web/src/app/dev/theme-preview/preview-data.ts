@@ -14,6 +14,7 @@ import {
   type AsyncOptionsSource,
   type Option,
 } from '@/systems/form';
+import { paginateFixture } from '@/test/paginate';
 
 // One status per badge variant, so the table and the badge section show them
 // all.
@@ -218,25 +219,6 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-function paginate<T>(
-  items: readonly T[],
-  page: number,
-  limit: number,
-): PaginatedResponse<T> {
-  const totalPages = Math.max(1, Math.ceil(items.length / limit));
-  return {
-    data: items.slice((page - 1) * limit, page * limit),
-    pagination: {
-      page,
-      limit,
-      total: items.length,
-      totalPages,
-      hasPrevious: page > 1,
-      hasNext: page < totalPages,
-    },
-  };
-}
-
 const matches = (label: string, search: string) =>
   label.toLowerCase().includes(search.trim().toLowerCase());
 
@@ -252,7 +234,7 @@ export const peopleSource: AsyncOptionsSource = {
         matches(person.name, search) &&
         (!department || person.department === department),
     );
-    return fromPaginated(paginate(found, page, limit), (person) => ({
+    return fromPaginated(paginateFixture(found, page, limit), (person) => ({
       value: person.id,
       label: person.name,
     }));
@@ -269,7 +251,7 @@ export const countrySource: AsyncOptionsSource = {
         matches(country.label, search) &&
         (!region || country.region === region),
     );
-    return fromPaginated(paginate(found, page, limit), (country) => ({
+    return fromPaginated(paginateFixture(found, page, limit), (country) => ({
       value: country.value,
       label: country.label,
     }));
@@ -323,5 +305,5 @@ export function pagePeople(
   page: number,
   limit: number,
 ): PaginatedResponse<PreviewPerson> {
-  return paginate(people, page, limit);
+  return paginateFixture(people, page, limit);
 }
