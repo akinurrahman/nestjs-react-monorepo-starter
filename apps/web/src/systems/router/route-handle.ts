@@ -27,6 +27,9 @@ export type RouteHandle = {
   // Present means the route is a sidebar entry. Entries are grouped under
   // `group`, a heading label, and sorted by `order` ascending within it.
   nav?: { group: string; order: number };
+  // Extra search terms for the command palette, which also matches the
+  // title and the nav group. Synonyms only; the title is already searched.
+  keywords?: readonly string[];
 };
 
 // The function form of lazy, forbidden from returning a handle. Not the

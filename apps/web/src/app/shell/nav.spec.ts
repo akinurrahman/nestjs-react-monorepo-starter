@@ -41,7 +41,15 @@ describe('buildNav', () => {
     expect(buildNav(routes, null, GROUPS)).toEqual([
       {
         label: 'Main',
-        items: [{ path: '/reports', title: 'Reports', icon: Box, order: 1 }],
+        items: [
+          {
+            path: '/reports',
+            title: 'Reports',
+            icon: Box,
+            order: 1,
+            keywords: [],
+          },
+        ],
       },
     ]);
     expect(load).not.toHaveBeenCalled();
@@ -163,6 +171,25 @@ describe('buildNav', () => {
     );
   });
 
+  it('carries keywords from the handle', () => {
+    const routes: AppRouteObject[] = [
+      {
+        path: 'payroll',
+        handle: {
+          title: 'Payroll',
+          icon: Box,
+          nav: { group: 'Main', order: 0 },
+          keywords: ['salary', 'payslip'],
+        },
+        element: null,
+      },
+    ];
+
+    expect(buildNav(routes, null, GROUPS)[0]?.items[0]?.keywords).toEqual([
+      'salary',
+      'payslip',
+    ]);
+  });
   it('skips routes without nav', () => {
     const routes: AppRouteObject[] = [
       {

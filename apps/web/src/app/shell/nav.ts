@@ -12,6 +12,7 @@ export type NavItem = {
   title: string;
   icon: LucideIcon;
   order: number;
+  keywords: readonly string[];
 };
 
 export type NavGroup = {
@@ -66,6 +67,7 @@ export function buildNav(
             title: handle.title,
             icon: handle.icon,
             order: handle.nav.order,
+            keywords: handle.keywords ?? [],
           });
           groups.set(handle.nav.group, items);
         }
