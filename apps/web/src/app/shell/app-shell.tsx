@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/systems/theme';
 import { AppSidebar } from './app-sidebar';
 import { Breadcrumbs } from './breadcrumbs';
 import { CommandPalette, PaletteButton } from './command-palette';
+import { RouteAnnouncer } from './route-announcer';
 import { useNavGroups } from './use-nav-groups';
 import { UserMenu } from './user-menu';
 
@@ -65,6 +66,7 @@ export function AppShell({
         </main>
       </div>
       <CommandPalette navGroups={navGroups} />
+      <RouteAnnouncer mainId={MAIN_ID} />
     </SidebarProvider>
   );
 }

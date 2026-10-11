@@ -132,6 +132,40 @@ describe('app shell', () => {
     expect(screen.getByRole('main')).toHaveFocus();
   });
 
+  describe('on navigation', () => {
+    const announcer = () => screen.getByRole('status');
+
+    it('says nothing and leaves focus alone on first load', async () => {
+      renderApp(pages, '/reports');
+      await screen.findByText('reports page');
+
+      expect(announcer()).toBeEmptyDOMElement();
+      expect(screen.getByRole('main')).not.toHaveFocus();
+    });
+
+    it('focuses main and announces the new page', async () => {
+      const { router } = renderApp(pages, '/');
+      await screen.findByText('home page');
+
+      await act(() => router.navigate('/reports'));
+
+      expect(await screen.findByText('reports page')).toBeInTheDocument();
+      expect(screen.getByRole('main')).toHaveFocus();
+      expect(announcer()).toHaveTextContent('Reports');
+    });
+
+    it('leaves focus where it is when only the search changes', async () => {
+      const { router } = renderApp(pages, '/reports');
+      await screen.findByText('reports page');
+      trigger().focus();
+
+      await act(() => router.navigate('/reports?search=q3'));
+
+      expect(trigger()).toHaveFocus();
+      expect(announcer()).toBeEmptyDOMElement();
+    });
+  });
+
   describe('inside the shell', () => {
     beforeEach(() => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
