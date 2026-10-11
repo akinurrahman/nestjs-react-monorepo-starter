@@ -1,4 +1,4 @@
-import { Bug, Hourglass, Unplug } from 'lucide-react';
+import { Bug, Hourglass, Palette, Unplug } from 'lucide-react';
 import type { AppRouteObject } from '@/systems/router';
 
 export const SLOW_ROUTE_DELAY_MS = 3000;
@@ -7,6 +7,18 @@ export const SLOW_ROUTE_DELAY_MS = 3000;
 // adds them only when import.meta.env.DEV, so a production build drops this
 // module and every chunk it lazy loads.
 export const devRoutes: AppRouteObject[] = [
+  {
+    path: 'dev/theme',
+    handle: {
+      title: 'Theme preview',
+      icon: Palette,
+      nav: { group: 'Dev', order: 0 },
+      keywords: ['tokens', 'colors', 'components', 'design system'],
+    },
+    lazy: async () => ({
+      Component: (await import('./theme-preview/theme-preview-page')).default,
+    }),
+  },
   {
     path: 'dev/throws',
     handle: { title: 'Throwing page', icon: Bug },
