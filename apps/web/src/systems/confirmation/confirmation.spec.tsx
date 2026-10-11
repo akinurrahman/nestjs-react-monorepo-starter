@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { expectNoUnhandledRejection } from '@/test/unhandled-rejections';
 import { ConfirmationHost } from './confirmation-host';
 import {
   confirm,
@@ -164,19 +165,11 @@ describe('confirmation', () => {
   });
 
   it('stays open and usable when onConfirm rejects', async () => {
-    const unhandled = vi.fn();
-    // Tests run in Node, but the app tsconfig has no Node types.
-    const { process } = globalThis as unknown as {
-      process: {
-        on(event: 'unhandledRejection', listener: () => void): void;
-        off(event: 'unhandledRejection', listener: () => void): void;
-      };
-    };
-    process.on('unhandledRejection', unhandled);
-    try {
-      const { user, onConfirm } = renderConfirm({
-        onConfirm: () => Promise.reject(new Error('Server said no')),
-      });
+    const { user, onConfirm } = renderConfirm({
+      onConfirm: () => Promise.reject(new Error('Server said no')),
+    });
+
+    await expectNoUnhandledRejection(async () => {
       await open(user);
 
       await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -190,11 +183,6 @@ describe('confirmation', () => {
 
       await user.click(confirmButton);
       await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(unhandled).not.toHaveBeenCalled();
-    } finally {
-      process.off('unhandledRejection', unhandled);
-    }
+    });
   });
 });

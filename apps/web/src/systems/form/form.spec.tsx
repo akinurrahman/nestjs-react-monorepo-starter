@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { z } from 'zod';
 import { ApiError } from '@/lib/api/api-error';
 import { conflict, validationFailed } from '@/test/error-fixtures';
+import { expectNoUnhandledRejection } from '@/test/unhandled-rejections';
 import { InputField } from './fields/input-field';
 import { Form, FormError, type FormSchema } from './form';
 
@@ -142,28 +143,18 @@ describe('Form', () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
-    const unhandled = vi.fn();
-    // The browser lib has no process, but these tests run on Node.
-    const { process } = globalThis as unknown as {
-      process: {
-        on(event: string, listener: () => void): void;
-        off(event: string, listener: () => void): void;
-      };
-    };
-    process.on('unhandledRejection', unhandled);
     const user = renderUserForm(async () => {
       throw new TypeError('boom');
     });
 
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await expectNoUnhandledRejection(async () => {
+      await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Something went wrong. Please try again.',
-    );
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(unhandled).not.toHaveBeenCalled();
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Something went wrong. Please try again.',
+      );
+    });
     expect(consoleError).toHaveBeenCalledWith(expect.any(TypeError));
-    process.off('unhandledRejection', unhandled);
     consoleError.mockRestore();
   });
 
