@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+﻿import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { peopleSource, servePeople } from '@/test/people-source';
 import { renderWithRouter } from '@/test/render-with-router';
@@ -145,14 +151,31 @@ describe('FilterAsyncSelect', () => {
   });
 });
 
-describe('SearchInput', () => {
-  it('writes once, after the person stops typing', async () => {
-    const { user, searchParams, navigations } = renderToolbar();
+// The debounce runs on the fake clock, so a slow run cannot let it fire
+// between keystrokes or before the "not yet" assertion. Keystrokes go
+// through fireEvent: user-event waits on a real setTimeout that only a
+// global jest would advance.
+function typeEachKey(box: HTMLElement, text: string, from = '') {
+  for (let end = 1; end <= text.length; end += 1) {
+    fireEvent.change(box, { target: { value: from + text.slice(0, end) } });
+  }
+}
 
-    await user.type(searchBox(), 'printer');
+describe('SearchInput', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('writes once, after the person stops typing', async () => {
+    const { searchParams, navigations } = renderToolbar();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+    typeEachKey(searchBox(), 'printer');
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1));
     expect(searchParams().has('search')).toBe(false);
 
-    await waitFor(() => expect(searchParams().get('search')).toBe('printer'));
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(searchParams().get('search')).toBe('printer');
     expect(navigations()).toBe(1);
   });
 
@@ -182,7 +205,7 @@ describe('SearchInput', () => {
 
   it('keeps typing that its own late write would overwrite', async () => {
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const search = (value?: string) => (
       <SearchInput
         value={value}
@@ -194,14 +217,17 @@ describe('SearchInput', () => {
     const { rerender } = render(search());
     const box = screen.getByRole('searchbox', { name: 'Search' });
 
-    await user.type(box, 'pr');
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith('pr'));
-    await user.type(box, 'int');
+    typeEachKey(box, 'pr');
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+    expect(onChange).toHaveBeenLastCalledWith('pr');
+    typeEachKey(box, 'int', 'pr');
     // The write of "pr" lands only now, mid-debounce of "print".
     rerender(search('pr'));
 
     expect(box).toHaveValue('print');
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('print'));
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+    expect(onChange).toHaveBeenLastCalledWith('print');
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 
   it('clears at once from the clear button and from Escape', async () => {

@@ -1,5 +1,11 @@
 const ZONES = ['America/New_York', 'Asia/Kolkata'] as const;
 
+// The file has no static import, so the first test would pay for loading
+// date-fns inside its own timeout, which a parallel run can push past.
+const COLD_IMPORT_MS = 20_000;
+
+beforeAll(() => import('./date'), COLD_IMPORT_MS);
+
 // Node applies a TZ change at runtime. The formatters are built at module
 // load, so each zone also needs a fresh import.
 async function inZone(timeZone: string) {
