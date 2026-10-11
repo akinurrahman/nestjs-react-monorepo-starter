@@ -1,16 +1,17 @@
 import { SearchX } from 'lucide-react';
 import type { AppRouteObject } from '@/systems/router';
 import { NotFoundState } from '@/systems/ui';
-import { AppLayout } from './app-layout';
 import { ProgressBar } from './navigation-progress';
 import { RootRoute } from './root-route';
 import { RouteAccessGate } from './route-access-gate';
 import { RouteErrorBoundary, RootErrorBoundary } from './route-errors';
+import { AppShell } from './shell/app-shell';
 
 /**
  * root      title, progress bar, scroll restoration. Its boundary is the
  *           last resort and replaces everything, layout included.
- * layout    the shell.
+ * layout    the shell. Its sidebar lists the pages from this config, so
+ *           every nav entry shows before its chunk loads.
  * page      pathless, inside the layout. Checks access, catches page errors
  *           and shows the initial lazy load, all without unmounting the shell.
  *
@@ -26,7 +27,7 @@ export function buildRoutes(pages: AppRouteObject[]): AppRouteObject[] {
       children: [
         {
           id: 'layout',
-          Component: AppLayout,
+          element: <AppShell navRoutes={pages} />,
           children: [
             {
               id: 'page',
