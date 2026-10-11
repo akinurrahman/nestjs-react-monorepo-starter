@@ -346,8 +346,10 @@ every sticky column but the last needs a `size`; dev warns otherwise).
 keepPreviousData` on the list query. `onRowClick` is mouse only; `RowLink` in the
 column that names the record is the keyboard path. Row buttons use `RowActions`
 or `RowActionsMenu` from `@/systems/ui`. The table sizes itself to the viewport
-through `--table-offset`; a page with more chrome above or below the table
-sets it on a wrapper.
+through `--table-offset`. The shell's default fits the standard list page: a
+`PageHeader` with a description, a `FilterBar` and the pagination row. A page
+with different chrome above or below the table sets its own value on a
+wrapper, e.g. `[--table-offset:calc(var(--header-height)+2*var(--page-padding)+16rem)]`.
 
 ### Modals, confirm and toasts
 

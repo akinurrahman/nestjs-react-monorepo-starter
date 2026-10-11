@@ -12,11 +12,14 @@ import { UserMenu } from './user-menu';
 
 const MAIN_ID = 'main-content';
 
-// --table-offset is the space above a page's content, header plus page
-// padding, for tables that size themselves to the viewport. Pages can
-// override it. The value gets tuned in 5d.
+// --table-offset is everything on a list page that is not the table body,
+// so DataTable's max height leaves the page itself unscrolled from sm up:
+// the header, padding above and below, and 12.5rem for a PageHeader with a
+// description (5.125rem), a FilterBar (3.25rem) and the pagination row
+// (3.8rem) plus borders. A page with other chrome sets its own value on a
+// wrapper, as the theme preview's table section does.
 const SHELL_VARS =
-  '[--header-height:--spacing(14)] [--page-padding:--spacing(4)] md:[--page-padding:--spacing(6)] [--table-offset:calc(var(--header-height)+var(--page-padding))]';
+  '[--header-height:--spacing(14)] [--page-padding:--spacing(4)] md:[--page-padding:--spacing(6)] [--table-offset:calc(var(--header-height)+2*var(--page-padding)+12.5rem)]';
 
 // Focuses main directly instead of following the hash, which would add a
 // history entry for the router and does not move focus in every browser.
