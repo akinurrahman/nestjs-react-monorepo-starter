@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/app';
 import { createAppRouter } from '@/app/router';
-import { createQueryClient } from '@/systems/api/query-client';
+import { createQueryClient } from '@/systems/api';
 import '@/index.css';
 
 const root = document.getElementById('root');

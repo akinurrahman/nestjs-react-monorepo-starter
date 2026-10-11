@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
-import { createQueryClient } from '@/systems/api/query-client';
+import { createQueryClient } from '@/systems/api';
 
 // The app's retry rules, without the backoff wait between attempts.
 export function createTestQueryClient() {
