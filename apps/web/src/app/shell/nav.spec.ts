@@ -4,6 +4,10 @@ import { buildNav } from './nav';
 
 const GROUPS = ['Main', 'People', 'Admin'];
 
+// Most cases are about ordering, not access, so they run as a user that
+// every role-free route admits.
+const SIGNED_IN = { role: 'USER' } as const;
+
 const page = (
   path: string,
   title: string,
@@ -38,7 +42,7 @@ describe('buildNav', () => {
       },
     ];
 
-    expect(buildNav(routes, null, GROUPS)).toEqual([
+    expect(buildNav(routes, SIGNED_IN, GROUPS)).toEqual([
       {
         label: 'Main',
         items: [
@@ -62,7 +66,7 @@ describe('buildNav', () => {
       page('home', 'Home', { group: 'Main', order: 0 }),
     ];
 
-    expect(buildNav(routes, null, GROUPS).map((g) => g.label)).toEqual([
+    expect(buildNav(routes, SIGNED_IN, GROUPS).map((g) => g.label)).toEqual([
       'Main',
       'People',
       'Admin',
@@ -76,13 +80,23 @@ describe('buildNav', () => {
       page('b', 'Second', { group: 'Main', order: 2 }),
     ];
 
-    expect(titles(buildNav(routes, null, GROUPS))).toEqual([
+    expect(titles(buildNav(routes, SIGNED_IN, GROUPS))).toEqual([
       ['Main', ['First', 'Second', 'Third']],
     ]);
   });
 
   describe('access', () => {
     const routes: AppRouteObject[] = [
+      {
+        path: 'welcome',
+        handle: {
+          title: 'Welcome',
+          icon: FileText,
+          nav: { group: 'Main', order: -1 },
+          public: true,
+        },
+        element: null,
+      },
       page('open', 'Open', { group: 'Main', order: 0 }),
       page('members', 'Members', { group: 'Main', order: 1 }, ['USER']),
       {
@@ -99,17 +113,17 @@ describe('buildNav', () => {
 
     it('lists what the role may open, ancestors included', () => {
       expect(titles(buildNav(routes, { role: 'USER' }, GROUPS))).toEqual([
-        ['Main', ['Open', 'Members']],
+        ['Main', ['Welcome', 'Open', 'Members']],
       ]);
       expect(titles(buildNav(routes, { role: 'ADMIN' }, GROUPS))).toEqual([
-        ['Main', ['Open']],
+        ['Main', ['Welcome', 'Open']],
         ['Admin', ['Users']],
       ]);
     });
 
-    it('lists only role-free routes without a user', () => {
+    it('lists only public routes without a user', () => {
       expect(titles(buildNav(routes, null, GROUPS))).toEqual([
-        ['Main', ['Open']],
+        ['Main', ['Welcome']],
       ]);
     });
 
@@ -132,7 +146,7 @@ describe('buildNav', () => {
       },
     ];
 
-    expect(buildNav(routes, null, GROUPS)[0]?.items[0]?.path).toBe('/');
+    expect(buildNav(routes, SIGNED_IN, GROUPS)[0]?.items[0]?.path).toBe('/');
   });
 
   it('warns about a group not in NAV_GROUPS and lists it last', () => {
@@ -141,12 +155,41 @@ describe('buildNav', () => {
       page('home', 'Home', { group: 'Main', order: 0 }),
     ];
 
-    expect(titles(buildNav(routes, null, GROUPS))).toEqual([
+    expect(titles(buildNav(routes, SIGNED_IN, GROUPS))).toEqual([
       ['Main', ['Home']],
       ['Mystery', ['Extra']],
     ]);
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('"Mystery" is not in NAV_GROUPS'),
+    );
+  });
+
+  it('warns about a public route under a roles parent and treats it as not public', () => {
+    const routes: AppRouteObject[] = [
+      {
+        path: 'admin',
+        handle: { title: 'Admin', icon: Lock, roles: ['ADMIN'] },
+        children: [
+          {
+            path: 'help',
+            handle: {
+              title: 'Admin help',
+              icon: FileText,
+              nav: { group: 'Admin', order: 0 },
+              public: true,
+            },
+            element: null,
+          },
+        ],
+      },
+    ];
+
+    expect(buildNav(routes, null, GROUPS)).toEqual([]);
+    expect(titles(buildNav(routes, { role: 'ADMIN' }, GROUPS))).toEqual([
+      ['Admin', ['Admin help']],
+    ]);
+    expect(console.warn).toHaveBeenCalledWith(
+      '[nav] public route "Admin help" on /admin/help under a roles parent is treated as not public.',
     );
   });
 
@@ -160,7 +203,7 @@ describe('buildNav', () => {
       },
     ];
 
-    expect(titles(buildNav(routes, null, GROUPS))).toEqual([
+    expect(titles(buildNav(routes, SIGNED_IN, GROUPS))).toEqual([
       ['People', ['Employees']],
     ]);
     expect(console.warn).toHaveBeenCalledWith(
@@ -185,7 +228,7 @@ describe('buildNav', () => {
       },
     ];
 
-    expect(buildNav(routes, null, GROUPS)[0]?.items[0]?.keywords).toEqual([
+    expect(buildNav(routes, SIGNED_IN, GROUPS)[0]?.items[0]?.keywords).toEqual([
       'salary',
       'payslip',
     ]);
@@ -199,6 +242,6 @@ describe('buildNav', () => {
       },
     ];
 
-    expect(buildNav(routes, null, GROUPS)).toEqual([]);
+    expect(buildNav(routes, SIGNED_IN, GROUPS)).toEqual([]);
   });
 });

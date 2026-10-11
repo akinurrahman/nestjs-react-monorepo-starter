@@ -38,7 +38,7 @@ export function buildRoutes(pages: AppRouteObject[]): AppRouteObject[] {
                 ...pages,
                 {
                   path: '*',
-                  handle: { title: 'Not found', icon: SearchX },
+                  handle: { title: 'Not found', icon: SearchX, public: true },
                   element: (
                     <NotFoundState description="This page does not exist. The link may be out of date." />
                   ),

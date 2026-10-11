@@ -399,10 +399,18 @@ export const academicRoutes: AppRouteObject[] = [
 - `lazy` is always the function form returning `{ Component }`. The object form
   swallows a failed chunk in 8.4 and the route renders blank. Never
   `React.lazy`.
+- Access is denied by default. A route without `public: true` needs a
+  signed-in user. `public` is only for pages that work with no user: login,
+  forgot password, the 404. It is read from the deepest matched route that
+  has a handle, so it covers that route's handle-less children (an index
+  route), and a child with its own handle has to say `public` itself. A
+  public route takes no `roles`, which the type rejects, and never sits under
+  a parent with roles: there it counts as not public, and dev warns.
 - `roles` lists who may open the route, using `Role` from `@starter/shared`.
-  Absent means everyone. It binds every child, and `RouteAccessGate` shows
-  `AccessDeniedState` when it fails. The sidebar runs the same
-  `canAccessRoute` check, so a route the user cannot open is not listed.
+  Absent means any signed-in user. It binds every child, and
+  `RouteAccessGate` shows `AccessDeniedState` when a check fails. The sidebar
+  and the palette run the same `canAccessRoute` check, so a route the user
+  cannot open is not listed.
 - `nav` makes the route a sidebar and palette entry. `nav.group` must be one of
   `NAV_GROUPS` in `app/config.ts`; any other group warns in dev and sorts last.
   A path with params cannot have `nav`.

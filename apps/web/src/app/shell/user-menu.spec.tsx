@@ -8,7 +8,13 @@ import { renderApp } from '@/test/render-app';
 const pages: AppRouteObject[] = [
   {
     index: true,
-    handle: { title: 'Home', icon: House, nav: { group: 'General', order: 0 } },
+    // Public, so the "without a user" case still has a page to render.
+    handle: {
+      title: 'Home',
+      icon: House,
+      nav: { group: 'General', order: 0 },
+      public: true,
+    },
     element: <p>home page</p>,
   },
   {

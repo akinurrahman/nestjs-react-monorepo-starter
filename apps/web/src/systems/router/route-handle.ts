@@ -20,24 +20,43 @@ export type RouteHandle = {
   title: string;
   // A lucide component, rendered by the sidebar and the palette.
   icon: LucideIcon;
-  // Who may open the route. Absent means everyone, signed in or not. Present
-  // means the user's role must be listed, and an empty list admits no one.
-  // Checked on every matched route, so a parent's roles bind its children.
-  roles?: readonly Role[];
   // Present means the route is a sidebar entry. Entries are grouped under
   // `group`, a heading label, and sorted by `order` ascending within it.
   nav?: { group: string; order: number };
   // Extra search terms for the command palette, which also matches the
   // title and the nav group. Synonyms only; the title is already searched.
   keywords?: readonly string[];
-};
+} & (
+  | {
+      // Open to everyone, signed in or not: only for a page that works with
+      // no user, like login or the 404. Read from the deepest matched route
+      // with a handle, so it covers that route's handle-less children, and a
+      // child with its own handle has to say public itself. A public route
+      // takes no roles, and under a parent with roles it counts as not
+      // public.
+      public: true;
+      roles?: never;
+    }
+  | {
+      // Absent: any signed-in user. A route that is not public is never open
+      // without a user.
+      public?: false;
+      // Who may open the route. Present means the user's role must be
+      // listed, and an empty list admits no one. Checked on every matched
+      // route, so a parent's roles bind its children.
+      roles?: readonly Role[];
+    }
+);
 
 // The function form of lazy, forbidden from returning a handle. Not the
 // object form: in 8.4 a rejected lazy Component on a route without a loader
 // is swallowed, and the route renders blank instead of reaching its error
 // boundary, so a stale deploy would go unnoticed.
 type AppLazyRoute = () => Promise<
-  Omit<Awaited<ReturnType<LazyRouteFunction<NonIndexRouteObject>>>, 'handle'> & {
+  Omit<
+    Awaited<ReturnType<LazyRouteFunction<NonIndexRouteObject>>>,
+    'handle'
+  > & {
     handle?: never;
   }
 >;

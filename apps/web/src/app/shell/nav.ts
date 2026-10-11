@@ -55,6 +55,12 @@ export function buildNav(
       const handle = readRouteHandle(route.handle);
       const chain = [...ancestors, handle];
 
+      if (handle?.public && ancestors.some((ancestor) => ancestor?.roles)) {
+        warn(
+          `public route "${handle.title}" on ${path} under a roles parent is treated as not public.`,
+        );
+      }
+
       if (handle?.nav) {
         if (/[:*]/.test(path)) {
           warn(

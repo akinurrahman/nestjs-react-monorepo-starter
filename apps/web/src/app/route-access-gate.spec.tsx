@@ -8,6 +8,11 @@ import { APP_NAME } from './config';
 
 const pages: AppRouteObject[] = [
   {
+    path: 'welcome',
+    handle: { title: 'Welcome', icon: FileText, public: true },
+    element: <p>welcome page</p>,
+  },
+  {
     path: 'open',
     handle: { title: 'Open', icon: FileText },
     element: <p>open page</p>,
@@ -36,6 +41,13 @@ async function expectDenied() {
 }
 
 describe('route access', () => {
+  it('renders a role-free page for any user', async () => {
+    setStubRole('USER');
+    renderApp(pages, '/open');
+
+    expect(await screen.findByText('open page')).toBeInTheDocument();
+  });
+
   it('renders a page the role is allowed on', async () => {
     setStubRole('USER');
     renderApp(pages, '/members');
@@ -69,16 +81,32 @@ describe('route access', () => {
   describe('without a user', () => {
     beforeEach(() => useSessionStore.setState({ user: null }));
 
-    it('renders a route without roles', async () => {
+    it('renders a public route', async () => {
+      renderApp(pages, '/welcome');
+
+      expect(await screen.findByText('welcome page')).toBeInTheDocument();
+    });
+
+    it('denies a route that is not public, even without roles', async () => {
       renderApp(pages, '/open');
 
-      expect(await screen.findByText('open page')).toBeInTheDocument();
+      await expectDenied();
+      expect(screen.queryByText('open page')).toBeNull();
     });
 
     it('denies a route with roles', async () => {
       renderApp(pages, '/members');
 
       await expectDenied();
+    });
+
+    it('still shows the 404 for an unknown url', async () => {
+      renderApp(pages, '/no/such/page');
+
+      expect(
+        await screen.findByText(/This page does not exist/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Access denied')).toBeNull();
     });
   });
 });
