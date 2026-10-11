@@ -240,6 +240,7 @@ export function DataTable<TData extends RowData>({
       <Table
         ref={scrollRef}
         aria-label={label}
+        scrollLabel={label}
         aria-busy={isLoading || isFetching}
         containerClassName="max-h-[calc(100dvh-var(--table-offset,16rem))] overflow-auto"
       >

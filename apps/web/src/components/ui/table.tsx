@@ -3,20 +3,33 @@ import { cn } from '@/lib/utils';
 
 // The ref points at the scroll container, not the <table>, so a caller can
 // read or drive the scroll position without reaching past this component.
+// scrollLabel makes that container a named, focusable region, so a keyboard
+// can scroll a table with no link or button in its rows. The ring is inset
+// because the rounded wrapper around a table clips anything outside.
 function Table({
   className,
   containerClassName,
+  scrollLabel,
   ref,
   ...props
 }: Omit<React.ComponentProps<'table'>, 'ref'> & {
   ref?: React.Ref<HTMLDivElement>;
   containerClassName?: string;
+  scrollLabel?: string;
 }) {
   return (
     <div
       ref={ref}
       data-slot="table-container"
-      className={cn('relative w-full overflow-x-auto', containerClassName)}
+      role={scrollLabel ? 'region' : undefined}
+      aria-label={scrollLabel}
+      tabIndex={scrollLabel ? 0 : undefined}
+      className={cn(
+        'relative w-full overflow-x-auto',
+        scrollLabel &&
+          'outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset',
+        containerClassName,
+      )}
     >
       <table
         data-slot="table"

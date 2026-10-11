@@ -433,6 +433,22 @@ describe('DataTable scrolling', () => {
       .getAllByRole('columnheader')
       .forEach((header) => expect(header).toHaveClass('sticky', 'top-0'));
   });
+
+  it('makes the scroll container a named region the keyboard can reach', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLUMNS} data={PEOPLE} label={LABEL} />);
+    const region = screen.getByRole('region', { name: LABEL });
+
+    expect(region).toBe(table().parentElement);
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toHaveClass(
+      'focus-visible:ring-3',
+      'focus-visible:ring-inset',
+    );
+
+    await user.tab();
+    expect(region).toHaveFocus();
+  });
 });
 
 describe('DataTable row click', () => {
@@ -554,6 +570,9 @@ describe('RowLink', () => {
       { url: '/people' },
     );
 
+    // The scroll region is the first stop, the record's link the next.
+    await user.tab();
+    expect(screen.getByRole('region', { name: LABEL })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('link', { name: 'Ada' })).toHaveFocus();
 
