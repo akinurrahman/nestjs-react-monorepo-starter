@@ -54,6 +54,20 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@theme {
+  --animate-progress-indeterminate: progress-indeterminate 1.2s ease-in-out
+    infinite;
+
+  @keyframes progress-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(400%);
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

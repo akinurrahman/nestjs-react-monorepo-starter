@@ -1,36 +1,30 @@
-import { Button } from '@/components/ui/button';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import type { DataRouter } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
+import { Toaster } from '@/components/ui/sonner';
+import { ConfirmationHost } from '@/systems/confirmation';
 
-const VARIANTS = [
-  'default',
-  'secondary',
-  'outline',
-  'ghost',
-  'destructive',
-  'link',
-] as const;
+type AppProps = {
+  router: DataRouter;
+  queryClient: QueryClient;
+};
 
-const SIZES = ['xs', 'sm', 'default', 'lg'] as const;
-
-export function App() {
+/**
+ * QueryClientProvider is outermost, so every route component can use the
+ * client. Loaders run outside React, so when one needs it, main.tsx hands
+ * this same client to createAppRouter.
+ *
+ * Toaster and ConfirmationHost are siblings of the router, not inside a
+ * route, so a toast or a dialog survives any route error boundary, the root
+ * one included. They have no router context: confirm() content must not use
+ * Link or other router hooks.
+ */
+export function App({ router, queryClient }: AppProps) {
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-semibold">Starter</h1>
-      <p className="mt-2 text-muted-foreground">Theme check</p>
-
-      <section className="mt-8 space-y-4">
-        {VARIANTS.map((variant) => (
-          <div key={variant} className="flex flex-wrap items-center gap-3">
-            {SIZES.map((size) => (
-              <Button key={size} variant={variant} size={size}>
-                {variant} {size}
-              </Button>
-            ))}
-            <Button variant={variant} disabled>
-              {variant} disabled
-            </Button>
-          </div>
-        ))}
-      </section>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+      <Toaster />
+      <ConfirmationHost />
+    </QueryClientProvider>
   );
 }
