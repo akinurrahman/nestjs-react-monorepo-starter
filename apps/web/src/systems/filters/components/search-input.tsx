@@ -24,7 +24,9 @@ type Sent = { value: string | undefined };
  * Typing stays local and reaches the URL, and so the query key, only after a
  * pause.
  *
- * A new value from outside (back, forward, a reset) replaces the text. This
+ * A new value from outside (a reset, a link, a navigation to this list with a
+ * different search) replaces the text. Filter writes replace the history
+ * entry, so Back never steps through earlier searches. This
  * box's own write coming back does not: the URL can land after the person has
  * typed more, and copying it in then would eat those keystrokes. Any other
  * value that arrives is treated as outside.

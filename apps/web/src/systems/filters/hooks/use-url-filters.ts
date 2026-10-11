@@ -250,7 +250,8 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
     return parsed as T;
   }, [params, fields, defaults]);
 
-  // Several fields in one navigation, so a range edit is one history entry.
+  // Several fields in one navigation, so a range edit is one URL write. Like
+  // every write here it replaces the history entry instead of adding one.
   const setFilters = useCallback(
     (patch: Patch<T>) => {
       write((next) => {

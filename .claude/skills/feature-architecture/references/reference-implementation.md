@@ -572,7 +572,9 @@ export default function ClassListPage() {
 
 `SearchInput` owns its own debounce, so every list page in the app gets the same
 behaviour. Changing several filters at once goes through `setFilters({ ... })`,
-which is one navigation and one history entry rather than three.
+which is one navigation rather than three. Every filter write replaces the
+current history entry, so filters never add history: Back leaves the list
+rather than stepping through earlier searches.
 
 The page owns the error state, and only for a load that never succeeded:
 `isLoadingError`, not `isError`, so a failed refetch leaves the rows on screen
