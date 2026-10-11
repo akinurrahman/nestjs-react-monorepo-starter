@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Monorepo starter template: NestJS API and shared package now, React web app coming.
+Monorepo starter template: NestJS API, React web app and a shared package.
 Every rule here is decided. If something seems wrong, ask before working around it.
 
 ## Stack
@@ -22,7 +22,7 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
 ## Commands
 
 Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
-(or `@starter/shared`).
+(or `@starter/shared`, `@starter/web`).
 
 | Task | Command |
 |---|---|
@@ -90,6 +90,50 @@ fails outside Turbo, run `pnpm --filter @starter/shared build`.
 - ESM, `.js` on relative imports. Everything public goes through `src/index.ts`.
   Consumers import `@starter/shared`, never deep paths.
 - Schema tests live here as `*.spec.ts` next to the schema.
+
+## Web (apps/web)
+
+React 19, Vite 8, React Router 8 (data mode), TanStack Query 5 and Table 9, Tailwind 4,
+shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in the
+`feature-architecture` skill (`.claude/skills/`): load it before touching `src/app`,
+`src/features`, `src/systems` or `src/lib`.
+
+- Layers: `lib` (no React), `components/ui` (shadcn primitives), `systems` (shared React,
+  no domain knowledge), `features/<name>` (one domain), `app` (router, shell, providers).
+  Imports point down only: app → features → systems → components/ui → lib. `lib` and
+  `systems` never import a feature (not lint-enforced, keep it by hand).
+- Features import each other only through `@/features/<name>`. Oxlint blocks deep
+  paths. Inside a feature, relative imports.
+- Semantic tokens from `src/styles/theme.css` only. No raw colors (hex, rgb, oklch,
+  palette classes like `bg-red-500`). Tints are opacity on a token: `bg-success/15`.
+- Touch targets: 40px below `sm` (`size-10`, `h-10`), 32 to 36px from `sm` up.
+- All HTTP through `apiCall<T>` / `apiCallPaginated<T>`, called only from a feature's
+  `*.api.ts`. The `{ data }` envelope is unwrapped there and never leaves that file.
+- Every request failure is an `ApiError`. Show it with `getErrorMessage`. Thread React
+  Query's `signal` into every GET.
+- Server state lives in React Query, client state in zustand. Neither copies the other.
+  Mutations own invalidation and the success toast; the global MutationCache shows errors.
+- `ColumnDef` and `createColumnHelper` come from `@/systems/table` only.
+- List filters live in the URL: a module-level `defineUrlFilters` spec plus
+  `useUrlFilters`. Never parse `useSearchParams` by hand.
+- Enums are `createLookup`; schemas use `lookup.toZodEnum()`. Roles only from
+  `@starter/shared` (`ROLES`, `Role`).
+- Routes are `AppRouteObject` config objects. The `handle` (title, icon, roles, nav,
+  keywords) sits on the config object, never in a lazy module. Pages load through
+  `lazy: async () => ({ Component })`. Feature routes are listed once, in `pages` in
+  `src/app/router.ts`. A nav group must be in `NAV_GROUPS` (`src/app/config.ts`).
+- Dev-only routes live in `src/app/dev`, added behind `import.meta.env.DEV`.
+- Modals come from `components/ui` (Dialog, Sheet, AlertDialog), which report to the
+  modal registry. Never build one straight on `@base-ui/react`.
+- Toast and `confirm()` content renders outside the router: no `Link` or router hooks
+  in it. Navigate from the callback with `router.navigate` or a `navigate` the page holds.
+- Ctrl/Cmd+K (command palette) and Ctrl/Cmd+B (sidebar) are reserved.
+- Any new piece in `components/ui` or `systems` gets a section or specimen on the theme
+  preview page (`src/app/dev/theme-preview`) in the same change.
+- Tests: HTTP goes through msw (`src/test/msw-server.ts`). Anything that needs the
+  real route tree renders through `renderApp`.
+- Running both apps: `docker compose up -d`, then `pnpm dev`. The API exits on boot
+  without the database. Web alone: `pnpm --filter @starter/web dev`.
 
 ## Database
 
