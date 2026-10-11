@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, data } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
@@ -51,7 +51,9 @@ describe('route errors', () => {
   it('shows the 404 inside the layout for an unknown url', async () => {
     renderApp(pages, '/no/such/page');
 
-    expect(await screen.findByText('Not found')).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('main')).findByText('Not found'),
+    ).toBeInTheDocument();
     expect(shellLink()).toBeInTheDocument();
     expect(document.title).toBe(`Not found | ${APP_NAME}`);
   });

@@ -1,9 +1,12 @@
 import type { MouseEvent } from 'react';
 import { Outlet } from 'react-router';
+import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import type { AppRouteObject } from '@/systems/router';
 import { ThemeToggle } from '@/systems/theme';
 import { AppSidebar } from './app-sidebar';
+import { Breadcrumbs } from './breadcrumbs';
+import { UserMenu } from './user-menu';
 
 const MAIN_ID = 'main-content';
 
@@ -38,8 +41,11 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-background px-(--page-padding)">
           <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-4 self-center!" />
+          <Breadcrumbs routes={navRoutes} />
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
+            <UserMenu />
           </div>
         </header>
         <main
