@@ -1,10 +1,9 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FileText, House, Lock } from 'lucide-react';
-import { useSidebarStore } from '@/components/ui/sidebar';
+import { useSidebarStore } from '@/components/ui/sidebar-store';
 import type { AppRouteObject } from '@/systems/router';
 import { setStubRole } from '@/systems/session';
-import { useSessionStore } from '@/systems/session/session-store';
 import { setViewportWidth } from '@/test/match-media';
 import { renderApp } from '@/test/render-app';
 
@@ -49,11 +48,6 @@ const trigger = () =>
   document.querySelector<HTMLButtonElement>('[data-sidebar="trigger"]')!;
 
 describe('app shell', () => {
-  beforeEach(() => {
-    useSidebarStore.setState(useSidebarStore.getInitialState(), true);
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-  });
-
   it('lists nav entries and marks the active one', async () => {
     renderApp(pages, '/reports');
     await screen.findByText('reports page');

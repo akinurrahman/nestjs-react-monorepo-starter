@@ -26,10 +26,6 @@ const pages: AppRouteObject[] = [
 const menuButton = () => screen.getByRole('button', { name: 'User menu' });
 
 describe('user menu', () => {
-  beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-  });
-
   it('shows the user name and initials', async () => {
     renderApp(pages, '/');
     await screen.findByText('home page');

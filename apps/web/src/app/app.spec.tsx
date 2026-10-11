@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { useConfirm } from '@/systems/confirmation';
-import { useConfirmationStore } from '@/systems/confirmation/confirmation-store';
 import { useThemeStore } from '@/systems/theme/theme-store';
 import { renderApp } from '@/test/render-app';
 
@@ -24,11 +23,6 @@ function ProvidersPage() {
 }
 
 describe('App providers', () => {
-  beforeEach(() => {
-    useConfirmationStore.setState(useConfirmationStore.getInitialState(), true);
-    useThemeStore.setState(useThemeStore.getInitialState(), true);
-  });
-
   it('renders a toast from a page', async () => {
     renderApp([{ index: true, Component: ProvidersPage }]);
 

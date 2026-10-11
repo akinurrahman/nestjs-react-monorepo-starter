@@ -9,13 +9,8 @@ import userEvent from '@testing-library/user-event';
 import { BarChart, House, Lock, Users } from 'lucide-react';
 import type { AppRouteObject } from '@/systems/router';
 import { setStubRole } from '@/systems/session';
-import { useSessionStore } from '@/systems/session/session-store';
 import { useThemeStore } from '@/systems/theme/theme-store';
-import { useSidebarStore } from '@/components/ui/sidebar';
-import {
-  confirm,
-  useConfirmationStore,
-} from '@/systems/confirmation/confirmation-store';
+import { confirm } from '@/systems/confirmation/confirmation-store';
 import { setViewportWidth } from '@/test/match-media';
 import { renderApp } from '@/test/render-app';
 import { usePaletteStore } from './palette-store';
@@ -78,14 +73,6 @@ async function renderShell() {
 }
 
 describe('command palette', () => {
-  beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-    useThemeStore.setState(useThemeStore.getInitialState(), true);
-    usePaletteStore.setState(usePaletteStore.getInitialState(), true);
-    useSidebarStore.setState(useSidebarStore.getInitialState(), true);
-    useConfirmationStore.setState(useConfirmationStore.getInitialState(), true);
-  });
-
   describe('opening', () => {
     it.each([
       ['Ctrl+K', { ctrlKey: true }],

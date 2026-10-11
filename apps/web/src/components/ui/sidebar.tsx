@@ -24,10 +24,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { PanelLeftIcon } from 'lucide-react';
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { useSidebarStore } from '@/components/ui/sidebar-store';
 
-const SIDEBAR_STORAGE_KEY = 'ui-sidebar';
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
@@ -42,14 +40,6 @@ type SidebarContextProps = {
   isMobile: boolean;
   toggleSidebar: () => void;
 };
-
-// Replaces the stock cookie. Only the desktop expanded state persists; the
-// mobile sheet always starts closed.
-type SidebarState = { open: boolean };
-
-const useSidebarStore = create<SidebarState>()(
-  persist((): SidebarState => ({ open: true }), { name: SIDEBAR_STORAGE_KEY }),
-);
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
@@ -733,5 +723,4 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
-  useSidebarStore,
 };

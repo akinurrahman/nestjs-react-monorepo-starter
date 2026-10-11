@@ -2,12 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import indexHtml from '../../../index.html?raw';
 import { setPrefersDark } from '@/test/match-media';
-import {
-  THEME_STORAGE_KEY,
-  resolveTheme,
-  setTheme,
-  useThemeStore,
-} from './theme-store';
+import { THEME_STORAGE_KEY, resolveTheme, setTheme } from './theme-store';
 import { ThemeSync } from './theme-sync';
 import { ThemeToggle } from './theme-toggle';
 
@@ -19,10 +14,6 @@ function storedTheme(): unknown {
 }
 
 describe('theme', () => {
-  beforeEach(() => {
-    useThemeStore.setState(useThemeStore.getInitialState(), true);
-  });
-
   it('sets the class and persists the choice from the toggle', async () => {
     const user = userEvent.setup();
     render(

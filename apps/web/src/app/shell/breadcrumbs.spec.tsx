@@ -2,7 +2,6 @@ import { screen, within } from '@testing-library/react';
 import { BarChart, FileText, Lock, Settings } from 'lucide-react';
 import { Outlet } from 'react-router';
 import type { AppRouteObject } from '@/systems/router';
-import { useSessionStore } from '@/systems/session/session-store';
 import { renderApp } from '@/test/render-app';
 
 const pages: AppRouteObject[] = [
@@ -51,10 +50,6 @@ const crumbs = () =>
   within(screen.getByRole('navigation', { name: 'Breadcrumb' }));
 
 describe('breadcrumbs', () => {
-  beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-  });
-
   it('lists the titles of the current matches', async () => {
     renderApp(pages, '/admin/users');
     await screen.findByText('users page');

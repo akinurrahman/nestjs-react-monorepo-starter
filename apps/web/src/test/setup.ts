@@ -1,13 +1,30 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
+import type { StoreApi } from 'zustand';
+import { usePaletteStore } from '@/app/shell/palette-store';
+import { useSidebarStore } from '@/components/ui/sidebar-store';
+import { useConfirmationStore } from '@/systems/confirmation/confirmation-store';
+import { useSessionStore } from '@/systems/session/session-store';
+import { useThemeStore } from '@/systems/theme/theme-store';
 import { installMatchMedia } from './match-media';
 import { server } from './msw-server';
 
 const unhandledRequests: string[] = [];
 
-// A fresh viewport and color scheme, and no persisted stores, per test.
+function resetStore<T>(store: StoreApi<T>) {
+  store.setState(store.getInitialState(), true);
+}
+
+// A fresh viewport and color scheme, and fresh stores, per test. The stores
+// reset first: the persisted ones write their defaults back to storage,
+// which the clear then empties.
 beforeEach(() => {
   installMatchMedia();
+  resetStore(useSessionStore);
+  resetStore(useThemeStore);
+  resetStore(useSidebarStore);
+  resetStore(usePaletteStore);
+  resetStore(useConfirmationStore);
   localStorage.clear();
   document.documentElement.classList.remove('dark');
 });

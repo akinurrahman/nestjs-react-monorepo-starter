@@ -2,10 +2,6 @@ import { act, renderHook } from '@testing-library/react';
 import { setStubRole, useSession, useSessionStore } from './session-store';
 
 describe('session stub', () => {
-  beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-  });
-
   it('starts with an ADMIN stub user in dev', () => {
     const { result } = renderHook(() => useSession());
 

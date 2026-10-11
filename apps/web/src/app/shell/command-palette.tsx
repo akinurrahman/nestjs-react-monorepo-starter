@@ -13,11 +13,8 @@ import {
   type Searchable,
   type SearchGroup,
 } from './palette-search';
-import {
-  setPaletteOpen,
-  useOpenPalette,
-  usePaletteStore,
-} from './palette-store';
+import { setPaletteOpen, usePaletteStore } from './palette-store';
+import { useOpenPalette } from './use-open-palette';
 
 type PaletteItem = Searchable & {
   id: string;

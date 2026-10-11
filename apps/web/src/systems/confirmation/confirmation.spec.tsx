@@ -55,10 +55,6 @@ async function open(
 }
 
 describe('confirmation', () => {
-  beforeEach(() => {
-    useConfirmationStore.setState(useConfirmationStore.getInitialState(), true);
-  });
-
   it('opens with the title and description', async () => {
     const { user } = renderConfirm();
 

@@ -36,10 +36,6 @@ async function expectDenied() {
 }
 
 describe('route access', () => {
-  beforeEach(() => {
-    useSessionStore.setState(useSessionStore.getInitialState(), true);
-  });
-
   it('renders a page the role is allowed on', async () => {
     setStubRole('USER');
     renderApp(pages, '/members');
