@@ -348,6 +348,31 @@ describe('SelectField optionsFn', () => {
   });
 });
 
+describe('TagsField remove button', () => {
+  it('reaches the touch size through its hit area', async () => {
+    const { user } = renderAlone(<TagsField name="value" label="Tags" />);
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Tags' }),
+      'one{Enter}',
+    );
+
+    const remove = screen.getByRole('button', { name: 'Remove one' });
+    // 20px plus 10px above and below, and 16px left plus 4px right, is
+    // 40px. From sm, 6px and 8px plus 4px make 32px.
+    expect(remove).toHaveClass(
+      'relative',
+      'size-5',
+      'after:-inset-y-2.5',
+      'after:-left-4',
+      'after:-right-1',
+      'sm:after:-inset-y-1.5',
+      'sm:after:-left-2',
+    );
+    expect(remove.parentElement).toHaveClass('overflow-visible');
+  });
+});
+
 describe('TagsField maxItems', () => {
   it('blocks typing when full but still removes with Backspace and the button', async () => {
     const { user, onSubmit } = renderAlone(

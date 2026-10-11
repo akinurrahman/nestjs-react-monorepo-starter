@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { cn } from '@/lib/utils';
 
-import { Button } from '@/components/ui/button';
 import {
   InputGroup,
   InputGroupAddon,
@@ -203,7 +202,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 min-h-10 text-sm sm:min-h-8 outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -340,9 +339,11 @@ function ComboboxChip({
     >
       {children}
       {showRemove && (
+        // A 24px mark in a 21px chip. The after: box grows the hit area to
+        // 40px below sm and 32px from sm up, mostly over the chip's own label
+        // so it reaches the next chip as little as possible.
         <ComboboxPrimitive.ChipRemove
-          render={<Button variant="ghost" size="icon-xs" />}
-          className="-ml-1 opacity-50 hover:opacity-100"
+          className="relative -ml-1 flex size-6 shrink-0 items-center justify-center rounded-[min(var(--radius-md),10px)] text-foreground opacity-50 transition-colors outline-none after:absolute after:-inset-y-2 after:-right-1 after:-left-3 hover:bg-muted hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50 sm:after:-inset-y-1 sm:after:-right-0.5 sm:after:-left-1.5 [&_svg]:size-3"
           data-slot="combobox-chip-remove"
         >
           <XIcon className="pointer-events-none" />

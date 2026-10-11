@@ -210,9 +210,15 @@ Tailwind in `index.css`: `bg-background`, `text-muted-foreground`,
 opacity on a token (`bg-success/15 text-success`), never a new token. Dark mode
 is the `.dark` class on `<html>`, and the tokens switch with it.
 
-Touch targets are 40px below `sm` and 32 to 36px from `sm` up:
-`size-10 sm:size-8`, `h-10 sm:h-9`. Look at `systems/ui/row-actions.tsx` and
-`systems/filters` before inventing a size.
+Touch targets are 40px below `sm` and 32 to 36px from `sm` up. Form controls
+and the default `Button` are `h-10 sm:h-9`, so a button beside an input lines
+up: `Input`, select and combobox triggers, `DatePicker`, the filter controls,
+and `Button` sizes `default` and `lg`. Compact controls are 32px from `sm`:
+`Button` sizes `xs` and `sm`, the icon sizes (`size-10 sm:size-8`), and menu,
+select and combobox items. All of them carry this already, so pick a `size`
+and add no height of your own. A control that has to look smaller than 32px, like a
+chip's remove mark, keeps its look and grows its hit area with an `after:`
+box (`components/ui/combobox.tsx`, `systems/form/fields/tags-field.tsx`).
 
 ### Forms
 

@@ -103,9 +103,11 @@ export function TagsField({
               <ul className="flex flex-wrap gap-1.5">
                 {items.map((entry) => (
                   <li key={entry}>
+                    {/* overflow-visible lets the remove button's hit area
+                        reach past the pill. */}
                     <Badge
                       variant="secondary"
-                      className="h-6 gap-1 pr-0.5 pl-2.5"
+                      className="h-6 gap-1 overflow-visible pr-0.5 pl-2.5"
                     >
                       {entry}
                       <button
@@ -117,7 +119,10 @@ export function TagsField({
                             items.filter((item) => item !== entry),
                           )
                         }
-                        className="flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:bg-destructive/10 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50"
+                        // A 20px mark in a 24px pill. The after: box grows
+                        // the hit area to 40px below sm and 32px from sm up,
+                        // mostly over the tag's own label.
+                        className="relative flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none after:absolute after:-inset-y-2.5 after:-right-1 after:-left-4 hover:bg-destructive/10 hover:text-destructive focus-visible:ring-3 focus-visible:ring-ring/50 sm:after:-inset-y-1.5 sm:after:-left-2"
                       >
                         <X className="size-3" />
                       </button>
