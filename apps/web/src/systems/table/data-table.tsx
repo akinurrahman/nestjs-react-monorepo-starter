@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useTable, type RowData } from '@tanstack/react-table';
+import type { PaginationMeta } from '@starter/shared';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -22,6 +23,7 @@ import {
   type ColumnDef,
   type DataTableColumnMeta,
 } from './columns';
+import { DataTablePagination } from './data-table-pagination';
 
 type DataTableProps<TData extends RowData> = {
   columns: ColumnDef<TData>[];
@@ -34,6 +36,11 @@ type DataTableProps<TData extends RowData> = {
   // previous page, the old rows stay on screen dimmed until the new ones land.
   isFetching?: boolean;
   emptyState?: ReactNode;
+  pagination?: PaginationMeta;
+  onPageChange?: (page: number) => void;
+  // Wire to the filter spec's limit. setFilter('limit') resets the page to 1.
+  onLimitChange?: (limit: number) => void;
+  limitOptions?: readonly number[];
   // Mouse only. Give the record's own column a RowLink for the keyboard and
   // screen reader path.
   onRowClick?: (row: TData) => void;
@@ -136,6 +143,10 @@ export function DataTable<TData extends RowData>({
   isLoading = false,
   isFetching = false,
   emptyState,
+  pagination,
+  onPageChange,
+  onLimitChange,
+  limitOptions,
   onRowClick,
   getRowId = defaultRowId,
   skeletonRows = DEFAULT_SKELETON_ROWS,
@@ -186,6 +197,20 @@ export function DataTable<TData extends RowData>({
     container.addEventListener('scroll', update, { passive: true });
     return () => container.removeEventListener('scroll', update);
   }, []);
+
+  // A delete that empties the last page, or a hand-edited ?page=, leaves the
+  // page past the end. The ref keeps a re-render with the same stale meta from
+  // asking twice before the new page lands.
+  const clampedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pagination || !onPageChange) return;
+    const { page, totalPages } = pagination;
+    if (totalPages <= 0 || page <= totalPages) return;
+    const key = `${page}/${totalPages}`;
+    if (clampedRef.current === key) return;
+    clampedRef.current = key;
+    onPageChange(totalPages);
+  }, [pagination, onPageChange]);
 
   function columnClasses(columnId: string, meta?: DataTableColumnMeta) {
     const pin = pins.get(columnId);
@@ -316,6 +341,15 @@ export function DataTable<TData extends RowData>({
           ) : null}
         </TableBody>
       </Table>
+
+      {pagination && onPageChange ? (
+        <DataTablePagination
+          pagination={pagination}
+          onPageChange={onPageChange}
+          onLimitChange={onLimitChange}
+          limitOptions={limitOptions}
+        />
+      ) : null}
     </div>
   );
 }
