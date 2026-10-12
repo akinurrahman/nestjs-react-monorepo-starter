@@ -54,7 +54,7 @@ cd starter-react-nest
 pnpm install
 
 # 2. Create your local env file, then set JWT_SECRET in it (the file shows
-#    how to generate one)
+#    how to generate one) and the SEED_ADMIN_* values for your first admin
 cp apps/api/.env.example apps/api/.env
 
 # 3. Start Postgres
@@ -63,7 +63,10 @@ docker compose up -d
 # 4. Create the database tables
 pnpm --filter @starter/api db:deploy
 
-# 5. Start everything
+# 5. Create the first admin user
+pnpm --filter @starter/api db:seed
+
+# 6. Start everything
 pnpm dev
 ```
 
@@ -101,8 +104,11 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 |---|---|
 | `pnpm --filter @starter/api db:migrate` | Create and apply a migration after a schema change |
 | `pnpm --filter @starter/api db:deploy` | Apply existing migrations, without creating new ones |
+| `pnpm --filter @starter/api db:seed` | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Does nothing if that email already exists |
 | `pnpm --filter @starter/api db:studio` | Browse and edit data in your browser |
 | `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it |
+
+The seed builds the API and runs `dist/seed.js` through `nest start --entryFile seed`, configured as the seed command in `apps/api/prisma7.config.ts`.
 
 E2E tests never touch your dev database. They use a second database, `starter_test`, in the same Postgres container, set in `apps/api/.env.test`. `pnpm test:e2e` creates and migrates it on every run and empties the app tables before each test file. A name that does not end in `_test` stops the run before it connects.
 

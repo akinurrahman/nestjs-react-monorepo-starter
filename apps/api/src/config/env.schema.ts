@@ -70,6 +70,10 @@ export const envSchema = z
       .default('refresh_token'),
     // Unset makes the cookie host-only, which is what most setups want.
     AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
+    // Read by the seed script only.
+    SEED_ADMIN_EMAIL: z.string().min(1).optional(),
+    SEED_ADMIN_PASSWORD: z.string().min(1).optional(),
+    SEED_ADMIN_NAME: z.string().min(1).optional(),
   })
   .refine(
     (env) => env.NODE_ENV !== 'production' || env.CORS_ORIGINS !== undefined,
