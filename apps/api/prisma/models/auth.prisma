@@ -1,0 +1,22 @@
+// One row per refresh token family. The cookie holds "<id>.<secret>"; only
+// the SHA-256 of the secret is stored.
+model Session {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  tokenHash         String    @map("token_hash")
+  // The secret replaced by the last rotation, accepted for a short grace
+  // window so concurrent refreshes from one browser do not look like reuse.
+  previousTokenHash String?   @map("previous_token_hash")
+  rotatedAt         DateTime? @map("rotated_at") @db.Timestamptz(3)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt        DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  ip                String?
+  userAgent         String?   @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}

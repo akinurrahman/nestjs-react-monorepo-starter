@@ -144,6 +144,7 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
 
 - Prisma names are camelCase, mapped to snake_case with `@map` / `@@map`.
 - IDs: `uuid(7)` stored as `@db.Uuid`.
+- DateTime fields use `@db.Timestamptz(3)`.
 - Never edit a migration that has run outside your machine. Make a new one.
 
 ## Tests

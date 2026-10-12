@@ -6,13 +6,16 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(uuid(7)) @db.Uuid
-  email        String   @unique
+  id           String    @id @default(uuid(7)) @db.Uuid
+  // Stored trimmed and lower-cased; the request schemas normalize it.
+  email        String    @unique
   name         String
-  passwordHash String   @map("password_hash")
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  passwordHash String    @map("password_hash")
+  role         Role      @default(USER)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions     Session[]
 
   @@map("users")
 }
