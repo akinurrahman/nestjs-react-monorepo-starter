@@ -1,8 +1,10 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import { Box, FileText, Folder } from 'lucide-react';
+import { http, HttpResponse } from 'msw';
 import { matchRoutes } from 'react-router';
 import { homeRoutes } from '@/features/home';
 import { readRouteHandle, type AppRouteObject } from '@/systems/router';
+import { server } from '@/test/msw-server';
 import { renderApp } from '@/test/render-app';
 import { APP_NAME } from './config';
 
@@ -72,6 +74,13 @@ describe('document title', () => {
 
 describe('lazy routes', () => {
   it('renders the home feature at /', async () => {
+    server.use(
+      http.get('/api/health/status', () =>
+        HttpResponse.json({
+          data: { status: 'ok', checks: { database: 'ok' } },
+        }),
+      ),
+    );
     renderApp(homeRoutes, '/');
 
     expect(
