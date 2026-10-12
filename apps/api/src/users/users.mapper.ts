@@ -11,5 +11,6 @@ export function toPublicUser(user: User): PublicUser {
     role: user.role,
     isActive: user.isActive,
     createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),  };
+    updatedAt: user.updatedAt.toISOString(),
+  };
 }
