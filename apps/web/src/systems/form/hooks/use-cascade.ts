@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { isEmptyParent, normalizeDependsOn } from '../lib/cascade';
+import { isEmptyValue } from '@/lib/is-empty-value';
+import { normalizeDependsOn } from '../lib/cascade';
 
 type Options = {
   name: string;
@@ -69,6 +70,6 @@ export function useCascade({
   return {
     parentValues,
     dependsOnList,
-    gated: dependsOnList.some((_, index) => isEmptyParent(watched[index])),
+    gated: dependsOnList.some((_, index) => isEmptyValue(watched[index])),
   };
 }

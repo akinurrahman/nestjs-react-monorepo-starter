@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { MAX_PAGE_LIMIT } from '@starter/shared';
+import { isEmptyValue } from '@/lib/is-empty-value';
 
 // null as well as undefined, because a cleared Base UI select hands back null
 // and String(null) would put a literal "null" in the URL. Both drop the param.
@@ -122,18 +123,13 @@ export function pagingSpec(
   };
 }
 
-export function isEmptyFilterValue(value: UrlFilterValue): boolean {
-  if (Array.isArray(value)) return value.length === 0;
-  return value === undefined || value === null || value === '';
-}
-
 // List defaults compare by membership, since a list default is a fresh array
 // every mount and param order means nothing.
 export function differsFromDefault(
   value: UrlFilterValue,
   fallback: UrlFilterValue,
 ): boolean {
-  if (isEmptyFilterValue(value)) return false;
+  if (isEmptyValue(value)) return false;
 
   if (Array.isArray(value)) {
     if (!Array.isArray(fallback)) return true;

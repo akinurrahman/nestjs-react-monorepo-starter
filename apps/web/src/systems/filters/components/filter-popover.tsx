@@ -6,10 +6,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { isEmptyValue } from '@/lib/is-empty-value';
 import { cn } from '@/lib/utils';
 import {
   differsFromDefault,
-  isEmptyFilterValue,
   useUrlFilters,
   type UrlFilterSpec,
   type UrlFilterValue,
@@ -138,7 +138,7 @@ export function FilterPopover<T extends object, C>({
                 ? draft[parent]
                 : current[parent]
               : undefined;
-            const gated = Boolean(parent) && isEmptyFilterValue(parentValue);
+            const gated = Boolean(parent) && isEmptyValue(parentValue);
             if (gated && !field.alwaysVisible) return null;
 
             const id = `${baseId}-${index}`;
