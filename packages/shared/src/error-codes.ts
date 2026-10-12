@@ -5,6 +5,12 @@ export const ERROR_CODES = {
   BAD_REQUEST: 'BAD_REQUEST',
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   UNAUTHORIZED: 'UNAUTHORIZED',
+  // Login failed. One code for a wrong email, a wrong password and an
+  // inactive account, so the response does not reveal which.
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  // The refresh cookie is missing, malformed, revoked, expired or reused, or
+  // its user is inactive. The client has to log in again.
+  INVALID_SESSION: 'INVALID_SESSION',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
