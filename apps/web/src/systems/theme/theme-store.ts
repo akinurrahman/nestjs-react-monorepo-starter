@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { themeLookup, type ResolvedTheme, type Theme } from './theme.lookup';
+// Types only: the lookup carries lucide icons, and a store that loads them
+// would put every icon behind anything that reads the theme, test setup
+// included. The values below are checked against the lookup's union.
+import type { ResolvedTheme, Theme } from './theme.lookup';
 
 // index.html reads this key before React loads, so a rename or a change to
 // the stored shape ({ state: { theme } }) has to happen there too.
@@ -12,7 +15,7 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 type ThemeState = { theme: Theme };
 
 export const useThemeStore = create<ThemeState>()(
-  persist((): ThemeState => ({ theme: themeLookup.keys.system }), {
+  persist((): ThemeState => ({ theme: 'system' }), {
     name: THEME_STORAGE_KEY,
   }),
 );
@@ -25,8 +28,8 @@ export function resolveTheme(
   theme: Theme,
   systemPrefersDark: boolean,
 ): ResolvedTheme {
-  if (theme !== themeLookup.keys.system) return theme;
-  return systemPrefersDark ? themeLookup.keys.dark : themeLookup.keys.light;
+  if (theme !== 'system') return theme;
+  return systemPrefersDark ? 'dark' : 'light';
 }
 
 function subscribeToSystem(onChange: () => void) {
