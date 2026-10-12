@@ -96,7 +96,7 @@ fails outside Turbo, run `pnpm --filter @starter/shared build`.
 
 React 19, Vite 8, React Router 8 (data mode), TanStack Query 5 and Table 9, Tailwind 4,
 shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in the
-`feature-architecture` skill (`.claude/skills/`): load it before touching `src/app`,
+`frontend-architecture` skill (`.claude/skills/`): load it before touching `src/app`,
 `src/features`, `src/systems` or `src/lib`.
 
 - Layers: `lib` (no React), `components/ui` (shadcn primitives), `systems` (shared React,

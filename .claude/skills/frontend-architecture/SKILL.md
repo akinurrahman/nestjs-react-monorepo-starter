@@ -1,9 +1,9 @@
 ---
-name: feature-architecture
+name: frontend-architecture
 description: Feature-based architecture spec for apps/web in this repo (React 19, Vite, React Router 8 data mode) - folder layout, one file set per entity, definitions/api/components/pages layering, createLookup for enums, apiCall and the response envelope, React Query keys and invalidation, URL filter specs, async select sources, systems/table, route handles and NAV_GROUPS, modals, semantic tokens, and the rules for when an abstraction earns a file. Use this skill whenever creating a new feature under apps/web/src/features/, adding an entity, page, query, mutation, form, table, or filter to an existing feature, wiring a domain into the router, changing src/systems, src/lib or src/app, or refactoring anything that touches data fetching or folder structure. Consult it even when the request sounds routine ("add a status filter", "make an edit page", "hook this up to the API") - the conventions here are project-specific and cannot be inferred from surrounding files.
 ---
 
-# Feature architecture
+# Frontend architecture
 
 The architecture of `apps/web`: a React 19 SPA on Vite, React Router 8 in data
 mode, TanStack Query 5 and Table 9, Tailwind 4 with shadcn on Base UI,
