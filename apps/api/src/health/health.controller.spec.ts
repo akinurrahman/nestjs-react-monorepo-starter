@@ -79,4 +79,30 @@ describe('Health endpoints', () => {
     expect(res.text).not.toMatch(/ECONNREFUSED|10\.0\.0\.5|postgres|stack/i);
     expect(res.headers['x-request-id']).toMatch(UUID);
   });
+
+  it('GET /api/health/status is ok when the database answers', async () => {
+    ping.mockResolvedValue();
+
+    await request(app.getHttpServer())
+      .get('/api/health/status')
+      .expect(200)
+      .expect({ data: { status: 'ok', checks: { database: 'ok' } } });
+
+    expect(ping).toHaveBeenCalledTimes(1);
+  });
+
+  it('GET /api/health/status is 503 SERVICE_UNAVAILABLE when the database is down', async () => {
+    ping.mockRejectedValue(new Error(CAUSE));
+
+    const res = await request(app.getHttpServer())
+      .get('/api/health/status')
+      .expect(503)
+      .expect({
+        statusCode: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Service unavailable',
+      });
+
+    expect(res.text).not.toMatch(/ECONNREFUSED|10\.0\.0\.5|postgres|stack/i);
+  });
 });
