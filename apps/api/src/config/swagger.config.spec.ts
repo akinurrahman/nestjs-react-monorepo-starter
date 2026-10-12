@@ -34,7 +34,7 @@ class ItemDto extends createZodDto(
 ) {}
 
 class CreateItemDto extends createZodDto(
-  z.object({
+  z.strictObject({
     name: z.string().min(1),
     tags: z.array(z.string()).optional(),
   }),

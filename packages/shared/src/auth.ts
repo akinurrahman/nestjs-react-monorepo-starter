@@ -26,7 +26,7 @@ export const newPasswordSchema = z
 // changing it must not lock out existing users.
 const currentPasswordSchema = z.string().min(1).max(PASSWORD_MAX_LENGTH);
 
-export const loginSchema = z.object({
+export const loginSchema = z.strictObject({
   email: emailSchema,
   password: currentPasswordSchema,
 });

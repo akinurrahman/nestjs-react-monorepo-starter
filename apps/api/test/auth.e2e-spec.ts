@@ -131,6 +131,27 @@ describe('POST /api/auth/login', () => {
       });
   });
 
+  it('answers 400 for an unknown field, even with valid credentials', async () => {
+    const user = await createUser(prisma);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: user.email, password: PASSWORD, remember: true })
+      .expect(400)
+      .expect({
+        statusCode: 400,
+        code: 'VALIDATION_FAILED',
+        message: 'Validation failed',
+        errors: [
+          {
+            path: '',
+            message: 'Unrecognized key: "remember"',
+            code: 'unrecognized_keys',
+          },
+        ],
+      });
+  });
+
   it('limits attempts per ip and email, leaving other emails from that ip alone', async () => {
     const target = await createUser(prisma);
     const colleague = await createUser(prisma);

@@ -40,6 +40,10 @@ describe('loginSchema', () => {
       'a password over the cap',
       { email: 'a@example.com', password: 'x'.repeat(257) },
     ],
+    [
+      'an unknown field',
+      { email: 'a@example.com', password: 'x', remember: true },
+    ],
   ])('rejects %s', (_, value) => {
     expect(loginSchema.safeParse(value).success).toBe(false);
   });

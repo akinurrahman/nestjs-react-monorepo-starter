@@ -9,7 +9,7 @@ import { Public } from './../src/auth/auth.decorators.js';
 import { configureApp } from './../src/config/app.config.js';
 
 class CreateThingDto extends createZodDto(
-  z.object({
+  z.strictObject({
     name: z.string().min(2),
     email: z.email(),
   }),
@@ -69,12 +69,23 @@ describe('Global validation (e2e)', () => {
       });
   });
 
-  it('strips unknown fields from the body', () => {
+  it('rejects unknown fields in the body', () => {
     return request(app.getHttpServer())
       .post('/api/validation-test')
       .send({ name: 'Ada', email: 'ada@example.com', isAdmin: true })
-      .expect(201)
-      .expect({ data: { name: 'Ada', email: 'ada@example.com' } });
+      .expect(400)
+      .expect({
+        statusCode: 400,
+        code: 'VALIDATION_FAILED',
+        message: 'Validation failed',
+        errors: [
+          {
+            path: '',
+            message: 'Unrecognized key: "isAdmin"',
+            code: 'unrecognized_keys',
+          },
+        ],
+      });
   });
 
   afterEach(async () => {
