@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query';
 import type { AsyncOptionsSource, Option } from '../types';
 
-export const ASYNC_PAGE_SIZE = 20;
+const ASYNC_PAGE_SIZE = 20;
 const DEFAULT_DEBOUNCE_MS = 300;
 const NO_PARENTS: Record<string, unknown> = {};
 

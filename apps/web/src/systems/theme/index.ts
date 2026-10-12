@@ -1,10 +1,4 @@
-export {
-  THEME_STORAGE_KEY,
-  resolveTheme,
-  setTheme,
-  useResolvedTheme,
-  useTheme,
-} from './theme-store';
+export { setTheme, useResolvedTheme, useTheme } from './theme-store';
 export { ThemeSync } from './theme-sync';
 export { ThemeToggle } from './theme-toggle';
 export { themeLookup } from './theme.lookup';
