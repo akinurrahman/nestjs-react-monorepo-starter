@@ -1,4 +1,18 @@
-import { assertTestDatabaseUrl, truncateAppTables } from './test-db.js';
+import {
+  assertTestDatabaseUrl,
+  readTestEnv,
+  truncateAppTables,
+} from './test-db.js';
+
+describe('readTestEnv', () => {
+  // AppModule ignores apps/api/.env under test, so .env.test must hold every
+  // key the env schema requires.
+  it('reads every key of .env.test, not just DATABASE_URL', () => {
+    expect(Object.keys(readTestEnv())).toEqual(
+      expect.arrayContaining(['DATABASE_URL', 'JWT_SECRET']),
+    );
+  });
+});
 
 const url = (name: string) =>
   `postgresql://postgres:postgres@localhost:5432/${name}`;

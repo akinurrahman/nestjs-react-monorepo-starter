@@ -132,7 +132,7 @@ starter-react-nest/
 - **One schema file per domain.** `user.prisma`, `leave.prisma`, `payroll.prisma`, each holding its related models.
 - **Migrations are permanent.** Always committed, never edited once they've run outside your machine. Need a change? Make a new migration.
 - **Config is validated.** The API refuses to start if an env variable is missing or wrong, and tells you exactly which one.
-- **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds nothing but the local Docker credentials for the throwaway test database.
+- **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds nothing but the local Docker credentials for the throwaway test database and a fake JWT secret.
 
 ## Roadmap
 

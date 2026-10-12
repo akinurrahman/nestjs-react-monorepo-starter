@@ -22,6 +22,9 @@ import { HealthModule } from './health/health.module.js';
       isGlobal: true,
       cache: true,
       validate: validateEnv,
+      // Tests take every value from the environment (apps/api/.env.test,
+      // loaded by the e2e setup), never from a developer's .env.
+      ignoreEnvFile: process.env['NODE_ENV'] === 'test',
     }),
     LoggerModule.forRootAsync({
       providers: [

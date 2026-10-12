@@ -1,14 +1,18 @@
 import type { TestProject } from 'vitest/node';
-import { prepareTestDatabase, readTestDatabaseUrl } from './test-db.js';
+import {
+  prepareTestDatabase,
+  readTestDatabaseUrl,
+  readTestEnv,
+} from './test-db.js';
 
 declare module 'vitest' {
   export interface ProvidedContext {
-    databaseUrl: string;
+    testEnv: Record<string, string>;
   }
 }
 
 export default async function setup(project: TestProject) {
-  const url = readTestDatabaseUrl();
-  await prepareTestDatabase(url);
-  project.provide('databaseUrl', url);
+  const env = readTestEnv();
+  await prepareTestDatabase(readTestDatabaseUrl(env));
+  project.provide('testEnv', env);
 }
