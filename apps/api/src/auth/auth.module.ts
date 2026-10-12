@@ -4,16 +4,15 @@ import { AccessTokenService } from './access-token.service.js';
 import { AuthCookieService } from './auth-cookie.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { PasswordService } from './password.service.js';
+import { PasswordModule } from './password.module.js';
 import { SessionsRepository } from './sessions.repository.js';
 
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, PasswordModule],
   controllers: [AuthController],
   providers: [
     AuthService,
     SessionsRepository,
-    PasswordService,
     AccessTokenService,
     AuthCookieService,
   ],

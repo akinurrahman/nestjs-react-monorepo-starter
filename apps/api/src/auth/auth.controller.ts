@@ -15,9 +15,10 @@ import type { AuthResponse, PublicUser } from '@starter/shared';
 import type { Request, Response } from 'express';
 import { ApiDataResponse, ApiErrorResponses } from '../common/swagger/index.js';
 import { LOGIN_RATE_LIMIT, loginTracker } from '../config/throttler.config.js';
+import { PublicUserDto } from '../users/users.dto.js';
 import { AuthCookieService } from './auth-cookie.service.js';
 import { CurrentUser, Public } from './auth.decorators.js';
-import { AuthResponseDto, LoginDto, PublicUserDto } from './auth.dto.js';
+import { AuthResponseDto, ChangePasswordDto, LoginDto } from './auth.dto.js';
 import { AuthService, type AuthResult } from './auth.service.js';
 import type { AuthUser, ClientInfo } from './auth.types.js';
 
@@ -99,6 +100,20 @@ export class AuthController {
   @ApiErrorResponses(401, 429)
   me(@CurrentUser() user: AuthUser): Promise<PublicUser> {
     return this.auth.me(user.id);
+  }
+
+  @Post('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({
+    description:
+      'Password changed. Revokes every other session of the user; this one stays.',
+  })
+  @ApiErrorResponses(400, 401, 403, 429)
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() body: ChangePasswordDto,
+  ): Promise<void> {
+    return this.auth.changePassword(user, body);
   }
 
   private respond(res: Response, result: AuthResult): AuthResponse {

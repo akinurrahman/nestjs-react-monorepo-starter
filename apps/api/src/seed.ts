@@ -1,7 +1,12 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { loginSchema } from '@starter/shared';
+import {
+  createUserSchema,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '@starter/shared';
+import { PasswordModule } from './auth/password.module.js';
 import { PasswordService } from './auth/password.service.js';
 import { validateEnv, type Env } from './config/env.schema.js';
 import { PrismaModule } from './database/prisma.module.js';
@@ -20,9 +25,9 @@ import { UsersRepository } from './users/users.repository.js';
       validate: validateEnv,
     }),
     PrismaModule,
+    PasswordModule,
     UsersModule,
   ],
-  providers: [PasswordService],
 })
 class SeedModule {}
 
@@ -35,14 +40,17 @@ async function seed(): Promise<void> {
   try {
     const config = app.get(ConfigService<Env, true>);
     const name = config.get('SEED_ADMIN_NAME', { infer: true });
-    // Same rules as login, so the admin can log in with what was given.
-    const credentials = loginSchema.safeParse({
-      email: config.get('SEED_ADMIN_EMAIL', { infer: true }),
-      password: config.get('SEED_ADMIN_PASSWORD', { infer: true }),
-    });
+    // Same rules as creating a user through the api: the email is
+    // normalized like at login, the password meets the policy.
+    const credentials = createUserSchema
+      .pick({ email: true, password: true })
+      .safeParse({
+        email: config.get('SEED_ADMIN_EMAIL', { infer: true }),
+        password: config.get('SEED_ADMIN_PASSWORD', { infer: true }),
+      });
     if (!credentials.success || name === undefined) {
       throw new Error(
-        'Set SEED_ADMIN_EMAIL (a valid email), SEED_ADMIN_PASSWORD and SEED_ADMIN_NAME',
+        `Set SEED_ADMIN_EMAIL (a valid email), SEED_ADMIN_PASSWORD (${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters) and SEED_ADMIN_NAME`,
       );
     }
 

@@ -11,6 +11,9 @@ export const ERROR_CODES = {
   // The refresh cookie is missing, malformed, revoked, expired or reused, or
   // its user is inactive. The client has to log in again.
   INVALID_SESSION: 'INVALID_SESSION',
+  // Changing your own password with a wrong current one. A field error on
+  // currentPassword, not a 401: the caller is authenticated.
+  INVALID_CURRENT_PASSWORD: 'INVALID_CURRENT_PASSWORD',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',

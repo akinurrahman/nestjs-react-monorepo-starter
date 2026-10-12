@@ -1,4 +1,11 @@
-import { authResponseSchema, loginSchema, publicUserSchema } from './auth.js';
+import {
+  authResponseSchema,
+  changePasswordSchema,
+  loginSchema,
+  newPasswordSchema,
+  PASSWORD_MIN_LENGTH,
+  publicUserSchema,
+} from './auth.js';
 
 const USER = {
   id: '019a0000-0000-7000-8000-000000000000',
@@ -35,6 +42,49 @@ describe('loginSchema', () => {
     ],
   ])('rejects %s', (_, value) => {
     expect(loginSchema.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts a password shorter than the policy minimum', () => {
+    expect(
+      loginSchema.safeParse({ email: 'a@example.com', password: 'x' }).success,
+    ).toBe(true);
+  });
+});
+
+describe('newPasswordSchema', () => {
+  it('requires the minimum length', () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(8);
+    expect(newPasswordSchema.safeParse('x'.repeat(7)).success).toBe(false);
+    expect(newPasswordSchema.safeParse('x'.repeat(8)).success).toBe(true);
+  });
+
+  it('caps the length', () => {
+    expect(newPasswordSchema.safeParse('x'.repeat(257)).success).toBe(false);
+  });
+
+  it('keeps the password as sent', () => {
+    expect(newPasswordSchema.parse('  spaced  ')).toBe('  spaced  ');
+  });
+});
+
+describe('changePasswordSchema', () => {
+  it('accepts any current password and a valid new one', () => {
+    const body = { currentPassword: 'x', newPassword: 'long enough' };
+    expect(changePasswordSchema.parse(body)).toEqual(body);
+  });
+
+  it.each([
+    ['a short new password', { currentPassword: 'x', newPassword: 'short' }],
+    [
+      'an empty current password',
+      { currentPassword: '', newPassword: 'long enough' },
+    ],
+    [
+      'an unknown field',
+      { currentPassword: 'x', newPassword: 'long enough', userId: 'x' },
+    ],
+  ])('rejects %s', (_, value) => {
+    expect(changePasswordSchema.safeParse(value).success).toBe(false);
   });
 });
 

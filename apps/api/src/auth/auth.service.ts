@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ERROR_CODES, type PublicUser } from '@starter/shared';
-import { UnauthorizedError } from '../common/errors/index.js';
+import {
+  type ChangePasswordInput,
+  ERROR_CODES,
+  type PublicUser,
+} from '@starter/shared';
+import { BadRequestError, UnauthorizedError } from '../common/errors/index.js';
 import type { Env } from '../config/env.schema.js';
 import type { Session, User } from '../generated/prisma/client.js';
 import { toPublicUser } from '../users/users.mapper.js';
 import { UsersRepository } from '../users/users.repository.js';
 import { AccessTokenService } from './access-token.service.js';
-import type { ClientInfo } from './auth.types.js';
+import type { AuthUser, ClientInfo } from './auth.types.js';
 import { PasswordService } from './password.service.js';
 import {
   formatRefreshToken,
@@ -35,6 +39,21 @@ const invalidCredentials = () =>
   new UnauthorizedError(
     ERROR_CODES.INVALID_CREDENTIALS,
     'Invalid email or password',
+  );
+
+const invalidCurrentPassword = () =>
+  new BadRequestError(
+    ERROR_CODES.INVALID_CURRENT_PASSWORD,
+    'Current password is incorrect',
+    {
+      errors: [
+        {
+          path: 'currentPassword',
+          message: 'Current password is incorrect',
+          code: ERROR_CODES.INVALID_CURRENT_PASSWORD,
+        },
+      ],
+    },
   );
 
 const invalidSession = () =>
@@ -155,6 +174,28 @@ export class AuthService {
     const user = await this.users.findById(userId);
     if (!user || !user.isActive) throw new UnauthorizedError();
     return toPublicUser(user);
+  }
+
+  // Ends every other session of the user, so a stolen session cannot outlive
+  // the password it was opened with. The caller's own session stays.
+  async changePassword(
+    actor: AuthUser,
+    input: ChangePasswordInput,
+  ): Promise<void> {
+    const user = await this.users.findById(actor.id);
+    if (!user || !user.isActive) throw new UnauthorizedError();
+
+    const valid = await this.passwords.verify(
+      user.passwordHash,
+      input.currentPassword,
+    );
+    if (!valid) throw invalidCurrentPassword();
+
+    await this.users.update(
+      user.id,
+      { passwordHash: await this.passwords.hash(input.newPassword) },
+      { revokeSessions: { keep: actor.sessionId } },
+    );
   }
 
   private inGrace(session: Session, secret: string, now: Date): boolean {

@@ -60,14 +60,15 @@ export async function createUser(
   prisma: PrismaService,
   {
     email = uniqueEmail(),
+    name = 'Test User',
     role = 'USER',
     isActive = true,
-  }: { email?: string; role?: Role; isActive?: boolean } = {},
+  }: { email?: string; name?: string; role?: Role; isActive?: boolean } = {},
 ) {
   return prisma.user.create({
     data: {
       email,
-      name: 'Test User',
+      name,
       role,
       isActive,
       passwordHash: await hashPassword(PASSWORD, FAST_ARGON2),
