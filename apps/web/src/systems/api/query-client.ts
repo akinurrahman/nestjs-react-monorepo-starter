@@ -5,6 +5,11 @@ import { isErrorHandled } from './handled-errors';
 
 declare module '@tanstack/react-query' {
   interface Register {
+    queryMeta: {
+      // The caller shows this query's errors itself, so a failed refetch
+      // does not toast.
+      handledError?: boolean;
+    };
     mutationMeta: {
       // The caller shows this mutation's errors itself, so the global
       // toast stays quiet.
@@ -29,6 +34,7 @@ export function createQueryClient(): QueryClient {
       // folds identical messages, as when every open query fails at once on
       // a window focus while offline.
       onError: (error, query) => {
+        if (query.meta?.handledError) return;
         if (query.state.data === undefined || !isApiError(error)) return;
         const message = getErrorMessage(error);
         toast.error(message, { id: `query-refetch:${message}` });

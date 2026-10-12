@@ -44,11 +44,12 @@ const COLUMNS = helper.columns([helper.accessor('name', { header: 'Name' })]);
 
 // The reference list page's query states: ErrorState only when nothing
 // loaded, the table otherwise.
-function PeoplePage() {
+function PeoplePage({ handledError }: { handledError?: boolean }) {
   const { data, error, isLoadingError, isLoading, isFetching, refetch } =
     useQuery({
       queryKey: ['people', 'list'],
       queryFn: ({ signal }) => apiCallPaginated<Person>('/people', { signal }),
+      meta: handledError ? { handledError } : undefined,
     });
 
   if (isLoadingError) {
@@ -203,6 +204,21 @@ describe('query errors', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await afterDeferredToast();
     expect(toasts()).toHaveLength(1);
+  });
+
+  it('does not toast a failed refetch of a query that opts out with meta', async () => {
+    servePeopleList();
+    const { client } = renderWithQuery(<PeoplePage handledError />);
+    expect(
+      await screen.findByRole('cell', { name: 'Ada' }),
+    ).toBeInTheDocument();
+
+    failPeopleList();
+    await act(() => client.refetchQueries({ queryKey: ['people'] }));
+
+    expect(client.getQueryState(['people', 'list'])?.status).toBe('error');
+    await afterDeferredToast();
+    expect(toasts()).toHaveLength(0);
   });
 
   it('shows ErrorState, not a toast, when the first load fails', async () => {
