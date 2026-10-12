@@ -96,17 +96,13 @@ export function useAsyncOptions({
   // Labels of selected values, copied while a loaded page still has them.
   // Set during render, so the trigger never paints the raw value in between.
   const [kept, setKept] = useState<Readonly<Record<string, string>>>({});
-  const unkept = selected.filter(
-    (value) => known.has(value) && kept[value] !== known.get(value),
-  );
-  if (unkept.length > 0) {
-    setKept((previous) => {
-      const next = { ...previous };
-      unkept.forEach((value) => {
-        next[value] = known.get(value)!;
-      });
-      return next;
-    });
+  const fresh: Record<string, string> = {};
+  for (const value of selected) {
+    const label = known.get(value);
+    if (label !== undefined && kept[value] !== label) fresh[value] = label;
+  }
+  if (Object.keys(fresh).length > 0) {
+    setKept((previous) => ({ ...previous, ...fresh }));
   }
 
   const getLabel = (value: string) => known.get(value) ?? kept[value] ?? value;
