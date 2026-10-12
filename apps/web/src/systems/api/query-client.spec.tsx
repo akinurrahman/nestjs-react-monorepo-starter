@@ -218,10 +218,11 @@ describe('query errors', () => {
 
 describe('mutation error toast', () => {
   it('toasts once', async () => {
+    const user = userEvent.setup();
     const count = countRequests(409, conflict);
     renderWithQuery(<SaveButton />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText(conflict.message)).toBeInTheDocument();
     await afterDeferredToast();
@@ -232,10 +233,11 @@ describe('mutation error toast', () => {
   // Pins what afterDeferredToast relies on: a deferral longer than one
   // macrotask would let every "no toast" check below pass too early.
   it('shows the toast within one macrotask of the failure', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     renderWithQuery(<SaveButton />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('save failed')).toBeInTheDocument();
     await afterDeferredToast();
 
@@ -243,11 +245,12 @@ describe('mutation error toast', () => {
   });
 
   it('skips a mutation with its own onError', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     const onError = vi.fn();
     renderWithQuery(<SaveButton onError={onError} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
     await afterDeferredToast();
@@ -255,10 +258,11 @@ describe('mutation error toast', () => {
   });
 
   it('skips a mutation that opts out with meta', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     renderWithQuery(<SaveButton handledError />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('save failed')).toBeInTheDocument();
     await afterDeferredToast();
@@ -266,11 +270,12 @@ describe('mutation error toast', () => {
   });
 
   it('still toasts, once, beside a per-call onError', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     const callOnError = vi.fn();
     renderWithQuery(<SaveButton callOnError={callOnError} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(callOnError).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(conflict.message)).toBeInTheDocument();
@@ -279,11 +284,12 @@ describe('mutation error toast', () => {
   });
 
   it('toasts a rejection a caller catches outside any form', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     const onCaught = vi.fn();
     renderWithQuery(<CaughtSaveButton onCaught={onCaught} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onCaught).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(conflict.message)).toBeInTheDocument();
@@ -291,10 +297,11 @@ describe('mutation error toast', () => {
   });
 
   it('skips an error a form shows on its fields', async () => {
+    const user = userEvent.setup();
     countRequests(400, validationFailed);
     renderWithQuery(<SaveForm />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(
       await screen.findByText('Invalid email address'),
@@ -304,10 +311,11 @@ describe('mutation error toast', () => {
   });
 
   it('skips an error a form shows as its root message', async () => {
+    const user = userEvent.setup();
     countRequests(409, conflict);
     renderWithQuery(<SaveForm />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       conflict.message,

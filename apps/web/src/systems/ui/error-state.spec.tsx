@@ -30,10 +30,11 @@ describe('ErrorState', () => {
   });
 
   it('calls onRetry from the retry button', async () => {
+    const user = userEvent.setup();
     const onRetry = vi.fn();
     render(<ErrorState onRetry={onRetry} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(onRetry).toHaveBeenCalledOnce();
   });

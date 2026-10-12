@@ -24,18 +24,20 @@ function ProvidersPage() {
 
 describe('App providers', () => {
   it('renders a toast from a page', async () => {
+    const user = userEvent.setup();
     renderApp([{ index: true, Component: ProvidersPage }]);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Toast' }));
+    await user.click(await screen.findByRole('button', { name: 'Toast' }));
 
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 
   it('gives the Toaster the resolved theme', async () => {
+    const user = userEvent.setup();
     useThemeStore.setState({ theme: 'dark' });
     renderApp([{ index: true, Component: ProvidersPage }]);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Toast' }));
+    await user.click(await screen.findByRole('button', { name: 'Toast' }));
     await screen.findByText('Saved');
 
     expect(document.querySelector('[data-sonner-toaster]')).toHaveAttribute(
@@ -45,11 +47,10 @@ describe('App providers', () => {
   });
 
   it('renders a confirm dialog from a page', async () => {
+    const user = userEvent.setup();
     renderApp([{ index: true, Component: ProvidersPage }]);
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Confirm' }),
-    );
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
 
     expect(await screen.findByRole('alertdialog')).toHaveAccessibleName(
       'Delete thing',
