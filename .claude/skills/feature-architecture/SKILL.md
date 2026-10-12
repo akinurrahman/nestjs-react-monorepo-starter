@@ -213,7 +213,7 @@ is the `.dark` class on `<html>`, and the tokens switch with it.
 Touch targets are 40px below `sm` and 32 to 36px from `sm` up. Form controls
 and the default `Button` are `h-10 sm:h-9`, so a button beside an input lines
 up: `Input`, select and combobox triggers, `DatePicker`, the filter controls,
-and `Button` sizes `default` and `lg`. Compact controls are 32px from `sm`:
+and the `default` `Button` (there is no `lg`). Compact controls are 32px from `sm`:
 `Button` sizes `xs` and `sm`, the icon sizes (`size-10 sm:size-8`), and menu,
 select and combobox items. All of them carry this already, so pick a `size`
 and add no height of your own. A control that has to look smaller than 32px, like a

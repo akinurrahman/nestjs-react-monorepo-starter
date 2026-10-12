@@ -85,12 +85,11 @@ export function ConfirmationHost() {
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel size="lg" disabled={isPending}>
+          <AlertDialogCancel disabled={isPending}>
             {options.cancelText ?? 'Cancel'}
           </AlertDialogCancel>
           <Button
             type="button"
-            size="lg"
             variant={variant.buttonVariant}
             className={variant.buttonClassName}
             disabled={isPending}

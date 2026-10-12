@@ -29,7 +29,6 @@ export function FormActions({
         <Button
           type="button"
           variant="outline"
-          size="lg"
           disabled={isPending}
           onClick={onCancel}
         >
@@ -37,7 +36,7 @@ export function FormActions({
         </Button>
       ) : null}
 
-      <Button type="submit" size="lg" disabled={isPending}>
+      <Button type="submit" disabled={isPending}>
         {isPending ? (
           <>
             <Loader2 className="animate-spin" />

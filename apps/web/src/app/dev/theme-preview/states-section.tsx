@@ -72,7 +72,7 @@ export function StatesSection() {
             title="No invoices yet"
             description="Invoices you create show up here."
             action={
-              <Button variant="outline" size="lg">
+              <Button variant="outline">
                 <Plus />
                 New invoice
               </Button>
@@ -93,7 +93,7 @@ export function StatesSection() {
             title="This page could not be shown"
             onRetry={retry}
             action={
-              <Button variant="outline" size="lg">
+              <Button variant="outline">
                 <House />
                 Go home
               </Button>
@@ -102,11 +102,7 @@ export function StatesSection() {
         </Frame>
         <Frame label="NotFoundState">
           <NotFoundState
-            action={
-              <Button variant="outline" size="lg">
-                Back to the list
-              </Button>
-            }
+            action={<Button variant="outline">Back to the list</Button>}
           />
         </Frame>
         <Frame label="AccessDeniedState">

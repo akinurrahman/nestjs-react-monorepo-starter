@@ -41,7 +41,6 @@ describe('touch targets', () => {
     'default',
     'xs',
     'sm',
-    'lg',
     'icon',
     'icon-xs',
     'icon-sm',

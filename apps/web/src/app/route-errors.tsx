@@ -17,7 +17,6 @@ function ReloadButton() {
     <Button
       type="button"
       variant="outline"
-      size="lg"
       onClick={() => window.location.reload()}
     >
       <RefreshCw />
@@ -56,10 +55,7 @@ export function RouteErrorBoundary() {
             <ReloadButton />
             {/* A link, not a Button rendering one: Base UI would give the
                 anchor role="button" and hide that it navigates. */}
-            <Link
-              to="/"
-              className={buttonVariants({ variant: 'outline', size: 'lg' })}
-            >
+            <Link to="/" className={buttonVariants({ variant: 'outline' })}>
               <House />
               Go home
             </Link>

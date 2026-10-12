@@ -38,7 +38,7 @@ export function ErrorState({
       {onRetry || action ? (
         <div className="mt-2 flex flex-wrap justify-center gap-2">
           {onRetry ? (
-            <Button type="button" variant="outline" size="lg" onClick={onRetry}>
+            <Button type="button" variant="outline" onClick={onRetry}>
               <RotateCcw />
               Retry
             </Button>
