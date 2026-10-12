@@ -1,13 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import type { Health, Readiness } from '@starter/shared';
 import { ApiDataResponse, ApiErrorResponses } from '../common/swagger/index.js';
-import {
-  HealthDto,
-  ReadinessDto,
-  type Health,
-  type Readiness,
-} from './health.dto.js';
+import { HealthDto, ReadinessDto } from './health.dto.js';
 import { HealthService } from './health.service.js';
 
 // Probes poll on a fixed schedule; throttling them could fail a healthy pod.

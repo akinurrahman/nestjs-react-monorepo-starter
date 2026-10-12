@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import type { Health, Readiness } from '@starter/shared';
 import { ServiceUnavailableError } from '../common/errors/index.js';
-import type { Health, Readiness } from './health.dto.js';
 import { HealthRepository } from './health.repository.js';
 
 export const DATABASE_PING_TIMEOUT_MS = 2000;
