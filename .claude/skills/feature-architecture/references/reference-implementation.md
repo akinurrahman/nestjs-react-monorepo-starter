@@ -427,7 +427,7 @@ Columns are inline. Split them into `components/classes/class-columns.tsx` once
 the array outgrows the page, roughly eight columns or a page over 150 lines.
 
 ```tsx
-import { Plus, School } from 'lucide-react';
+import { Plus, School, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -556,13 +556,25 @@ export default function ClassListPage() {
         onPageChange={(page) => setFilter('page', page)}
         onLimitChange={(limit) => setFilter('limit', limit)}
         emptyState={
-          <EmptyState
-            icon={School}
-            title={isFiltered ? 'No classes match' : 'No classes yet'}
-            description={
-              isFiltered ? 'Try clearing the filters.' : 'Create the first one.'
-            }
-          />
+          isFiltered ? (
+            <EmptyState
+              icon={School}
+              title="No classes match"
+              description="Nothing fits these filters."
+              action={
+                <Button variant="outline" onClick={resetFilters}>
+                  <X />
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={School}
+              title="No classes yet"
+              description="Create the first one."
+            />
+          )
         }
       />
     </>
@@ -575,6 +587,10 @@ behaviour. Changing several filters at once goes through `setFilters({ ... })`,
 which is one navigation rather than three. Every filter write replaces the
 current history entry, so filters never add history: Back leaves the list
 rather than stepping through earlier searches.
+
+A filtered list that comes back empty offers "Clear filters" right in the
+empty state, which calls `resetFilters` and so clears paging too. An empty
+list with nothing filtered offers the next step instead, never a clear.
 
 The page owns the error state, and only for a load that never succeeded:
 `isLoadingError`, not `isError`, so a failed refetch leaves the rows on screen

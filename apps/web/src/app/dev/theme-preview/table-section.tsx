@@ -1,6 +1,7 @@
-import { Archive, Copy, Eye, Lock, Trash2, Users } from 'lucide-react';
+import { Archive, Copy, Eye, Lock, Trash2, Users, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/date';
 import { formatMoney } from '@/lib/format';
 import { useConfirm } from '@/systems/confirmation';
@@ -27,7 +28,8 @@ import {
 const helper = createColumnHelper<PreviewPerson>();
 
 export function TableSection() {
-  const { filters, setFilter } = useUrlFilters(PREVIEW_FILTER_SPEC);
+  const { filters, setFilter, isFiltered, resetFilters } =
+    useUrlFilters(PREVIEW_FILTER_SPEC);
   const confirm = useConfirm();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -231,11 +233,25 @@ export function TableSection() {
         onLimitChange={(limit) => setFilter('limit', limit)}
         onRowClick={(person) => toast(`Row clicked: ${person.name}`)}
         emptyState={
-          <EmptyState
-            icon={Users}
-            title="No people match"
-            description="Clear the filters, or turn off Empty."
-          />
+          isFiltered ? (
+            <EmptyState
+              icon={Users}
+              title="No people match"
+              description="Nobody fits these filters."
+              action={
+                <Button type="button" variant="outline" onClick={resetFilters}>
+                  <X />
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Users}
+              title="No people yet"
+              description="Turn off Empty to see the rows."
+            />
+          )
         }
       />
     </PreviewSection>
