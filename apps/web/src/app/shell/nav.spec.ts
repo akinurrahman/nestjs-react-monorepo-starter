@@ -1,3 +1,4 @@
+import type { Role } from '@starter/shared';
 import { Box, FileText, Folder, Lock, Users } from 'lucide-react';
 import type { AppRouteObject } from '@/systems/router';
 import { buildNav } from './nav';
@@ -12,7 +13,7 @@ const page = (
   path: string,
   title: string,
   nav: { group: string; order: number },
-  roles?: ('ADMIN' | 'USER')[],
+  roles?: Role[],
 ): AppRouteObject => ({
   path,
   handle: { title, icon: FileText, nav, roles },
