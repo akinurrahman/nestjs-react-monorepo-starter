@@ -92,7 +92,7 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 | `pnpm typecheck` | Check types across the repo |
 | `pnpm lint` | Lint with Oxlint |
 | `pnpm test` | Run unit tests |
-| `pnpm test:e2e` | Run end-to-end tests *(needs the database running)* |
+| `pnpm test:e2e` | Run end-to-end tests against `starter_test` *(needs the database running)* |
 
 **Database**
 
@@ -101,6 +101,9 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 | `pnpm --filter @starter/api db:migrate` | Create and apply a migration after a schema change |
 | `pnpm --filter @starter/api db:deploy` | Apply existing migrations, without creating new ones |
 | `pnpm --filter @starter/api db:studio` | Browse and edit data in your browser |
+| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it |
+
+E2E tests never touch your dev database. They use a second database, `starter_test`, in the same Postgres container, set in `apps/api/.env.test`. `pnpm test:e2e` creates and migrates it on every run and empties the app tables before each test file. A name that does not end in `_test` stops the run before it connects.
 
 ## Project structure
 
@@ -129,7 +132,7 @@ starter-react-nest/
 - **One schema file per domain.** `user.prisma`, `leave.prisma`, `payroll.prisma`, each holding its related models.
 - **Migrations are permanent.** Always committed, never edited once they've run outside your machine. Need a change? Make a new migration.
 - **Config is validated.** The API refuses to start if an env variable is missing or wrong, and tells you exactly which one.
-- **Secrets stay out of git.** Only `.env.example` files are committed.
+- **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds nothing but the local Docker credentials for the throwaway test database.
 
 ## Roadmap
 

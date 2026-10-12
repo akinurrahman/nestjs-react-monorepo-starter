@@ -30,7 +30,8 @@ Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
 | Dev | `pnpm dev` |
 | Typecheck / lint | `pnpm typecheck` / `pnpm lint` |
 | Unit tests | `pnpm test` |
-| E2E tests | `pnpm test:e2e` (Postgres must be running) |
+| E2E tests | `pnpm test:e2e` (Postgres must be running, uses `starter_test` from `apps/api/.env.test`) |
+| Prepare e2e DB by hand | `pnpm --filter @starter/api db:test:prepare` |
 | Format | `pnpm --filter @starter/api format` |
 | Build | `pnpm build` |
 | Regenerate Prisma client | `pnpm --filter @starter/api db:generate` |
