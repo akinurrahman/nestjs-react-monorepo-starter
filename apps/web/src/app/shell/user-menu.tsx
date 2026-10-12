@@ -23,14 +23,14 @@ export function UserMenu() {
         render={
           <Button
             variant="ghost"
-            className="h-10 gap-2 px-1.5 md:h-8"
+            className="gap-2 px-1.5 sm:h-8"
             aria-label="User menu"
           />
         }
       >
         <span
           aria-hidden="true"
-          className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground md:size-6"
+          className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground sm:size-6"
         >
           {getInitials(user.name)}
         </span>
