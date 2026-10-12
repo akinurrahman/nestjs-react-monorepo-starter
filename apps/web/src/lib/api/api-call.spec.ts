@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw';
 import { server } from '@/test/msw-server';
-import { apiCall, apiCallPaginated } from './api-call';
+import { apiCall, apiCallEmpty, apiCallPaginated } from './api-call';
 import { CLIENT_ERROR_CODES } from './api-error';
 
 const pagination = {
@@ -42,27 +42,19 @@ describe('apiCall', () => {
     await expect(apiCall('/nothing')).resolves.toBeNull();
   });
 
-  it('resolves undefined for a 204', async () => {
+  it.each([
+    ['a 204', 204],
+    ['a 200 with an empty body', 200],
+  ])('throws BAD_RESPONSE for %s', async (_, status) => {
     server.use(
-      http.delete(
-        '/api/users/1',
-        () => new HttpResponse(null, { status: 204 }),
-      ),
+      http.get('/api/empty', () => new HttpResponse(null, { status })),
     );
 
-    await expect(
-      apiCall<void>('/users/1', { method: 'DELETE' }),
-    ).resolves.toBeUndefined();
-  });
-
-  it('resolves undefined for a 200 with an empty body', async () => {
-    server.use(
-      http.post('/api/ping', () => new HttpResponse(null, { status: 200 })),
-    );
-
-    await expect(
-      apiCall<void>('/ping', { method: 'POST' }),
-    ).resolves.toBeUndefined();
+    await expect(apiCall('/empty')).rejects.toMatchObject({
+      name: 'ApiError',
+      status,
+      code: CLIENT_ERROR_CODES.BAD_RESPONSE,
+    });
   });
 
   it.each([
@@ -171,6 +163,49 @@ describe('apiCall', () => {
       name: 'CanceledError',
       code: 'ERR_CANCELED',
     });
+  });
+});
+
+describe('apiCallEmpty', () => {
+  it('resolves undefined for a 204', async () => {
+    server.use(
+      http.delete(
+        '/api/users/1',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+
+    await expect(
+      apiCallEmpty('/users/1', { method: 'DELETE' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('resolves undefined for a 200 with an empty body', async () => {
+    server.use(
+      http.post('/api/ping', () => new HttpResponse(null, { status: 200 })),
+    );
+
+    await expect(
+      apiCallEmpty('/ping', { method: 'POST' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('ignores the data of an envelope', async () => {
+    server.use(
+      http.post('/api/ping', () => HttpResponse.json({ data: { ok: true } })),
+    );
+
+    await expect(
+      apiCallEmpty('/ping', { method: 'POST' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('throws BAD_RESPONSE for a body that is not an envelope', async () => {
+    server.use(http.post('/api/ping', () => HttpResponse.text('hello')));
+
+    await expect(
+      apiCallEmpty('/ping', { method: 'POST' }),
+    ).rejects.toMatchObject({ code: CLIENT_ERROR_CODES.BAD_RESPONSE });
   });
 });
 

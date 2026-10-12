@@ -3,7 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { z } from 'zod';
-import { apiCall, apiCallPaginated } from '@/lib/api/api-call';
+import { apiCall, apiCallEmpty, apiCallPaginated } from '@/lib/api/api-call';
 import { conflict, notFound, validationFailed } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
 import { renderWithQuery } from '@/test/render-with-query';
@@ -103,7 +103,7 @@ function SaveButton({
   handledError?: boolean;
 }) {
   const mutation = useMutation({
-    mutationFn: () => apiCall<void>('/thing', { method: 'POST' }),
+    mutationFn: () => apiCallEmpty('/thing', { method: 'POST' }),
     onError,
     meta: handledError ? { handledError } : undefined,
   });
@@ -122,7 +122,7 @@ function SaveButton({
 
 function CaughtSaveButton({ onCaught }: { onCaught: () => void }) {
   const mutation = useMutation({
-    mutationFn: () => apiCall<void>('/thing', { method: 'POST' }),
+    mutationFn: () => apiCallEmpty('/thing', { method: 'POST' }),
   });
   return (
     <button
@@ -140,7 +140,7 @@ const UserField = formFields(userSchema);
 function SaveForm() {
   const mutation = useMutation({
     mutationFn: (values: z.output<typeof userSchema>) =>
-      apiCall<void>('/thing', { method: 'POST', body: values }),
+      apiCallEmpty('/thing', { method: 'POST', body: values }),
   });
   return (
     <Form

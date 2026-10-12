@@ -167,7 +167,7 @@ coerced 0. `Form` seeds strings, enums and arrays with their empty value, so
 
 ```ts
 import type { PaginatedResponse } from '@starter/shared';
-import { apiCall, apiCallPaginated } from '@/lib/api/api-call';
+import { apiCall, apiCallEmpty, apiCallPaginated } from '@/lib/api/api-call';
 import type { ClassFormValues } from '../definitions/class.schema';
 import type {
   ClassDetail,
@@ -201,7 +201,7 @@ export const classApi = {
     }),
 
   remove: (id: string) =>
-    apiCall<void>(`/academic/classes/${id}`, { method: 'DELETE' }),
+    apiCallEmpty(`/academic/classes/${id}`, { method: 'DELETE' }),
 };
 ```
 
@@ -714,7 +714,7 @@ export const SUBJECT_FILTER_SPEC = defineUrlFilters<SubjectFilters>({
 ### `api/subject.api.ts`
 
 ```ts
-import { apiCall, apiCallPaginated } from '@/lib/api/api-call';
+import { apiCall, apiCallEmpty, apiCallPaginated } from '@/lib/api/api-call';
 import type { SubjectFormValues } from '../definitions/subject.schema';
 import type {
   SubjectDetail,
@@ -752,7 +752,7 @@ export const subjectApi = {
     }),
 
   remove: (id: string) =>
-    apiCall<void>(`/academic/subjects/${id}`, { method: 'DELETE' }),
+    apiCallEmpty(`/academic/subjects/${id}`, { method: 'DELETE' }),
 };
 ```
 

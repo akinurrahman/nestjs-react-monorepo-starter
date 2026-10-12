@@ -608,6 +608,9 @@ wrong shape becomes an `ApiError` with code `BAD_RESPONSE`.
 Always pass the generic: `apiCall<ClassDetail>(...)`. Without it the return is
 `unknown`, and a cast to silence it hides a typo'd field.
 
+Void endpoints (delete, actions with no body) use `apiCallEmpty`, never
+`apiCall<void>`.
+
 `ApiCallOptions` is `method`, `body`, `params`, `signal`, `headers`. `body` and
 `params` are independent, so `POST /x?notify=true` works and so does `DELETE`
 with a body. Array params go as repeated keys (`a=1&a=2`), which the API reads

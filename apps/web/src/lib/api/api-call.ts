@@ -15,18 +15,30 @@ export type ApiCallOptions = {
   headers?: Record<string, string>;
 };
 
-// A handler that returns nothing gets a 200 with an empty body, and a 204 has
-// none either. Both resolve to undefined. A null return is { data: null }.
-export async function apiCall<T>(
+// T excludes undefined: an endpoint that answers with nothing uses
+// apiCallEmpty, so an empty body here is a broken response, not a value. A
+// null return is { data: null }.
+export async function apiCall<T extends {} | null>(
   endpoint: string,
   options: ApiCallOptions = {},
 ): Promise<T> {
   const response = await send(endpoint, options);
-  if (isEmpty(response.data)) return undefined as T;
 
   const body: unknown = response.data;
-  if (!isRecord(body) || !('data' in body)) throw badResponse(response.status);
+  if (!isEnvelope(body)) throw badResponse(response.status);
   return body.data as T;
+}
+
+// For an endpoint with nothing to return. A handler that returns nothing gets
+// a 200 with an empty body and a 204 has none, and an envelope's data is
+// ignored. Anything else is still a broken response.
+export async function apiCallEmpty(
+  endpoint: string,
+  options: ApiCallOptions = {},
+): Promise<void> {
+  const response = await send(endpoint, options);
+  if (isEmpty(response.data)) return;
+  if (!isEnvelope(response.data)) throw badResponse(response.status);
 }
 
 export async function apiCallPaginated<T, S = undefined>(
@@ -62,6 +74,10 @@ function send(
 
 function isEmpty(data: unknown): boolean {
   return data === undefined || data === '';
+}
+
+function isEnvelope(body: unknown): body is { data: unknown } {
+  return isRecord(body) && 'data' in body;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
