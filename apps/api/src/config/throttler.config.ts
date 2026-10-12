@@ -20,6 +20,14 @@ export const LOGIN_RATE_LIMIT = {
   ttl: 60_000,
 } satisfies Pick<ThrottlerOptions, 'limit' | 'ttl'>;
 
+// Changing your own password is limited per user, like login. Keyed on the
+// user, so a stolen access token cannot guess the current password faster
+// from many IPs, and colleagues behind one IP do not share a bucket.
+export const PASSWORD_CHANGE_RATE_LIMIT = {
+  limit: 5,
+  ttl: 60_000,
+} satisfies Pick<ThrottlerOptions, 'limit' | 'ttl'>;
+
 // Guards run before validation, so the email is normalized here the same way
 // the login schema does it. A missing or non-string email shares one bucket.
 export const loginTracker: ThrottlerGetTrackerFunction = (req) => {

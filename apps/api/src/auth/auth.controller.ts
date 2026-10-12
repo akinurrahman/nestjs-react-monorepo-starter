@@ -8,6 +8,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -20,6 +21,7 @@ import { AuthCookieService } from './auth-cookie.service.js';
 import { CurrentUser, Public } from './auth.decorators.js';
 import { AuthResponseDto, ChangePasswordDto, LoginDto } from './auth.dto.js';
 import { AuthService, type AuthResult } from './auth.service.js';
+import { PasswordChangeThrottlerGuard } from './password-change-throttler.guard.js';
 import type { AuthUser, ClientInfo } from './auth.types.js';
 
 const USER_AGENT_MAX = 512;
@@ -103,6 +105,7 @@ export class AuthController {
   }
 
   @Post('password')
+  @UseGuards(PasswordChangeThrottlerGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({
     description:

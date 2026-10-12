@@ -776,6 +776,35 @@ describe('POST /api/auth/password', () => {
     await api().post('/api/auth/password').set(headers).send(body).expect(400);
   });
 
+  // Both users come from the same IP, so a limit keyed on the IP would
+  // block the second one too.
+  it('limits attempts per user, leaving other users alone', async () => {
+    const target = await signInUser();
+    const colleague = await signInUser();
+    const wrong = { currentPassword: 'wrong', newPassword: NEW_PASSWORD };
+
+    for (let i = 0; i < 5; i++) {
+      await api()
+        .post('/api/auth/password')
+        .set(target.headers)
+        .send(wrong)
+        .expect(400);
+    }
+    const blocked = await api()
+      .post('/api/auth/password')
+      .set(target.headers)
+      .send({ currentPassword: PASSWORD, newPassword: NEW_PASSWORD })
+      .expect(429);
+    expect(blocked.body).toMatchObject({ code: 'TOO_MANY_REQUESTS' });
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+
+    await api()
+      .post('/api/auth/password')
+      .set(colleague.headers)
+      .send({ currentPassword: PASSWORD, newPassword: NEW_PASSWORD })
+      .expect(204);
+  });
+
   it('answers 401 without a token', async () => {
     await api()
       .post('/api/auth/password')
