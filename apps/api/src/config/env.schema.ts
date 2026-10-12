@@ -55,6 +55,21 @@ export const envSchema = z
     // Number of reverse proxies in front of the app; unset trusts none, so
     // X-Forwarded-For is ignored.
     TRUST_PROXY: z.coerce.number().int().min(1).optional(),
+    // HS256 key for access tokens. No default: a guessable key lets anyone
+    // mint tokens. 32 characters is the floor, a random 64 is better.
+    JWT_SECRET: z.string().min(32),
+    // Lifetimes in seconds.
+    AUTH_ACCESS_TTL: z.coerce.number().int().min(1).default(900),
+    AUTH_REFRESH_TTL: z.coerce.number().int().min(1).default(604_800),
+    // How long the secret replaced by a rotation stays accepted, so that
+    // concurrent refreshes from one browser are not taken for token reuse.
+    AUTH_REFRESH_GRACE: z.coerce.number().int().min(0).default(30),
+    AUTH_COOKIE_NAME: z
+      .string()
+      .regex(/^[\w-]+$/, { error: 'Letters, digits, "_" and "-" only' })
+      .default('refresh_token'),
+    // Unset makes the cookie host-only, which is what most setups want.
+    AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
   })
   .refine(
     (env) => env.NODE_ENV !== 'production' || env.CORS_ORIGINS !== undefined,

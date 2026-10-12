@@ -3,12 +3,14 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from './../src/app.module.js';
+import { Public } from './../src/auth/auth.decorators.js';
 import { ConflictError, NotFoundError } from './../src/common/errors/index.js';
 import { configureApp } from './../src/config/app.config.js';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
+@Public()
 @Controller('errors-test')
 class ErrorsTestController {
   @Get('not-found')

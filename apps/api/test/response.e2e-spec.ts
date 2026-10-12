@@ -10,6 +10,7 @@ import {
 import request from 'supertest';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './../src/app.module.js';
+import { Public } from './../src/auth/auth.decorators.js';
 import { configureApp } from './../src/config/app.config.js';
 import {
   paginate,
@@ -23,6 +24,7 @@ function pageOf<T>(items: T[], page: number, limit: number): T[] {
   return items.slice((page - 1) * limit, page * limit);
 }
 
+@Public()
 @Controller('response-test')
 class ResponseTestController {
   @Get('item')

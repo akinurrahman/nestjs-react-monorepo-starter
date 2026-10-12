@@ -4,6 +4,9 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { AuthGuard } from './auth/auth.guard.js';
+import { AuthModule } from './auth/auth.module.js';
+import { RolesGuard } from './auth/roles.guard.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 import { validateEnv, type Env } from './config/env.schema.js';
@@ -44,9 +47,15 @@ import { HealthModule } from './health/health.module.js';
     ThrottlerModule.forRoot([RATE_LIMIT]),
     PrismaModule,
     HealthModule,
+    AuthModule,
   ],
   providers: [
+    // Global guards run in this order: rate limit first, so rejected
+    // credentials still count; then authentication (deny by default); then
+    // roles, which needs the user authentication set.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

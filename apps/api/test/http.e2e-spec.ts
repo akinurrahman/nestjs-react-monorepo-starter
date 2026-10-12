@@ -3,6 +3,7 @@ import { Controller, Get } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from './../src/app.module.js';
+import { Public } from './../src/auth/auth.decorators.js';
 import { DEFAULT_CORS_ORIGINS } from './../src/config/env.schema.js';
 import { configureApp } from './../src/config/app.config.js';
 import {
@@ -13,6 +14,7 @@ import {
 const ALLOWED_ORIGIN = DEFAULT_CORS_ORIGINS[0];
 const DISALLOWED_ORIGIN = 'https://evil.example';
 
+@Public()
 @Controller('prefix-test')
 class PrefixTestController {
   @Get()

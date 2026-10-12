@@ -15,9 +15,13 @@ export const SWAGGER_JSON_PATH = 'docs-json';
 export const SWAGGER_YAML_PATH = 'docs-yaml';
 
 export function createSwaggerDocument(app: INestApplication): OpenAPIObject {
+  // Every operation requires the bearer token, as AuthGuard does; @Public()
+  // overrides it per route with an empty requirement.
   const config = new DocumentBuilder()
     .setTitle('Starter API')
     .setVersion('0.1.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+    .addSecurityRequirements('bearer')
     .build();
 
   // Required by nestjs-zod: strips its x-nestjs_zod-* markers, applies

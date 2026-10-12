@@ -5,6 +5,7 @@ import request from 'supertest';
 import { z } from 'zod';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './../src/app.module.js';
+import { Public } from './../src/auth/auth.decorators.js';
 import { configureApp } from './../src/config/app.config.js';
 
 class CreateThingDto extends createZodDto(
@@ -14,6 +15,7 @@ class CreateThingDto extends createZodDto(
   }),
 ) {}
 
+@Public()
 @Controller('validation-test')
 class ValidationTestController {
   @Post()

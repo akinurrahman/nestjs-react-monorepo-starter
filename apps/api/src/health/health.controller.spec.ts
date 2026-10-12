@@ -18,6 +18,7 @@ describe('Health endpoints', () => {
 
   beforeAll(async () => {
     vi.stubEnv('DATABASE_URL', 'postgresql://localhost:5432/unused');
+    vi.stubEnv('JWT_SECRET', 'unit-test-jwt-secret-0123456789abcdef');
     const { AppModule } = await import('../app.module.js');
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })

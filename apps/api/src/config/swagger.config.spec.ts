@@ -73,6 +73,7 @@ async function createApp(
 ): Promise<INestApplication<App>> {
   vi.resetModules();
   vi.stubEnv('DATABASE_URL', 'postgresql://localhost:5432/unused');
+  vi.stubEnv('JWT_SECRET', 'unit-test-jwt-secret-0123456789abcdef');
   for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
 
   const { AppModule } = await import('../app.module.js');
@@ -243,7 +244,10 @@ describe('setupSwagger', () => {
 });
 
 describe('SWAGGER_ENABLED', () => {
-  const base = { DATABASE_URL: 'postgresql://localhost:5432/unused' };
+  const base = {
+    DATABASE_URL: 'postgresql://localhost:5432/unused',
+    JWT_SECRET: 'unit-test-jwt-secret-0123456789abcdef',
+  };
 
   it('defaults to true outside production', () => {
     expect(validateEnv({ ...base, NODE_ENV: 'development' })).toMatchObject({

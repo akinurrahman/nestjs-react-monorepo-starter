@@ -16,7 +16,10 @@ describe('validateEnv', () => {
   });
 });
 
-const base = { DATABASE_URL: 'postgresql://localhost:5432/unused' };
+const base = {
+  DATABASE_URL: 'postgresql://localhost:5432/unused',
+  JWT_SECRET: 'x'.repeat(32),
+};
 
 function corsOrigins(env: Record<string, string>) {
   return envSchema.parse({ ...base, ...env }).CORS_ORIGINS;
@@ -111,6 +114,50 @@ describe('TRUST_PROXY', () => {
     ['an address', '10.0.0.0/8'],
   ])('rejects %s', (_, value) => {
     expect(parse({ TRUST_PROXY: value }).success).toBe(false);
+  });
+});
+
+describe('auth settings', () => {
+  function parse(env: Record<string, string | undefined>) {
+    return envSchema.safeParse({ ...base, ...env });
+  }
+
+  it('requires JWT_SECRET', () => {
+    const result = parse({ JWT_SECRET: undefined });
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual([
+      'JWT_SECRET',
+    ]);
+  });
+
+  it('rejects a JWT_SECRET under 32 characters', () => {
+    expect(parse({ JWT_SECRET: 'x'.repeat(31) }).success).toBe(false);
+  });
+
+  it('applies the defaults', () => {
+    const env = parse({}).data;
+    expect(env).toMatchObject({
+      AUTH_ACCESS_TTL: 900,
+      AUTH_REFRESH_TTL: 604_800,
+      AUTH_REFRESH_GRACE: 30,
+      AUTH_COOKIE_NAME: 'refresh_token',
+    });
+    expect(env?.AUTH_COOKIE_DOMAIN).toBeUndefined();
+  });
+
+  it('parses lifetimes in seconds', () => {
+    expect(
+      parse({ AUTH_ACCESS_TTL: '60', AUTH_REFRESH_GRACE: '0' }).data,
+    ).toMatchObject({ AUTH_ACCESS_TTL: 60, AUTH_REFRESH_GRACE: 0 });
+  });
+
+  it.each([
+    ['a zero access TTL', { AUTH_ACCESS_TTL: '0' }],
+    ['a fractional refresh TTL', { AUTH_REFRESH_TTL: '1.5' }],
+    ['a negative grace', { AUTH_REFRESH_GRACE: '-1' }],
+    ['a cookie name with a space', { AUTH_COOKIE_NAME: 'refresh token' }],
+    ['a cookie name with a semicolon', { AUTH_COOKIE_NAME: 'a;b' }],
+  ])('rejects %s', (_, env) => {
+    expect(parse(env).success).toBe(false);
   });
 });
 

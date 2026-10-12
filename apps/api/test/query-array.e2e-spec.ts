@@ -6,6 +6,7 @@ import { createZodDto } from 'nestjs-zod';
 import request from 'supertest';
 import { z } from 'zod';
 import { AppModule } from './../src/app.module.js';
+import { Public } from './../src/auth/auth.decorators.js';
 import { ApiErrorResponses } from './../src/common/swagger/index.js';
 import { configureApp } from './../src/config/app.config.js';
 import { createSwaggerDocument } from './../src/config/swagger.config.js';
@@ -16,6 +17,7 @@ class StatusFilterDto extends createZodDto(
   }),
 ) {}
 
+@Public()
 @Controller('query-array-test')
 class QueryArrayTestController {
   @Get()

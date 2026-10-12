@@ -3,12 +3,14 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { getOptionsToken } from '@nestjs/throttler';
 import request from 'supertest';
+import { Public } from './../src/auth/auth.decorators.js';
 import { RATE_LIMIT } from './../src/config/throttler.config.js';
 
 const TEST_LIMIT = 2;
 const DOCS_USER = 'docs';
 const DOCS_PASSWORD = 'correct horse battery staple';
 
+@Public()
 @Controller('throttle-test')
 class ThrottleTestController {
   @Get()

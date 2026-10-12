@@ -53,7 +53,8 @@ git clone https://github.com/akinurrahman/starter-react-nest.git
 cd starter-react-nest
 pnpm install
 
-# 2. Create your local env file
+# 2. Create your local env file, then set JWT_SECRET in it (the file shows
+#    how to generate one)
 cp apps/api/.env.example apps/api/.env
 
 # 3. Start Postgres
