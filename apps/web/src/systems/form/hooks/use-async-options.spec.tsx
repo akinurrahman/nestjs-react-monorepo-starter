@@ -56,9 +56,11 @@ describe('fromPaginated', () => {
 describe('useAsyncOptions', () => {
   it('does not fetch until enabled', async () => {
     const requests = servePeople();
-    const { result, rerender } = renderOptions({ enabled: false });
+    const { result, rerender, client } = renderOptions({ enabled: false });
 
-    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    // An enabled query starts fetching in the mount commit, so nothing in
+    // flight now means nothing was asked for.
+    expect(client.isFetching()).toBe(0);
     expect(requests).toHaveLength(0);
     expect(result.current.isLoading).toBe(false);
 

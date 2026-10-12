@@ -108,12 +108,15 @@ function SaveButton({
     meta: handledError ? { handledError } : undefined,
   });
   return (
-    <button
-      type="button"
-      onClick={() => mutation.mutate(undefined, { onError: callOnError })}
-    >
-      Save
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => mutation.mutate(undefined, { onError: callOnError })}
+      >
+        Save
+      </button>
+      {mutation.isError ? <p>save failed</p> : null}
+    </>
   );
 }
 
@@ -153,17 +156,20 @@ function SaveForm() {
 
 const toasts = () => document.querySelectorAll('[data-sonner-toast]');
 
-// Past the global toast's one macrotask deferral, with room for sonner to
-// render, so an absent toast is absent and not just late.
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+// The global mutation toast waits one macrotask after the failure, and timers
+// run in the order they were set. Called once the failure is on screen, so
+// that timer is already queued: this one runs after it, and an absent toast
+// is absent, not late. Ordering, not a duration.
+const afterDeferredToast = () =>
+  act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
 describe('query retries', () => {
   it('does not retry a 4xx', async () => {
     const count = countRequests(404, notFound);
     renderWithQuery(<Thing />);
 
+    // The error shows only once retrying is over, so no request can follow.
     expect(await screen.findByText('failed')).toBeInTheDocument();
-    await settle();
     expect(count.value).toBe(1);
   });
 
@@ -194,7 +200,7 @@ describe('query errors', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Ada' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(1);
   });
 
@@ -202,10 +208,10 @@ describe('query errors', () => {
     failPeopleList();
     renderWithQuery(<PeoplePage />);
 
+    // The QueryCache reports synchronously, before the error reaches the page.
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "Couldn't load this data",
     );
-    await settle();
     expect(toasts()).toHaveLength(0);
   });
 });
@@ -218,9 +224,22 @@ describe('mutation error toast', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText(conflict.message)).toBeInTheDocument();
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(1);
     expect(count.value).toBe(1);
+  });
+
+  // Pins what afterDeferredToast relies on: a deferral longer than one
+  // macrotask would let every "no toast" check below pass too early.
+  it('shows the toast within one macrotask of the failure', async () => {
+    countRequests(409, conflict);
+    renderWithQuery(<SaveButton />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('save failed')).toBeInTheDocument();
+    await afterDeferredToast();
+
+    expect(toasts()).toHaveLength(1);
   });
 
   it('skips a mutation with its own onError', async () => {
@@ -231,7 +250,7 @@ describe('mutation error toast', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(0);
   });
 
@@ -241,7 +260,8 @@ describe('mutation error toast', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await settle();
+    expect(await screen.findByText('save failed')).toBeInTheDocument();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(0);
   });
 
@@ -254,7 +274,7 @@ describe('mutation error toast', () => {
 
     await waitFor(() => expect(callOnError).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(conflict.message)).toBeInTheDocument();
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(1);
   });
 
@@ -279,7 +299,7 @@ describe('mutation error toast', () => {
     expect(
       await screen.findByText('Invalid email address'),
     ).toBeInTheDocument();
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(0);
   });
 
@@ -292,7 +312,7 @@ describe('mutation error toast', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       conflict.message,
     );
-    await settle();
+    await afterDeferredToast();
     expect(toasts()).toHaveLength(0);
   });
 });
