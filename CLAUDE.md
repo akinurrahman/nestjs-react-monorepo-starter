@@ -130,6 +130,8 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   modal registry. Never build one straight on `@base-ui/react`.
 - Toast and `confirm()` content renders outside the router: no `Link` or router hooks
   in it. Navigate from the callback with `router.navigate` or a `navigate` the page holds.
+- Navigate calls in deferred callbacks (toast actions, timeouts) use absolute paths,
+  since a relative path resolves against wherever the user is by then.
 - Ctrl/Cmd+K (command palette) and Ctrl/Cmd+B (sidebar) are reserved.
 - Any new piece in `components/ui` or `systems` gets a section or specimen on the theme
   preview page (`src/app/dev/theme-preview`) in the same change.
