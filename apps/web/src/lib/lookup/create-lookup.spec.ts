@@ -109,7 +109,11 @@ describe('createLookup types', () => {
     expectTypeOf<Status>().toEqualTypeOf<'active' | 'archived' | 'draft'>();
     expectTypeOf(statusLookup.keys.active).toEqualTypeOf<'active'>();
     expectTypeOf(statusLookup.options[0]!.value).toEqualTypeOf<Status>();
-    expectTypeOf(statusLookup.resolve('x')).toEqualTypeOf<LookupEntry | null>();
+    // The return type, not a call: resolve('x') would warn about an unknown
+    // value on every run.
+    expectTypeOf(
+      statusLookup.resolve,
+    ).returns.toEqualTypeOf<LookupEntry | null>();
     expectTypeOf(
       statusLookup.toZodEnum().parse('active'),
     ).toEqualTypeOf<Status>();
