@@ -19,7 +19,8 @@ export function configureHttp(app: NestExpressApplication): void {
   app.use(app.get<HttpLogger>(HTTP_LOGGER));
 
   const config = app.get(ConfigService<Env, true>);
-  const allowedOrigins = new Set(config.get('CORS_ORIGINS', { infer: true }));
+  const corsOrigins = config.get('CORS_ORIGINS', { infer: true });
+  const allowedOrigins = new Set(corsOrigins);
 
   // With N hops trusted, req.ip is the address the outermost trusted proxy
   // saw, which is what the throttler keys on. Unset leaves Express's default
@@ -40,4 +41,12 @@ export function configureHttp(app: NestExpressApplication): void {
     credentials: true,
     exposedHeaders: [REQUEST_ID_HEADER],
   });
+
+  // Rejects state-changing requests a browser reports as cross-origin
+  // (Sec-Fetch-Site, or Origin against Host), with a 403 through the filter.
+  // SameSite=Strict already keeps the refresh cookie off cross-site requests;
+  // this also covers same-site ones, such as from a sibling subdomain. The
+  // CORS origins are the web apps, so they are trusted here too. After the
+  // logger and CORS, so rejections are logged and carry CORS headers.
+  app.enableCsrfProtection({ trustedOrigins: corsOrigins });
 }

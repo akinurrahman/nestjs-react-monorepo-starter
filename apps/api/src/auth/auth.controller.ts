@@ -48,7 +48,7 @@ export class AuthController {
   @ApiDataResponse(AuthResponseDto, {
     description: 'Logged in. Sets the refresh token cookie.',
   })
-  @ApiErrorResponses(400, 401, 429)
+  @ApiErrorResponses(400, 401, 403, 429)
   async login(
     @Body() body: LoginDto,
     @Req() req: Request,
@@ -64,7 +64,7 @@ export class AuthController {
     description:
       'New access token. Rotates the refresh token cookie, except for a repeat within the grace window.',
   })
-  @ApiErrorResponses(401, 429)
+  @ApiErrorResponses(401, 403, 429)
   async refresh(
     @Cookies() cookies: CookieJar,
     @Req() req: Request,
@@ -85,7 +85,7 @@ export class AuthController {
   @ApiNoContentResponse({
     description: 'Session revoked and cookie cleared.',
   })
-  @ApiErrorResponses(429)
+  @ApiErrorResponses(403, 429)
   async logout(
     @Cookies() cookies: CookieJar,
     @Res({ passthrough: true }) res: Response,
