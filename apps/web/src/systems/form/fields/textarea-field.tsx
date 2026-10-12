@@ -1,8 +1,7 @@
 import { Textarea } from '@/components/ui/textarea';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type TextareaFieldProps = BaseFieldProps & {
   rows?: number;
@@ -10,31 +9,14 @@ export type TextareaFieldProps = BaseFieldProps & {
 };
 
 export function TextareaField({
-  name,
-  label,
-  hideLabel,
-  description,
-  placeholder,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   rows = 4,
   maxLength,
+  ...base
 }: TextareaFieldProps) {
-  const { gated, dependsOnList } = useCascade({ name, dependsOn });
+  const field = useFieldShell(base);
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => (
         <Textarea
           id={control.id}
@@ -45,8 +27,8 @@ export function TextareaField({
           onBlur={control.onBlur}
           rows={rows}
           maxLength={maxLength}
-          placeholder={gated ? gatedText(dependsOnList) : placeholder}
-          disabled={disabled || gated}
+          placeholder={field.placeholder}
+          disabled={field.disabled}
           aria-invalid={control.invalid}
           aria-required={control.required || undefined}
           aria-describedby={control.describedBy}

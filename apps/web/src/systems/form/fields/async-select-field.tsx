@@ -9,10 +9,9 @@ import {
 } from '@/components/ui/combobox';
 import { AsyncCombobox, AsyncOptionsList } from '../controls/async-combobox';
 import { useAsyncOptions } from '../hooks/use-async-options';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { AsyncOptionsSource, BaseFieldProps, Option } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 type SourceProps = {
   source: AsyncOptionsSource;
@@ -39,36 +38,17 @@ export function AsyncSelectField({ multi, ...props }: AsyncSelectFieldProps) {
 type FieldProps = Omit<AsyncSelectFieldProps, 'multi'>;
 
 function AsyncSingleSelectField({
-  name,
-  label,
-  hideLabel,
-  description,
   placeholder = 'Select...',
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   source,
   initialOptions,
   debounceMs,
   emptyMessage,
+  ...base
 }: FieldProps) {
-  const { gated, dependsOnList, parentValues } = useCascade({
-    name,
-    dependsOn,
-  });
+  const field = useFieldShell({ ...base, placeholder });
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => (
         <AsyncCombobox
           id={control.id}
@@ -81,10 +61,10 @@ function AsyncSingleSelectField({
           value={control.value}
           onChange={control.onChange}
           source={source}
-          parentValues={parentValues}
+          parentValues={field.parentValues}
           initialOptions={initialOptions}
-          placeholder={gated ? gatedText(dependsOnList) : placeholder}
-          disabled={disabled || gated}
+          placeholder={field.placeholder}
+          disabled={field.disabled}
           debounceMs={debounceMs}
           emptyMessage={emptyMessage}
         />
@@ -94,34 +74,17 @@ function AsyncSingleSelectField({
 }
 
 function AsyncMultiSelectField({
-  name,
-  label,
-  hideLabel,
-  description,
   placeholder = 'Select...',
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
-  ...sourceProps
+  source,
+  initialOptions,
+  debounceMs,
+  emptyMessage,
+  ...base
 }: FieldProps) {
-  const { gated, dependsOnList, parentValues } = useCascade({
-    name,
-    dependsOn,
-    emptyValue: [],
-  });
+  const field = useFieldShell({ ...base, placeholder }, []);
 
   return (
-    <FieldShell<string[]>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string[]> {...field.shell}>
       {(control) => (
         <AsyncMultiCombobox
           id={control.id}
@@ -133,10 +96,13 @@ function AsyncMultiSelectField({
           aria-describedby={control.describedBy}
           value={control.value}
           onChange={control.onChange}
-          parentValues={parentValues}
-          placeholder={gated ? gatedText(dependsOnList) : placeholder}
-          disabled={disabled || gated}
-          {...sourceProps}
+          parentValues={field.parentValues}
+          placeholder={field.placeholder}
+          disabled={field.disabled}
+          source={source}
+          initialOptions={initialOptions}
+          debounceMs={debounceMs}
+          emptyMessage={emptyMessage}
         />
       )}
     </FieldShell>
@@ -147,7 +113,7 @@ type AsyncMultiComboboxProps = SourceProps & {
   value: string[] | undefined;
   onChange: (value: string[]) => void;
   parentValues: Record<string, unknown>;
-  placeholder: string;
+  placeholder: string | undefined;
   disabled: boolean | undefined;
 } & Pick<
     ComponentProps<'input'>,

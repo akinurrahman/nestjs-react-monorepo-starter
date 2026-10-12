@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
 import { z } from 'zod';
 import { InputField } from '../fields/input-field';
+import { SelectField } from '../fields/select-field';
 import { Form } from '../form';
 
 const schema = z.object({ country: z.string(), city: z.string() });
@@ -106,6 +107,57 @@ describe('useCascade', () => {
       state: '',
       city: '',
     });
+  });
+
+  it('disables a visible child while its parent is empty', async () => {
+    render(
+      <Form
+        schema={schema}
+        defaultValues={{ country: 'IN', city: 'Pune' }}
+        onSubmit={vi.fn()}
+      >
+        <InputField name="country" label="Country" />
+        <InputField
+          name="city"
+          label="City"
+          dependsOn="country"
+          alwaysVisible
+        />
+      </Form>,
+    );
+    const user = userEvent.setup();
+
+    await user.clear(screen.getByRole('textbox', { name: 'Country' }));
+
+    expect(city()).toBeDisabled();
+  });
+
+  it('clears a multi child to an empty list, not a string', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <Form
+        schema={z.object({ team: z.string(), people: z.array(z.string()) })}
+        defaultValues={{ team: 'red', people: ['ada'] }}
+        onSubmit={onSubmit}
+      >
+        <InputField name="team" label="Team" />
+        <SelectField
+          name="people"
+          label="People"
+          options={[{ value: 'ada', label: 'Ada' }]}
+          dependsOn="team"
+          multi
+        />
+        <button type="submit">Save</button>
+      </Form>,
+    );
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole('textbox', { name: 'Team' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0]![0]).toEqual({ team: 'redx', people: [] });
   });
 
   it('keeps the new child value after reset(newValues)', async () => {

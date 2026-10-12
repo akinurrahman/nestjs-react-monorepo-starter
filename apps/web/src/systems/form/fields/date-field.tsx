@@ -1,8 +1,7 @@
 import { DatePicker } from '@/components/ui/date-picker';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type DateFieldProps = BaseFieldProps & {
   // yyyy-MM-dd bounds. Days outside them cannot be picked at all.
@@ -12,32 +11,11 @@ export type DateFieldProps = BaseFieldProps & {
 
 // A calendar day as yyyy-MM-dd, the shape every date-only API field takes.
 // Never an instant, never an offset.
-export function DateField({
-  name,
-  label,
-  hideLabel,
-  description,
-  placeholder,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
-  min,
-  max,
-}: DateFieldProps) {
-  const { gated, dependsOnList } = useCascade({ name, dependsOn });
+export function DateField({ min, max, ...base }: DateFieldProps) {
+  const field = useFieldShell(base);
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => (
         <DatePicker
           id={control.id}
@@ -49,8 +27,8 @@ export function DateField({
           }}
           min={min}
           max={max}
-          placeholder={gated ? gatedText(dependsOnList) : placeholder}
-          disabled={disabled || gated}
+          placeholder={field.placeholder}
+          disabled={field.disabled}
           aria-invalid={control.invalid}
           aria-describedby={control.describedBy}
         />

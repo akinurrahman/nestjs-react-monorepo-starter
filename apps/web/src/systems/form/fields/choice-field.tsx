@@ -1,8 +1,8 @@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { useCascade } from '../hooks/use-cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type ChoiceOption = {
   value: string;
@@ -23,31 +23,15 @@ export type ChoiceFieldProps = Omit<BaseFieldProps, 'placeholder'> & {
  * steers the rest of the form. A long list still belongs in a select.
  */
 export function ChoiceField({
-  name,
-  label,
-  hideLabel,
-  description,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   options,
   columns = 2,
+  ...base
 }: ChoiceFieldProps) {
-  const { gated } = useCascade({ name, dependsOn });
-  const isDisabled = disabled || gated;
+  const field = useFieldShell(base);
+  const isDisabled = field.disabled;
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => {
         // Focus goes to the radio a keyboard user would land on: the checked
         // one, else the first.

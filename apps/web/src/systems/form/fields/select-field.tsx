@@ -19,10 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps, Option, OptionsFn } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 type OptionsProps = {
   options?: readonly Option[];
@@ -61,39 +60,23 @@ function useResolvedOptions({ options, optionsFn }: OptionsProps): Option[] {
 type FieldProps = BaseFieldProps & OptionsProps;
 
 function SingleSelectField({
-  name,
-  label,
-  hideLabel,
-  description,
   placeholder = 'Select...',
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   options,
   optionsFn,
+  ...base
 }: FieldProps) {
-  const { gated, dependsOnList } = useCascade({ name, dependsOn });
+  const field = useFieldShell({ ...base, placeholder });
   const resolved = useResolvedOptions({ options, optionsFn });
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => (
         <Select
           name={control.name}
           value={control.value || null}
           onValueChange={(next) => control.onChange(next ?? '')}
           items={resolved}
-          disabled={disabled || gated}
+          disabled={field.disabled}
         >
           <SelectTrigger
             id={control.id}
@@ -105,9 +88,7 @@ function SingleSelectField({
             aria-describedby={control.describedBy}
             className="w-full"
           >
-            <SelectValue
-              placeholder={gated ? gatedText(dependsOnList) : placeholder}
-            />
+            <SelectValue placeholder={field.placeholder} />
           </SelectTrigger>
           <SelectContent>
             {resolved.map((option) => (
@@ -123,37 +104,17 @@ function SingleSelectField({
 }
 
 function MultiSelectField({
-  name,
-  label,
-  hideLabel,
-  description,
   placeholder = 'Select...',
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   options,
   optionsFn,
+  ...base
 }: FieldProps) {
-  const { gated, dependsOnList } = useCascade({
-    name,
-    dependsOn,
-    emptyValue: [],
-  });
+  const field = useFieldShell({ ...base, placeholder }, []);
   const resolved = useResolvedOptions({ options, optionsFn });
   const anchor = useComboboxAnchor();
 
   return (
-    <FieldShell<string[]>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string[]> {...field.shell}>
       {(control) => {
         // A value the options no longer list still shows, by its raw value,
         // so it can be seen and removed.
@@ -174,7 +135,7 @@ function MultiSelectField({
               control.onChange(next.map((option) => option.value))
             }
             isItemEqualToValue={(a: Option, b: Option) => a.value === b.value}
-            disabled={disabled || gated}
+            disabled={field.disabled}
           >
             <ComboboxChips ref={anchor} className="w-full">
               <ComboboxValue>
@@ -195,11 +156,9 @@ function MultiSelectField({
                 aria-required={control.required || undefined}
                 aria-describedby={control.describedBy}
                 placeholder={
-                  gated
-                    ? gatedText(dependsOnList)
-                    : selected.length
-                      ? undefined
-                      : placeholder
+                  !field.gated && selected.length
+                    ? undefined
+                    : field.placeholder
                 }
               />
             </ComboboxChips>

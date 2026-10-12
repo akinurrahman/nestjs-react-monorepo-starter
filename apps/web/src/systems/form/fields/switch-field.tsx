@@ -1,36 +1,17 @@
 import { Switch } from '@/components/ui/switch';
-import { useCascade } from '../hooks/use-cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type SwitchFieldProps = Omit<BaseFieldProps, 'placeholder'>;
 
 // Base UI puts the id on its hidden checkbox and names the visible switch
 // through aria-labelledby, so a plain htmlFor alone leaves it unnamed.
-export function SwitchField({
-  name,
-  label,
-  hideLabel,
-  description,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
-}: SwitchFieldProps) {
-  const { gated } = useCascade({ name, dependsOn, emptyValue: false });
+export function SwitchField(props: SwitchFieldProps) {
+  const field = useFieldShell(props, false);
 
   return (
-    <FieldShell<boolean>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      layout="row"
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<boolean> {...field.shell} layout="row">
       {(control) => (
         <Switch
           id={control.id}
@@ -39,7 +20,7 @@ export function SwitchField({
           checked={Boolean(control.value)}
           onCheckedChange={(next) => control.onChange(next)}
           onBlur={control.onBlur}
-          disabled={disabled || gated}
+          disabled={field.disabled}
           aria-labelledby={control.labelId}
           aria-invalid={control.invalid}
           aria-describedby={control.describedBy}

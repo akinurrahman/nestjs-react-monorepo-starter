@@ -1,35 +1,17 @@
 import { Input } from '@/components/ui/input';
-import { useCascade } from '../hooks/use-cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type TimeFieldProps = Omit<BaseFieldProps, 'placeholder'>;
 
 // Wall-clock time as HH:mm. The native control brings each platform's own
 // picker and its 12h or 24h preference, which no custom dropdown matches.
-export function TimeField({
-  name,
-  label,
-  hideLabel,
-  description,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
-}: TimeFieldProps) {
-  const { gated } = useCascade({ name, dependsOn });
+export function TimeField(props: TimeFieldProps) {
+  const field = useFieldShell(props);
 
   return (
-    <FieldShell<string>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string> {...field.shell}>
       {(control) => (
         <Input
           id={control.id}
@@ -39,7 +21,7 @@ export function TimeField({
           value={control.value ?? ''}
           onChange={(event) => control.onChange(event.target.value)}
           onBlur={control.onBlur}
-          disabled={disabled || gated}
+          disabled={field.disabled}
           aria-invalid={control.invalid}
           aria-required={control.required || undefined}
           aria-describedby={control.describedBy}

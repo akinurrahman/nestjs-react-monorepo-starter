@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 export type TagsFieldProps = BaseFieldProps & {
   // Stops accepting entries at the schema's limit, which beats letting
@@ -18,36 +17,16 @@ export type TagsFieldProps = BaseFieldProps & {
  * plain text field would have to invent a separator and a parser.
  */
 export function TagsField({
-  name,
-  label,
-  hideLabel,
-  description,
   placeholder = 'Type and press Enter',
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   maxItems,
+  ...base
 }: TagsFieldProps) {
   const [draft, setDraft] = useState('');
-  const { gated, dependsOnList } = useCascade({
-    name,
-    dependsOn,
-    emptyValue: [],
-  });
-  const isDisabled = disabled || gated;
+  const field = useFieldShell({ ...base, placeholder }, []);
+  const isDisabled = field.disabled;
 
   return (
-    <FieldShell<string[]>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string[]> {...field.shell}>
       {(control) => {
         const items = control.value ?? [];
         const isFull = maxItems !== undefined && items.length >= maxItems;
@@ -87,11 +66,9 @@ export function TagsField({
                 control.onBlur();
               }}
               placeholder={
-                gated
-                  ? gatedText(dependsOnList)
-                  : isFull
-                    ? `Limit of ${maxItems} reached`
-                    : placeholder
+                !field.gated && isFull
+                  ? `Limit of ${maxItems} reached`
+                  : field.placeholder
               }
               disabled={isDisabled}
               aria-invalid={control.invalid}

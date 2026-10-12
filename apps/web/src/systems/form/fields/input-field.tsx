@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useCascade } from '../hooks/use-cascade';
-import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
+import { useFieldShell } from './use-field-shell';
 
 type InputType = 'text' | 'email' | 'url' | 'tel' | 'password' | 'number';
 
@@ -19,43 +18,21 @@ export type InputFieldProps = BaseFieldProps & {
 };
 
 export function InputField({
-  name,
-  label,
-  hideLabel,
-  description,
-  placeholder,
-  required,
-  disabled,
-  className,
-  dependsOn,
-  alwaysVisible,
   type = 'text',
   min,
   max,
   step,
   maxLength,
   autoComplete,
+  ...base
 }: InputFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === 'password';
   const isNumber = type === 'number';
-
-  const { gated, dependsOnList } = useCascade({
-    name,
-    dependsOn,
-    emptyValue: isNumber ? undefined : '',
-  });
+  const field = useFieldShell(base, isNumber ? undefined : '');
 
   return (
-    <FieldShell<string | number>
-      name={name}
-      label={label}
-      hideLabel={hideLabel}
-      description={description}
-      required={required}
-      className={className}
-      hidden={gated && !alwaysVisible}
-    >
+    <FieldShell<string | number> {...field.shell}>
       {(control) => (
         <div className="relative">
           <Input
@@ -73,8 +50,8 @@ export function InputField({
               );
             }}
             onBlur={control.onBlur}
-            placeholder={gated ? gatedText(dependsOnList) : placeholder}
-            disabled={disabled || gated}
+            placeholder={field.placeholder}
+            disabled={field.disabled}
             min={min}
             max={max}
             step={step}
@@ -95,7 +72,7 @@ export function InputField({
               type="button"
               aria-label={revealed ? 'Hide password' : 'Show password'}
               aria-pressed={revealed}
-              disabled={disabled || gated}
+              disabled={field.disabled}
               onClick={() => setRevealed((current) => !current)}
               className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none"
             >
