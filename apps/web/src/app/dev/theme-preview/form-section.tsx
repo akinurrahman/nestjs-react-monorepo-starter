@@ -1,5 +1,5 @@
 import { ERROR_CODES } from '@starter/shared';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import {
   TextareaField,
   TimeField,
 } from '@/systems/form';
-import { applyServerError } from '@/systems/form/lib/server-errors';
 import { PreviewSection, PreviewSwitch } from './preview-layout';
 import { DEPARTMENTS, PEOPLE, peopleSource } from './preview-data';
 
@@ -89,7 +88,9 @@ const INITIAL_PEOPLE = PEOPLE.slice(0, 3).map((person) => ({
 }));
 
 // What a 400 with field errors looks like once apiCall has turned it into an
-// ApiError. The last path names no field, so it lands in FormError.
+// ApiError. onSubmit throws it, so Form maps it exactly as it would a
+// feature's rejected mutation. The last path names no field, so it lands in
+// FormError.
 const SERVER_ERROR = new ApiError({
   status: 400,
   code: ERROR_CODES.VALIDATION_FAILED,
@@ -109,11 +110,16 @@ const SUBMIT_DELAY_MS = 800;
 export function FormSection() {
   const [disabled, setDisabled] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const rejectNext = useRef(false);
 
   async function submit(values: z.output<typeof schema>) {
     setIsPending(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, SUBMIT_DELAY_MS));
+      if (rejectNext.current) {
+        rejectNext.current = false;
+        throw SERVER_ERROR;
+      }
       toast.success('Form submitted', {
         description: `${values.name}, ${values.email}`,
       });
@@ -125,7 +131,7 @@ export function FormSection() {
   return (
     <PreviewSection
       id="form"
-      description="Every field in systems/form, all required, inside a real Form. Submit empty for client errors. Show server errors runs the same mapping a rejected mutation does."
+      description="Every field in systems/form, all required, inside a real Form. Submit empty for client errors. Show server errors fills the sample values and submits, and onSubmit throws the ApiError a 400 would, so Form maps it as it does for a feature."
     >
       <PreviewSwitch
         label="Disable every field"
@@ -271,16 +277,15 @@ export function FormSection() {
             <FormError />
 
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              {/* A submit, so the error takes the real path: the sample
+                  values pass client validation, then onSubmit throws. */}
               <Button
-                type="button"
+                type="submit"
                 variant="outline"
-                onClick={() =>
-                  applyServerError(
-                    form.setError,
-                    SERVER_ERROR,
-                    new Set(FIELD_NAMES),
-                  )
-                }
+                onClick={() => {
+                  rejectNext.current = true;
+                  form.reset(SAMPLE);
+                }}
               >
                 Show server errors
               </Button>
