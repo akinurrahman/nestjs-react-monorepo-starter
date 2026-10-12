@@ -1,13 +1,19 @@
+import type { FieldValues } from 'react-hook-form';
 import { Switch } from '@/components/ui/switch';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
 
-export type SwitchFieldProps = Omit<BaseFieldProps, 'placeholder'>;
+export type SwitchFieldProps<T extends FieldValues = FieldValues> = Omit<
+  BaseFieldProps<T>,
+  'placeholder'
+>;
 
 // Base UI puts the id on its hidden checkbox and names the visible switch
 // through aria-labelledby, so a plain htmlFor alone leaves it unnamed.
-export function SwitchField(props: SwitchFieldProps) {
+export function SwitchField<T extends FieldValues = FieldValues>(
+  props: SwitchFieldProps<T>,
+) {
   const field = useFieldShell(props, false);
 
   return (

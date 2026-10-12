@@ -1,13 +1,19 @@
+import type { FieldValues } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
 
-export type TimeFieldProps = Omit<BaseFieldProps, 'placeholder'>;
+export type TimeFieldProps<T extends FieldValues = FieldValues> = Omit<
+  BaseFieldProps<T>,
+  'placeholder'
+>;
 
 // Wall-clock time as HH:mm. The native control brings each platform's own
 // picker and its 12h or 24h preference, which no custom dropdown matches.
-export function TimeField(props: TimeFieldProps) {
+export function TimeField<T extends FieldValues = FieldValues>(
+  props: TimeFieldProps<T>,
+) {
   const field = useFieldShell(props);
 
   return (

@@ -20,6 +20,6 @@ describe('FormSection', () => {
     ).toHaveTextContent('The server rejected some of these values');
     expect(
       screen.getByRole('textbox', { name: /^Name/ }),
-    ).toHaveAccessibleDescription('InputField, text. The server rejected name');
+    ).toHaveAccessibleDescription('Input, text. The server rejected name');
   });
 });

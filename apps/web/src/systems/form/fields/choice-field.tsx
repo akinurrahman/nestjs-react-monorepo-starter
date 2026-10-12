@@ -1,3 +1,4 @@
+import type { FieldValues } from 'react-hook-form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { BaseFieldProps } from '../types';
@@ -12,7 +13,10 @@ export type ChoiceOption = {
   description?: string;
 };
 
-export type ChoiceFieldProps = Omit<BaseFieldProps, 'placeholder'> & {
+export type ChoiceFieldProps<T extends FieldValues = FieldValues> = Omit<
+  BaseFieldProps<T>,
+  'placeholder'
+> & {
   options: readonly ChoiceOption[];
   // Two per row from sm up.
   columns?: 1 | 2;
@@ -22,11 +26,11 @@ export type ChoiceFieldProps = Omit<BaseFieldProps, 'placeholder'> & {
  * A few mutually exclusive options laid out as cards, for a decision that
  * steers the rest of the form. A long list still belongs in a select.
  */
-export function ChoiceField({
+export function ChoiceField<T extends FieldValues = FieldValues>({
   options,
   columns = 2,
   ...base
-}: ChoiceFieldProps) {
+}: ChoiceFieldProps<T>) {
   const field = useFieldShell(base);
   const isDisabled = field.disabled;
 

@@ -1,4 +1,5 @@
 import { useState, type ComponentProps } from 'react';
+import type { FieldValues } from 'react-hook-form';
 import {
   Combobox,
   ComboboxChip,
@@ -22,12 +23,16 @@ type SourceProps = {
   emptyMessage?: string;
 };
 
-export type AsyncSelectFieldProps = BaseFieldProps &
-  SourceProps & {
-    multi?: boolean;
-  };
+export type AsyncSelectFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> &
+    SourceProps & {
+      multi?: boolean;
+    };
 
-export function AsyncSelectField({ multi, ...props }: AsyncSelectFieldProps) {
+export function AsyncSelectField<T extends FieldValues = FieldValues>({
+  multi,
+  ...props
+}: AsyncSelectFieldProps<T>) {
   return multi ? (
     <AsyncMultiSelectField {...props} />
   ) : (

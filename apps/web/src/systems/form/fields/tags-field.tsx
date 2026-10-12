@@ -1,26 +1,28 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import type { FieldValues } from 'react-hook-form';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
 
-export type TagsFieldProps = BaseFieldProps & {
-  // Stops accepting entries at the schema's limit, which beats letting
-  // someone type one more and then rejecting it.
-  maxItems?: number;
-};
+export type TagsFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> & {
+    // Stops accepting entries at the schema's limit, which beats letting
+    // someone type one more and then rejecting it.
+    maxItems?: number;
+  };
 
 /**
  * A free-text list, for an API that models one row as several names, where a
  * plain text field would have to invent a separator and a parser.
  */
-export function TagsField({
+export function TagsField<T extends FieldValues = FieldValues>({
   placeholder = 'Type and press Enter',
   maxItems,
   ...base
-}: TagsFieldProps) {
+}: TagsFieldProps<T>) {
   const [draft, setDraft] = useState('');
   const field = useFieldShell({ ...base, placeholder }, []);
   const isDisabled = field.disabled;

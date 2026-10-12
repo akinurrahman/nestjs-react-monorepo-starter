@@ -15,13 +15,7 @@ export type {
   OptionsFn,
 } from './types';
 
-export { AsyncSelectField } from './fields/async-select-field';
-export { ChoiceField } from './fields/choice-field';
+// Fields only through formFields(schema), so every name is checked against
+// the schema. The raw components stay inside systems/form.
+export { formFields } from './form-fields';
 export type { ChoiceOption } from './fields/choice-field';
-export { DateField } from './fields/date-field';
-export { InputField } from './fields/input-field';
-export { SelectField } from './fields/select-field';
-export { SwitchField } from './fields/switch-field';
-export { TagsField } from './fields/tags-field';
-export { TextareaField } from './fields/textarea-field';
-export { TimeField } from './fields/time-field';

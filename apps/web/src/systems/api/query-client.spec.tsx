@@ -7,7 +7,7 @@ import { apiCall, apiCallPaginated } from '@/lib/api/api-call';
 import { conflict, notFound, validationFailed } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
 import { renderWithQuery } from '@/test/render-with-query';
-import { Form, FormError, InputField } from '@/systems/form';
+import { Form, FormError, formFields } from '@/systems/form';
 import { createColumnHelper, DataTable } from '@/systems/table';
 import { ErrorState } from '@/systems/ui';
 
@@ -135,6 +135,7 @@ function CaughtSaveButton({ onCaught }: { onCaught: () => void }) {
 }
 
 const userSchema = z.object({ email: z.string(), name: z.string() });
+const UserField = formFields(userSchema);
 
 function SaveForm() {
   const mutation = useMutation({
@@ -146,8 +147,8 @@ function SaveForm() {
       schema={userSchema}
       onSubmit={(values) => mutation.mutateAsync(values)}
     >
-      <InputField name="email" label="Email" />
-      <InputField name="name" label="Name" />
+      <UserField.Input name="email" label="Email" />
+      <UserField.Input name="name" label="Name" />
       <FormError />
       <button type="submit">Save</button>
     </Form>

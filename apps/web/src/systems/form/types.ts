@@ -1,3 +1,5 @@
+import type { FieldValues, Path } from 'react-hook-form';
+
 export type Option = { value: string; label: string };
 
 export type OptionsFn = (formValues: Record<string, unknown>) => Option[];
@@ -20,8 +22,11 @@ export type AsyncOptionsSource = {
   fetch: (args: AsyncOptionsArgs) => Promise<AsyncOptionsPage>;
 };
 
-export type BaseFieldProps = {
-  name: string;
+// T is the form's input values. formFields(schema) fills it in, so name and
+// dependsOn only accept paths the schema has; the default keeps the field
+// components usable inside systems/form without one.
+export type BaseFieldProps<T extends FieldValues = FieldValues> = {
+  name: Path<T>;
   label: string;
   // Keeps the label as the accessible name while taking it off screen, for a
   // field whose purpose the layout already shows.
@@ -33,7 +38,7 @@ export type BaseFieldProps = {
   className?: string;
   // Clears this field whenever a parent changes. With several parents it
   // stays gated until every one has a value.
-  dependsOn?: string | string[];
+  dependsOn?: Path<T> | Path<T>[];
   // A dependent field hides until its parents have values. This keeps it on
   // screen, disabled, instead.
   alwaysVisible?: boolean;

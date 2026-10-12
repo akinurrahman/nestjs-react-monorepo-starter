@@ -154,7 +154,7 @@ export type ClassFormInput = z.input<typeof classFormSchema>;
 export type ClassFormValues = z.output<typeof classFormSchema>;
 ```
 
-`InputField type="number"` hands the form a number, or `undefined` when empty,
+`Field.Input type="number"` hands the form a number, or `undefined` when empty,
 so the schema takes `z.number()` and the required message fires instead of a
 coerced 0. `Form` seeds strings, enums and arrays with their empty value, so
 `remarks` needs no `.optional()` to start blank.
@@ -309,15 +309,7 @@ decides where success goes, so the same component works in a `FormSheet`.
 ### `components/classes/class-form.tsx`
 
 ```tsx
-import {
-  AsyncSelectField,
-  Form,
-  FormActions,
-  FormError,
-  InputField,
-  SelectField,
-  TextareaField,
-} from '@/systems/form';
+import { Form, FormActions, FormError, formFields } from '@/systems/form';
 import { useCreateClass, useUpdateClass } from '../../api/class.mutations';
 import { subjectOptionsSource } from '../../api/subject.queries';
 import { classStatusLookup } from '../../definitions/class.lookup';
@@ -326,6 +318,9 @@ import {
   type ClassFormInput,
 } from '../../definitions/class.schema';
 import type { ClassDetail } from '../../definitions/class.types';
+
+// Typed to the schema: a name or dependsOn it does not have fails tsc.
+const Field = formFields(classFormSchema);
 
 type ClassFormProps = {
   initialData?: ClassDetail;
@@ -362,20 +357,20 @@ export function ClassForm({
       }}
       className="grid gap-5"
     >
-      <InputField
+      <Field.Input
         name="name"
         label="Class name"
         placeholder="Class 10"
         required
       />
-      <InputField name="numericLevel" label="Level" type="number" required />
-      <SelectField
+      <Field.Input name="numericLevel" label="Level" type="number" required />
+      <Field.Select
         name="status"
         label="Status"
         options={classStatusLookup.options}
         required
       />
-      <AsyncSelectField
+      <Field.AsyncSelect
         name="subjectIds"
         label="Subjects"
         source={subjectOptionsSource}
@@ -386,7 +381,7 @@ export function ClassForm({
         multi
         required
       />
-      <TextareaField name="remarks" label="Remarks" />
+      <Field.Textarea name="remarks" label="Remarks" />
 
       <FormError />
       <FormActions
@@ -801,7 +796,7 @@ export const subjectOptionsSource: AsyncOptionsSource = {
 
 `getOptions` is its own endpoint and its own key. Do not feed a picker from the
 paginated list query or it will only ever show page one. The source is a plain
-object, not a hook: `AsyncSelectField`, `FilterAsyncSelect` and a popover
+object, not a hook: `Field.AsyncSelect`, `FilterAsyncSelect` and a popover
 `asyncSelect` each run it through `useInfiniteQuery`, searched and paged on the
 server, keyed under `SUBJECT_KEYS.options()`. A cascade child reads its parents
 from `parentValues` and passes them as params.

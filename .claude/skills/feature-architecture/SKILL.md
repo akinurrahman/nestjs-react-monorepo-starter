@@ -222,11 +222,20 @@ box (`components/ui/combobox.tsx`, `systems/form/fields/tags-field.tsx`).
 
 ### Forms
 
-Fields come from `@/systems/form`: `Form`, `FormError`, `FormActions`,
-`FormSheet`, `InputField` (text, email, url, tel, password, number),
-`TextareaField`, `SelectField` (`multi` for many), `AsyncSelectField` (`multi`
-for many), `ChoiceField`, `SwitchField`, `TagsField`, `TimeField`, `DateField`.
-Every field takes `name`, `label`, `description`, `placeholder`, `required`,
+Forms come from `@/systems/form`: `Form`, `FormError`, `FormActions`,
+`FormSheet` and `formFields`. Fields come only from `formFields(schema)`,
+called once at module level next to the schema, so `name` and `dependsOn` are
+checked against the schema's keys:
+
+```tsx
+const Field = formFields(classFormSchema);
+// <Field.Input name="name" label="Class name" required />
+```
+
+It returns `Input` (text, email, url, tel, password, number), `Textarea`,
+`Select` (`multi` for many), `AsyncSelect` (`multi` for many), `Choice`,
+`Switch`, `Tags`, `Time` and `Date`. The raw field components are not
+exported, so an unchecked field name cannot be written. Every field takes `name`, `label`, `description`, `placeholder`, `required`,
 `disabled`, and `dependsOn` / `alwaysVisible` for a cascade.
 
 `Form` seeds empty defaults from the schema, so pass only real values in
@@ -242,7 +251,7 @@ component inside a feature.
 
 ### Async selects
 
-A picker over a list too long to ship to the browser is an `AsyncSelectField`
+A picker over a list too long to ship to the browser is a `Field.AsyncSelect`
 in a form, or a `FilterAsyncSelect` / popover `asyncSelect` in a filter bar. All
 of them take one `AsyncOptionsSource`, owned by the entity it lists, in its
 `api/<entity>.queries.ts`:

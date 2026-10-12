@@ -71,7 +71,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useConfirm } from '@/systems/confirmation';
-import { FormSheet, InputField, TextareaField } from '@/systems/form';
+import { FormSheet, formFields } from '@/systems/form';
 import { PreviewSection, Specimen } from './preview-layout';
 import { useFailingMutation } from './use-failing-mutation';
 
@@ -83,6 +83,8 @@ const noteSchema = z.object({
   title: z.string().min(1, 'Enter a title'),
   body: z.string(),
 });
+
+const NoteField = formFields(noteSchema);
 
 export function OverlaysSection() {
   const confirm = useConfirm();
@@ -161,8 +163,8 @@ export function OverlaysSection() {
             setSheetOpen(false);
           }}
         >
-          <InputField name="title" label="Title" required />
-          <TextareaField name="body" label="Body" />
+          <NoteField.Input name="title" label="Title" required />
+          <NoteField.Textarea name="body" label="Body" />
         </FormSheet>
       </Specimen>
 

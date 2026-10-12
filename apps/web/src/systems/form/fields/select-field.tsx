@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useFormContext, useWatch } from 'react-hook-form';
+import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 import {
   Select,
   SelectContent,
@@ -18,12 +18,16 @@ type OptionsProps = {
   optionsFn?: OptionsFn;
 };
 
-export type SelectFieldProps = BaseFieldProps &
-  OptionsProps & {
-    multi?: boolean;
-  };
+export type SelectFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> &
+    OptionsProps & {
+      multi?: boolean;
+    };
 
-export function SelectField({ multi, ...props }: SelectFieldProps) {
+export function SelectField<T extends FieldValues = FieldValues>({
+  multi,
+  ...props
+}: SelectFieldProps<T>) {
   return multi ? (
     <MultiSelectField {...props} />
   ) : (

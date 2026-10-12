@@ -4,20 +4,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api/api-error';
-import {
-  AsyncSelectField,
-  ChoiceField,
-  DateField,
-  Form,
-  FormActions,
-  FormError,
-  InputField,
-  SelectField,
-  SwitchField,
-  TagsField,
-  TextareaField,
-  TimeField,
-} from '@/systems/form';
+import { Form, FormActions, FormError, formFields } from '@/systems/form';
 import { PreviewSection, PreviewSwitch } from './preview-layout';
 import { DEPARTMENTS, PEOPLE, peopleSource } from './preview-data';
 
@@ -60,6 +47,8 @@ const schema = z.object({
 });
 
 type Values = z.input<typeof schema>;
+
+const Field = formFields(schema);
 
 const FIELD_NAMES = Object.keys(schema.shape);
 
@@ -148,73 +137,73 @@ export function FormSection() {
         {(form) => (
           <>
             <div className="grid gap-5 md:grid-cols-2">
-              <InputField
+              <Field.Input
                 name="name"
                 label="Name"
-                description="InputField, text."
+                description="Input, text."
                 placeholder="Ada Lovelace"
                 required
                 disabled={disabled}
               />
-              <InputField
+              <Field.Input
                 name="email"
                 label="Email"
                 type="email"
-                description="InputField, email."
+                description="Input, email."
                 placeholder="ada@example.com"
                 autoComplete="off"
                 required
                 disabled={disabled}
               />
-              <InputField
+              <Field.Input
                 name="age"
                 label="Age"
                 type="number"
                 min={0}
-                description="InputField, number. Empty is undefined, not 0."
+                description="Input, number. Empty is undefined, not 0."
                 required
                 disabled={disabled}
               />
-              <InputField
+              <Field.Input
                 name="password"
                 label="Password"
                 type="password"
                 autoComplete="new-password"
-                description="InputField, password, with the reveal toggle."
+                description="Input, password, with the reveal toggle."
                 required
                 disabled={disabled}
               />
-              <TextareaField
+              <Field.Textarea
                 name="bio"
                 label="Bio"
-                description="TextareaField."
+                description="Textarea."
                 placeholder="A line or two"
                 rows={3}
                 required
                 disabled={disabled}
                 className="md:col-span-2"
               />
-              <SelectField
+              <Field.Select
                 name="department"
                 label="Department"
-                description="SelectField."
+                description="Select."
                 options={DEPARTMENTS}
                 required
                 disabled={disabled}
               />
-              <SelectField
+              <Field.Select
                 name="skills"
                 label="Skills"
-                description="SelectField, multi."
+                description="Select, multi."
                 options={SKILLS}
                 multi
                 required
                 disabled={disabled}
               />
-              <AsyncSelectField
+              <Field.AsyncSelect
                 name="manager"
                 label="Manager"
-                description="AsyncSelectField, depends on Department. Scroll the list to load more."
+                description="AsyncSelect, depends on Department. Scroll the list to load more."
                 source={peopleSource}
                 initialOptions={INITIAL_PEOPLE}
                 dependsOn="department"
@@ -222,53 +211,53 @@ export function FormSection() {
                 required
                 disabled={disabled}
               />
-              <AsyncSelectField
+              <Field.AsyncSelect
                 name="mentors"
                 label="Mentors"
-                description="AsyncSelectField, multi, over every person."
+                description="AsyncSelect, multi, over every person."
                 source={peopleSource}
                 initialOptions={INITIAL_PEOPLE}
                 multi
                 required
                 disabled={disabled}
               />
-              <ChoiceField
+              <Field.Choice
                 name="contract"
                 label="Contract"
-                description="ChoiceField."
+                description="Choice."
                 options={CONTRACTS}
                 required
                 disabled={disabled}
                 className="md:col-span-2"
               />
-              <TagsField
+              <Field.Tags
                 name="tags"
                 label="Tags"
-                description="TagsField, at most 4."
+                description="Tags, at most 4."
                 maxItems={4}
                 required
                 disabled={disabled}
               />
-              <TimeField
+              <Field.Time
                 name="startTime"
                 label="Start time"
-                description="TimeField."
+                description="Time."
                 required
                 disabled={disabled}
               />
-              <DateField
+              <Field.Date
                 name="startDate"
                 label="Start date"
-                description="DateField, 2026 only."
+                description="Date, 2026 only."
                 min="2026-01-01"
                 max="2026-12-31"
                 required
                 disabled={disabled}
               />
-              <SwitchField
+              <Field.Switch
                 name="remote"
                 label="Remote"
-                description="SwitchField."
+                description="Switch."
                 required
                 disabled={disabled}
               />

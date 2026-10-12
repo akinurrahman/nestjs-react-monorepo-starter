@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import type { FieldValues } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { BaseFieldProps } from '../types';
@@ -8,16 +9,17 @@ import { useFieldShell } from './use-field-shell';
 
 type InputType = 'text' | 'email' | 'url' | 'tel' | 'password' | 'number';
 
-export type InputFieldProps = BaseFieldProps & {
-  type?: InputType;
-  min?: number;
-  max?: number;
-  step?: number;
-  maxLength?: number;
-  autoComplete?: string;
-};
+export type InputFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> & {
+    type?: InputType;
+    min?: number;
+    max?: number;
+    step?: number;
+    maxLength?: number;
+    autoComplete?: string;
+  };
 
-export function InputField({
+export function InputField<T extends FieldValues = FieldValues>({
   type = 'text',
   min,
   max,
@@ -25,7 +27,7 @@ export function InputField({
   maxLength,
   autoComplete,
   ...base
-}: InputFieldProps) {
+}: InputFieldProps<T>) {
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === 'password';
   const isNumber = type === 'number';

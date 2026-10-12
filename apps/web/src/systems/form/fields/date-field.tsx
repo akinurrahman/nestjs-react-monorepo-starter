@@ -1,17 +1,23 @@
+import type { FieldValues } from 'react-hook-form';
 import { DatePicker } from '@/components/ui/date-picker';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
 
-export type DateFieldProps = BaseFieldProps & {
-  // yyyy-MM-dd bounds. Days outside them cannot be picked at all.
-  min?: string;
-  max?: string;
-};
+export type DateFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> & {
+    // yyyy-MM-dd bounds. Days outside them cannot be picked at all.
+    min?: string;
+    max?: string;
+  };
 
 // A calendar day as yyyy-MM-dd, the shape every date-only API field takes.
 // Never an instant, never an offset.
-export function DateField({ min, max, ...base }: DateFieldProps) {
+export function DateField<T extends FieldValues = FieldValues>({
+  min,
+  max,
+  ...base
+}: DateFieldProps<T>) {
   const field = useFieldShell(base);
 
   return (

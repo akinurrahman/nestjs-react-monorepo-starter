@@ -1,18 +1,20 @@
+import type { FieldValues } from 'react-hook-form';
 import { Textarea } from '@/components/ui/textarea';
 import type { BaseFieldProps } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
 
-export type TextareaFieldProps = BaseFieldProps & {
-  rows?: number;
-  maxLength?: number;
-};
+export type TextareaFieldProps<T extends FieldValues = FieldValues> =
+  BaseFieldProps<T> & {
+    rows?: number;
+    maxLength?: number;
+  };
 
-export function TextareaField({
+export function TextareaField<T extends FieldValues = FieldValues>({
   rows = 4,
   maxLength,
   ...base
-}: TextareaFieldProps) {
+}: TextareaFieldProps<T>) {
   const field = useFieldShell(base);
 
   return (
