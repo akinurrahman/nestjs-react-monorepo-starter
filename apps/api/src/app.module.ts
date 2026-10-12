@@ -18,6 +18,7 @@ import {
 import { RATE_LIMIT } from './config/throttler.config.js';
 import { PrismaModule } from './database/prisma.module.js';
 import { HealthModule } from './health/health.module.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { HealthModule } from './health/health.module.js';
     ThrottlerModule.forRoot([RATE_LIMIT]),
     PrismaModule,
     HealthModule,
+    UsersModule,
     AuthModule,
   ],
   providers: [
