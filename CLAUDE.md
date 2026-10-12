@@ -67,6 +67,8 @@ The dev shell may be PowerShell on Windows. Prefer commands that work in both.
   Paginated lists return `paginate(items, total, query, summary?)` and take `PaginationQueryDto`.
 - DTOs: a Zod schema from `@starter/shared` plus `class XDto extends createZodDto(XSchema) {}`
   in the api.
+- Request body schemas use `z.strictObject`: an unknown field is a 400, never silently
+  dropped.
 - Document every endpoint: `ApiDataResponse`, `ApiPaginatedResponse`, `ApiErrorResponses`.
 - New routes land under `/api` automatically. Only probes are unprefixed and unthrottled.
 - `configureApp` is the only app setup. `main.ts` and every e2e spec use it. Nothing
