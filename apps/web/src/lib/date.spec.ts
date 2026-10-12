@@ -138,3 +138,17 @@ describe('formatDateTime', () => {
     },
   );
 });
+
+describe('formatMonthShort', () => {
+  it('names the month in the app locale by default', async () => {
+    const { formatMonthShort } = await inZone('UTC');
+
+    expect(formatMonthShort(new Date(2026, 9, 1))).toBe('Oct');
+  });
+
+  it('takes another locale', async () => {
+    const { formatMonthShort } = await inZone('UTC');
+
+    expect(formatMonthShort(new Date(2026, 9, 1), 'de-DE')).toBe('Okt');
+  });
+});

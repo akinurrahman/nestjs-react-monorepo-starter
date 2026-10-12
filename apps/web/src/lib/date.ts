@@ -60,6 +60,12 @@ export function formatDate(value: string | null | undefined): string {
   return dateFormat.format(new Date(Date.UTC(year!, month! - 1, day)));
 }
 
+// A month's short name, for a calendar's month picker. The locale defaults
+// to the app's, not the browser's, like every other date on screen.
+export function formatMonthShort(date: Date, locale: string = APP_LOCALE) {
+  return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
+}
+
 export function formatDateTime(
   value: string | number | Date | null | undefined,
 ): string {

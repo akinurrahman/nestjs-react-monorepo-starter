@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { calendarDateOf, formatMonthShort } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import {
   DayPicker,
@@ -41,8 +42,7 @@ function Calendar({
       captionLayout={captionLayout}
       locale={locale}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString(locale?.code, { month: 'short' }),
+        formatMonthDropdown: (date) => formatMonthShort(date, locale?.code),
         ...formatters,
       }}
       classNames={{
@@ -189,7 +189,8 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
-  locale,
+  // Taken off so it does not reach the DOM button.
+  locale: _locale,
   ...props
 }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
   const defaultClassNames = getDefaultClassNames();
@@ -203,7 +204,7 @@ function CalendarDayButton({
     <Button
       variant="ghost"
       size="icon"
-      data-day={day.date.toLocaleDateString(locale?.code)}
+      data-day={calendarDateOf(day.date)}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&
