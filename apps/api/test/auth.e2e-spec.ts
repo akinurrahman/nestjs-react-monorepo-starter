@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { RATE_LIMIT } from './../src/config/throttler.config.js';
 import type { PrismaService } from './../src/database/prisma.service.js';
 import {
   cookieHeader,
@@ -177,6 +178,25 @@ describe('POST /api/auth/login', () => {
       .expect(429);
 
     await login(app, colleague.email).expect(200);
+  });
+
+  // Password spraying: one password against many emails. Each email has
+  // its own ip and email bucket, so only the global per-IP limit stops it.
+  it('keeps the per-ip limit across different emails', async () => {
+    for (let i = 0; i < RATE_LIMIT.limit; i++) {
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: `spray${i}@example.com`, password: 'Password1' })
+        .expect(401);
+    }
+
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'spray-last@example.com', password: 'Password1' })
+      .expect(429)
+      .expect((res) => {
+        expect((res.body as { code: string }).code).toBe('TOO_MANY_REQUESTS');
+      });
   });
 
   it("deletes the user's revoked and expired sessions", async () => {

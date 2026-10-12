@@ -11,11 +11,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import type { AuthResponse, PublicUser } from '@starter/shared';
 import type { Request, Response } from 'express';
 import { ApiDataResponse, ApiErrorResponses } from '../common/swagger/index.js';
-import { LOGIN_RATE_LIMIT, loginTracker } from '../config/throttler.config.js';
 import { PublicUserDto } from '../users/users.dto.js';
 import { AuthCookieService } from './auth-cookie.service.js';
 import { CurrentUser, Public } from './auth.decorators.js';
@@ -23,6 +21,7 @@ import { AuthResponseDto, ChangePasswordDto, LoginDto } from './auth.dto.js';
 import { AuthService, type AuthResult } from './auth.service.js';
 import { PasswordChangeThrottlerGuard } from './password-change-throttler.guard.js';
 import type { AuthUser, ClientInfo } from './auth.types.js';
+import { LoginThrottlerGuard } from './login-throttler.guard.js';
 
 const USER_AGENT_MAX = 512;
 
@@ -46,8 +45,8 @@ export class AuthController {
 
   @Post('login')
   @Public()
+  @UseGuards(LoginThrottlerGuard)
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { ...LOGIN_RATE_LIMIT, getTracker: loginTracker } })
   @ApiDataResponse(AuthResponseDto, {
     description: 'Logged in. Sets the refresh token cookie.',
   })
