@@ -3,7 +3,7 @@ import { type ArgumentsHost, Logger } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import { createHttpLogger } from '../../config/logger.config.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import { ServiceUnavailableError } from '../errors/index.js';
+import { ConflictError, ServiceUnavailableError } from '../errors/index.js';
 import {
   AllExceptionsFilter,
   toErrorResponse,
@@ -46,6 +46,33 @@ describe('toErrorResponse (Prisma)', () => {
       code: 'INTERNAL_ERROR',
       message: 'Internal server error',
     });
+  });
+});
+
+describe('toErrorResponse (AppError)', () => {
+  it('sends field errors but never the cause', () => {
+    const errors = [
+      {
+        path: 'email',
+        message: 'Email is already in use',
+        code: 'EMAIL_TAKEN',
+      },
+    ];
+    const error = new ConflictError('EMAIL_TAKEN', 'Email is already in use', {
+      errors,
+      cause: new Error('internal detail'),
+    });
+
+    const body = toErrorResponse(error);
+
+    expect(body).toEqual({
+      statusCode: 409,
+      code: 'EMAIL_TAKEN',
+      message: 'Email is already in use',
+      errors,
+    });
+    expect(JSON.stringify(body)).not.toContain('internal detail');
+    expect(error.cause).toBeInstanceOf(Error);
   });
 });
 
