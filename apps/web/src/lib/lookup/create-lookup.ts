@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react';
 import { z } from 'zod';
 
 export type BadgeVariant =
@@ -10,20 +9,26 @@ export type BadgeVariant =
   | 'info'
   | 'destructive';
 
-export type LookupEntry = {
+// Icon is whatever component the config passes, inferred from it, so lib
+// stays free of React. It is never when no entry has one, and the code that
+// renders an entry (systems/ui/lookup-badge) names the type it accepts.
+export type LookupEntry<Icon = never> = {
   label: string;
   badgeVariant?: BadgeVariant;
-  icon?: ComponentType<{ className?: string }>;
+  icon?: Icon;
   iconClassName?: string;
   className?: string;
 };
 
-export type LookupConfig<T extends string> = Record<T, LookupEntry>;
+export type LookupConfig<T extends string, Icon = never> = Record<
+  T,
+  LookupEntry<Icon>
+>;
 
 export type LookupOption<T extends string> = { value: T; label: string };
 
-export function createLookup<T extends string>(
-  config: LookupConfig<T>,
+export function createLookup<T extends string, Icon = never>(
+  config: LookupConfig<T, Icon>,
   name?: string,
 ) {
   const values = Object.keys(config) as T[];
@@ -37,7 +42,7 @@ export function createLookup<T extends string>(
     label: config[value].label,
   }));
 
-  function resolve(value: string | null | undefined): LookupEntry | null {
+  function resolve(value: string | null | undefined): LookupEntry<Icon> | null {
     if (value && Object.hasOwn(config, value)) return config[value as T];
     // Empty is a legitimate "not set". An unknown value means the api grew a
     // member this lookup has not caught up with.

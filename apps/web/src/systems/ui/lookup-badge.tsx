@@ -1,9 +1,14 @@
+import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { LookupEntry } from '@/lib/lookup/create-lookup';
 import { cn } from '@/lib/utils';
 
 type LookupBadgeProps = {
-  lookup: { resolve: (value: string | null | undefined) => LookupEntry | null };
+  lookup: {
+    resolve: (
+      value: string | null | undefined,
+    ) => LookupEntry<ComponentType<{ className?: string }>> | null;
+  };
   value: string | null | undefined;
   showIcon?: boolean;
   className?: string;
