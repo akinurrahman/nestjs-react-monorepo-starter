@@ -1,3 +1,4 @@
+import { useFieldLabels } from '../form-context';
 import { useCascade } from '../hooks/use-cascade';
 import { gatedText } from '../lib/cascade';
 import type { BaseFieldProps } from '../types';
@@ -22,6 +23,7 @@ export function useFieldShell(props: FieldShellInput, emptyValue?: unknown) {
     dependsOn,
     alwaysVisible,
   } = props;
+  const labelOf = useFieldLabels();
   const { gated, dependsOnList, parentValues } = useCascade({
     name,
     dependsOn,
@@ -40,7 +42,7 @@ export function useFieldShell(props: FieldShellInput, emptyValue?: unknown) {
     },
     gated,
     parentValues,
-    placeholder: gated ? gatedText(dependsOnList) : placeholder,
+    placeholder: gated ? gatedText(dependsOnList.map(labelOf)) : placeholder,
     disabled: Boolean(disabled) || gated,
   };
 }

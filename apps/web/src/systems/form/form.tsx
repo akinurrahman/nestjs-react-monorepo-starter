@@ -13,7 +13,7 @@ import type { z } from 'zod';
 import { isApiError } from '@/lib/api/api-error';
 import { cn } from '@/lib/utils';
 import { markErrorHandled } from '@/systems/api';
-import { FieldRegistryContext, type FieldRegistry } from './form-context';
+import { createFieldRegistry, FieldRegistryContext } from './form-context';
 import { getDefaults } from './lib/schema-defaults';
 import { applyServerError, ROOT_ERROR } from './lib/server-errors';
 
@@ -46,7 +46,7 @@ export function Form<S extends FormSchema>({
   id,
   className,
 }: FormProps<S>) {
-  const [registry] = useState<FieldRegistry>(() => new Set());
+  const [registry] = useState(createFieldRegistry);
 
   // Caller defaults win over the seeded empties.
   const mergedDefaults = useMemo(() => {
@@ -73,7 +73,7 @@ export function Form<S extends FormSchema>({
       // An ApiError is an expected outcome. Anything else is a bug the
       // person still gets a message for, but a developer should see.
       if (import.meta.env.DEV && !isApiError(error)) console.error(error);
-      applyServerError(form.setError, error, registry);
+      applyServerError(form.setError, error, registry.onScreen);
       markErrorHandled(error);
     }
   });

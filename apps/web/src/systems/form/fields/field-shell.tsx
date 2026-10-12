@@ -52,7 +52,7 @@ export function FieldShell<T>({
 }: FieldShellProps<T>) {
   const id = useId();
   const { field, fieldState } = useController({ name });
-  useRegisterField(name, !hidden);
+  useRegisterField(name, label, !hidden);
 
   if (hidden) return null;
 

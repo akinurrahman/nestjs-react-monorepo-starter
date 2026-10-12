@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { isEmptyValue } from '@/lib/is-empty-value';
 import { cn } from '@/lib/utils';
+import { gatedText } from '@/systems/form';
 import {
   differsFromDefault,
   useUrlFilters,
@@ -170,7 +171,7 @@ export function FilterPopover<T extends object, C>({
                   onChange={(value) => change(field.key, value)}
                   placeholder={
                     gated && parent
-                      ? `Select ${labelOf(parent)} first`
+                      ? gatedText([labelOf(parent)])
                       : field.placeholder
                   }
                   disabled={Boolean(field.disabled) || gated}

@@ -132,6 +132,28 @@ describe('useCascade', () => {
     expect(city()).toBeDisabled();
   });
 
+  it('names a gated parent by its label, not its field name', async () => {
+    render(
+      <Form
+        schema={z.object({ departmentId: z.string(), managerId: z.string() })}
+        onSubmit={vi.fn()}
+      >
+        <InputField name="departmentId" label="Department" />
+        <InputField
+          name="managerId"
+          label="Manager"
+          dependsOn="departmentId"
+          alwaysVisible
+        />
+      </Form>,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Manager' })).toHaveAttribute(
+      'placeholder',
+      'Select Department first',
+    );
+  });
+
   it('clears a multi child to an empty list, not a string', async () => {
     const onSubmit = vi.fn();
     render(

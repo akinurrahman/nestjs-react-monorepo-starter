@@ -213,6 +213,29 @@ describe('FilterPopover', () => {
     await waitFor(() => expect(searchParams().toString()).toBe('region=na'));
   });
 
+  it('names a gated parent by its label in an always-visible dependent', async () => {
+    // A select shows its "All" entry while empty, so the gated text shows on
+    // a control that renders its placeholder, like the date picker.
+    const fields: FilterPopoverField<Filters>[] = [
+      CHAIN[0]!,
+      {
+        key: 'since',
+        label: 'Since',
+        type: 'date',
+        dependsOn: 'region',
+        alwaysVisible: true,
+      },
+    ];
+    renderWithRouter(<FilterPopover spec={SPEC} fields={fields} />);
+    const user = userEvent.setup();
+
+    const popup = within(await openPopover(user));
+
+    expect(popup.getByRole('button', { name: 'Since' })).toHaveTextContent(
+      'Select Region first',
+    );
+  });
+
   it('hides a dependent until its parent has a value', async () => {
     const { user } = renderPopover();
     const popup = within(await openPopover(user));
