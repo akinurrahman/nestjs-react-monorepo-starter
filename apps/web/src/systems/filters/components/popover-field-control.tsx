@@ -1,19 +1,7 @@
-import {
-  Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxValue,
-  useComboboxAnchor,
-} from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import type { Option } from '@/systems/form';
+import { MultiSelectCombobox } from '@/systems/form';
 import type { UrlFilterValue } from '../hooks/use-url-filters';
 import type { PopoverFieldShape } from '../lib/popover-fields';
 import { FilterAsyncSelect } from './filter-async-select';
@@ -77,9 +65,9 @@ export function PopoverFieldControl({
 
     case 'multiSelect':
       return (
-        <MultiSelectControl
+        <MultiSelectCombobox
           id={id}
-          labelId={labelId}
+          aria-labelledby={labelId}
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
           options={field.options}
@@ -134,73 +122,4 @@ export function PopoverFieldControl({
         </RadioGroup>
       );
   }
-}
-
-type MultiSelectControlProps = {
-  id: string;
-  labelId: string;
-  value: string[];
-  onChange: (value: string[]) => void;
-  options: readonly Option[];
-  placeholder: string;
-  disabled: boolean;
-};
-
-function MultiSelectControl({
-  id,
-  labelId,
-  value,
-  onChange,
-  options,
-  placeholder,
-  disabled,
-}: MultiSelectControlProps) {
-  const anchor = useComboboxAnchor();
-  // A value the options no longer list still shows by its raw value, so it
-  // can be seen and removed.
-  const selected = value.map(
-    (entry) =>
-      options.find((option) => option.value === entry) ?? {
-        value: entry,
-        label: entry,
-      },
-  );
-
-  return (
-    <Combobox
-      multiple
-      items={[...options]}
-      value={selected}
-      onValueChange={(next: Option[]) =>
-        onChange(next.map((option) => option.value))
-      }
-      isItemEqualToValue={(a: Option, b: Option) => a.value === b.value}
-      disabled={disabled}
-    >
-      <ComboboxChips ref={anchor} className="w-full">
-        <ComboboxValue>
-          {(chips: Option[]) =>
-            chips.map((option) => (
-              <ComboboxChip key={option.value}>{option.label}</ComboboxChip>
-            ))
-          }
-        </ComboboxValue>
-        <ComboboxChipsInput
-          id={id}
-          aria-labelledby={labelId}
-          placeholder={selected.length ? undefined : placeholder}
-        />
-      </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
-        <ComboboxEmpty>No results.</ComboboxEmpty>
-        <ComboboxList>
-          {(option: Option) => (
-            <ComboboxItem key={option.value} value={option}>
-              {option.label}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  );
 }

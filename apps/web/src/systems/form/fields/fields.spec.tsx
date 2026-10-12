@@ -323,6 +323,21 @@ describe('SelectField chevron', () => {
   });
 });
 
+describe('SelectField multi placeholder', () => {
+  it('shows until a chip is picked, then clears', async () => {
+    const { user } = renderAlone(
+      <SelectField name="value" label="Pick" options={OPTIONS} multi />,
+    );
+    const input = screen.getByRole('combobox', { name: 'Pick' });
+    expect(input).toHaveAttribute('placeholder', 'Select...');
+
+    await user.click(input);
+    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
+
+    expect(input).not.toHaveAttribute('placeholder');
+  });
+});
+
 describe('SelectField optionsFn', () => {
   it('derives its options from live form values', async () => {
     const { user } = renderAlone(

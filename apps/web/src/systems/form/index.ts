@@ -4,6 +4,7 @@ export { FormActions } from './form-actions';
 export { FormSheet } from './form-sheet';
 export { AsyncCombobox } from './controls/async-combobox';
 export type { AsyncComboboxProps } from './controls/async-combobox';
+export { MultiSelectCombobox } from './controls/multi-select-combobox';
 export { fromPaginated } from './lib/from-paginated';
 export type {
   AsyncOptionsArgs,

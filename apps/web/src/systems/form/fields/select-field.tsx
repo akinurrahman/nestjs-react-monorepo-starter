@@ -1,24 +1,13 @@
 import { useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import {
-  Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxValue,
-  useComboboxAnchor,
-} from '@/components/ui/combobox';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { MultiSelectCombobox } from '../controls/multi-select-combobox';
 import type { BaseFieldProps, Option, OptionsFn } from '../types';
 import { FieldShell } from './field-shell';
 import { useFieldShell } from './use-field-shell';
@@ -111,70 +100,26 @@ function MultiSelectField({
 }: FieldProps) {
   const field = useFieldShell({ ...base, placeholder }, []);
   const resolved = useResolvedOptions({ options, optionsFn });
-  const anchor = useComboboxAnchor();
 
   return (
     <FieldShell<string[]> {...field.shell}>
-      {(control) => {
-        // A value the options no longer list still shows, by its raw value,
-        // so it can be seen and removed.
-        const selected = (control.value ?? []).map(
-          (value) =>
-            resolved.find((option) => option.value === value) ?? {
-              value,
-              label: value,
-            },
-        );
-
-        return (
-          <Combobox
-            multiple
-            items={resolved}
-            value={selected}
-            onValueChange={(next: Option[]) =>
-              control.onChange(next.map((option) => option.value))
-            }
-            isItemEqualToValue={(a: Option, b: Option) => a.value === b.value}
-            disabled={field.disabled}
-          >
-            <ComboboxChips ref={anchor} className="w-full">
-              <ComboboxValue>
-                {(values: Option[]) =>
-                  values.map((option) => (
-                    <ComboboxChip key={option.value}>
-                      {option.label}
-                    </ComboboxChip>
-                  ))
-                }
-              </ComboboxValue>
-              <ComboboxChipsInput
-                id={control.id}
-                ref={control.ref}
-                onBlur={control.onBlur}
-                aria-labelledby={control.labelId}
-                aria-invalid={control.invalid}
-                aria-required={control.required || undefined}
-                aria-describedby={control.describedBy}
-                placeholder={
-                  !field.gated && selected.length
-                    ? undefined
-                    : field.placeholder
-                }
-              />
-            </ComboboxChips>
-            <ComboboxContent anchor={anchor}>
-              <ComboboxEmpty>No results.</ComboboxEmpty>
-              <ComboboxList>
-                {(option: Option) => (
-                  <ComboboxItem key={option.value} value={option}>
-                    {option.label}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        );
-      }}
+      {(control) => (
+        <MultiSelectCombobox
+          id={control.id}
+          ref={control.ref}
+          onBlur={control.onBlur}
+          aria-labelledby={control.labelId}
+          aria-invalid={control.invalid}
+          aria-required={control.required || undefined}
+          aria-describedby={control.describedBy}
+          value={control.value ?? []}
+          onChange={control.onChange}
+          options={resolved}
+          placeholder={field.placeholder}
+          alwaysShowPlaceholder={field.gated}
+          disabled={field.disabled}
+        />
+      )}
     </FieldShell>
   );
 }
