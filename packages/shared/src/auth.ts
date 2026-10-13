@@ -57,7 +57,10 @@ export const loginSchema = z.strictObject({
   password: z
     .string({ error: 'Enter your password' })
     .min(1, 'Enter your password')
-    .max(PASSWORD_MAX_LENGTH),
+    .max(
+      PASSWORD_MAX_LENGTH,
+      `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+    ),
 });
 
 export const changePasswordSchema = z.strictObject({

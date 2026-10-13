@@ -4,6 +4,7 @@ import {
   emailSchema,
   loginSchema,
   newPasswordSchema,
+  PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   publicUserSchema,
 } from './auth.js';
@@ -98,6 +99,20 @@ describe('loginSchema', () => {
 
     expect(result.error?.issues).toEqual([
       expect.objectContaining({ path: [path], message }),
+    ]);
+  });
+
+  it('says how long a password may be when it is too long', () => {
+    const result = loginSchema.safeParse({
+      email: 'a@example.com',
+      password: 'x'.repeat(PASSWORD_MAX_LENGTH + 1),
+    });
+
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ['password'],
+        message: `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+      }),
     ]);
   });
 
