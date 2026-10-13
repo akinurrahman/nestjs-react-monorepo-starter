@@ -32,7 +32,7 @@ Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
 | Unit tests | `pnpm test` |
 | E2E tests | `pnpm test:e2e` (Postgres must be running, uses `starter_test` from `apps/api/.env.test`) |
 | Prepare e2e DB by hand | `pnpm --filter @starter/api db:test:prepare` |
-| Format | `pnpm --filter @starter/api format` |
+| Format / check | `pnpm format` / `pnpm format:check` (root only, one Prettier config) |
 | Build | `pnpm build` |
 | Regenerate Prisma client | `pnpm --filter @starter/api db:generate` |
 | Apply migrations | `pnpm --filter @starter/api db:deploy` |
@@ -160,7 +160,11 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
 
 ## Git
 
-- Conventional commits, one reason per commit. Each commit must pass typecheck and tests.
+- Conventional commits, one reason per commit. Each commit must pass format:check, lint,
+  typecheck and tests.
+- Formatting and lint config live at the root only (`.prettierrc`, `.prettierignore`,
+  `.oxlintrc.json`). Don't add per-package configs. Package-specific lint rules go in an
+  `overrides` entry, and an override that changes a plugin's rules must list that plugin.
 - Don't commit until told "commit". Never push unless told.
 - Ask before doing anything outside the task. Report anything you did that wasn't asked for.
 - LF line endings everywhere (`.editorconfig`, `.gitattributes`).

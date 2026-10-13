@@ -95,6 +95,8 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 | `pnpm build` | Build all apps for production |
 | `pnpm typecheck` | Check types across the repo |
 | `pnpm lint` | Lint with Oxlint |
+| `pnpm format` | Format the whole repo with Prettier |
+| `pnpm format:check` | Check formatting without writing |
 | `pnpm test` | Run unit tests |
 | `pnpm test:e2e` | Run end-to-end tests against `starter_test` *(needs the database running)* |
 

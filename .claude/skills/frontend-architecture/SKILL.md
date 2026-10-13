@@ -699,8 +699,9 @@ Form:
 - No file header banners, no `LEVEL:` markers, no section dividers
 - Never restate what the line does. `// fetch the class` above a fetch is noise
 - No commented-out code, no TODO placeholders carried in from this guide
-- Comment the trap, not the mechanism: `// options key too, the class form
-  picker reads it` earns its place. `// invalidate queries` does not
+- Comment the trap, not the mechanism:
+  `// options key too, the class form picker reads it` earns its place.
+  `// invalidate queries` does not
 
 The reference implementation puts its reasoning in prose between the code
 blocks, not inside them. Generated code follows the code blocks, not the prose.
@@ -712,8 +713,9 @@ strings, commit messages, or the summary you report back. Use a hyphen, a
 comma, or rewrite the sentence. The only acceptable dash is one that is part of
 syntax.
 
-Code follows the repo's Prettier config: single quotes, trailing commas,
-2-space indent. Run `pnpm --filter @starter/web format` on what you touched.
+Code follows the repo's root Prettier config: single quotes, trailing commas,
+2-space indent. Run `pnpm format` from the repo root; `pnpm format:check` must
+pass.
 
 ## Naming
 
@@ -770,7 +772,8 @@ For each entity, skipping anything the request does not need:
 ## Definition of done
 
 1. `pnpm typecheck` passes
-2. `pnpm lint` (Oxlint) passes, including the feature import rule
+2. `pnpm lint` (Oxlint) and `pnpm format:check` pass, including the feature
+   import rule
 3. `pnpm test` passes, with tests for the new behaviour
 4. Every `apiCall` and `apiCallPaginated` has an explicit generic
 5. Every GET threads `signal`; no mutation does
