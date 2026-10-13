@@ -76,6 +76,12 @@ describe('loginSchema', () => {
       'Enter a valid email',
     ],
     [
+      'a NUL in the email',
+      { email: 'a\0da@example.com', password: 'x' },
+      'email',
+      'Enter a valid email',
+    ],
+    [
       'an empty password',
       { email: 'a@example.com', password: '' },
       'password',

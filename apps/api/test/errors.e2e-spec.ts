@@ -6,6 +6,7 @@ import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
 import { ConflictError, NotFoundError } from './../src/common/errors/index.js';
 import { configureApp } from './../src/config/app.config.js';
+import { PrismaService } from './../src/database/prisma.service.js';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -13,6 +14,8 @@ const UUID =
 @Public()
 @Controller('errors-test')
 class ErrorsTestController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get('not-found')
   notFound() {
     throw new NotFoundError('USER_NOT_FOUND', 'User not found');
@@ -31,6 +34,14 @@ class ErrorsTestController {
   @Post('echo')
   echo(@Body() body: unknown) {
     return body;
+  }
+
+  // Straight to the database, past every request schema.
+  @Get('nul')
+  nul() {
+    return this.prisma.user.findMany({
+      where: { name: { contains: 'a\0b' } },
+    });
   }
 }
 
@@ -92,6 +103,17 @@ describe('Global exception filter (e2e)', () => {
       });
 
     expect(res.text).not.toContain('secret database password');
+  });
+
+  it('answers a NUL byte that reaches Postgres with 400, not 500', () => {
+    return request(app.getHttpServer())
+      .get('/api/errors-test/nul')
+      .expect(400)
+      .expect({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'Request contains a character that is not allowed',
+      });
   });
 
   describe('unknown routes', () => {

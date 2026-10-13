@@ -149,6 +149,70 @@ describe.each([
   });
 });
 
+// Postgres rejects a NUL byte in text, so without the schema check each of
+// these was a 500.
+describe('NUL byte in user text', () => {
+  const NUL_NAME = { name: 'A\0da' };
+
+  it.each([
+    [
+      'GET /api/users?search',
+      async () => {
+        const { headers } = await signInAdmin();
+        return api().get('/api/users?search=a%00b').set(headers);
+      },
+      'search',
+      'Search contains a character that is not allowed',
+    ],
+    [
+      'POST /api/users name',
+      async () => {
+        const { headers } = await signInAdmin();
+        return api()
+          .post('/api/users')
+          .set(headers)
+          .send({
+            email: uniqueEmail(),
+            role: 'USER',
+            password: NEW_PASSWORD,
+            ...NUL_NAME,
+          });
+      },
+      'name',
+      'Name contains a character that is not allowed',
+    ],
+    [
+      'PATCH /api/users/me name',
+      async () => {
+        const { headers } = await signInUser();
+        return api().patch('/api/users/me').set(headers).send(NUL_NAME);
+      },
+      'name',
+      'Name contains a character that is not allowed',
+    ],
+    [
+      'PATCH /api/users/:id name',
+      async () => {
+        const { headers } = await signInAdmin();
+        const user = await createUser(prisma);
+        return api().patch(`/api/users/${user.id}`).set(headers).send(NUL_NAME);
+      },
+      'name',
+      'Name contains a character that is not allowed',
+    ],
+  ])('answers 400 on %s', async (_, send, path, message) => {
+    const res = await send();
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      statusCode: 400,
+      code: 'VALIDATION_FAILED',
+      message: 'Validation failed',
+      errors: [{ path, message, code: 'custom' }],
+    });
+  });
+});
+
 describe('GET /api/users', () => {
   it('pages newest first with the pagination fields', async () => {
     const { headers, user: admin } = await signInAdmin();

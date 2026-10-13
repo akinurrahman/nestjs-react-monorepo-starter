@@ -40,6 +40,33 @@ describe('toErrorResponse (Prisma)', () => {
     });
   });
 
+  // The shape Prisma 7 with the pg adapter throws for a NUL byte in text.
+  function postgresError(originalCode: string) {
+    return new Prisma.PrismaClientKnownRequestError('internal prisma detail', {
+      code: 'P2039',
+      clientVersion: Prisma.prismaVersion.client,
+      meta: {
+        modelName: 'User',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: { originalCode, kind: 'postgres' },
+        },
+      },
+    });
+  }
+
+  it('maps Postgres 22021 (NUL byte) to 400 BAD_REQUEST', () => {
+    expect(toErrorResponse(postgresError('22021'))).toEqual({
+      statusCode: 400,
+      code: 'BAD_REQUEST',
+      message: 'Request contains a character that is not allowed',
+    });
+  });
+
+  it('keeps other Postgres errors at 500', () => {
+    expect(toErrorResponse(postgresError('22P02'))).toEqual(INTERNAL_ERROR);
+  });
+
   it('maps other known codes to 500 INTERNAL_ERROR', () => {
     expect(toErrorResponse(prismaError('P2003'))).toEqual({
       statusCode: 500,

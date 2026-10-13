@@ -103,6 +103,15 @@ export function toErrorResponse(exception: unknown): ErrorResponse {
   }
 
   if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    // 22021: a NUL byte in text, which Postgres rejects. The request schemas
+    // refuse it first; this covers a field they miss.
+    if (postgresCode(exception) === '22021') {
+      return {
+        statusCode: 400,
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Request contains a character that is not allowed',
+      };
+    }
     switch (exception.code) {
       case 'P2002':
         return {
@@ -135,6 +144,16 @@ export function toErrorResponse(exception: unknown): ErrorResponse {
   if (clientStatus !== undefined) return genericResponse(clientStatus);
 
   return INTERNAL_ERROR;
+}
+
+// The pg driver adapter reports the database's own SQLSTATE in meta.
+function postgresCode(
+  exception: Prisma.PrismaClientKnownRequestError,
+): string | undefined {
+  const adapterError = exception.meta?.['driverAdapterError'] as
+    { cause?: { originalCode?: unknown } } | undefined;
+  const code = adapterError?.cause?.originalCode;
+  return typeof code === 'string' ? code : undefined;
 }
 
 function clientErrorStatus(exception: unknown): number | undefined {

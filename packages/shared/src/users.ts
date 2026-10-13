@@ -4,6 +4,7 @@ import { paginationQuerySchema } from './pagination.js';
 import { queryArray } from './query-array.js';
 import { queryBoolean } from './query-boolean.js';
 import { roleSchema } from './roles.js';
+import { hasNoNullChar } from './text.js';
 
 export const USER_ERROR_CODES = {
   USER_NOT_FOUND: 'USER_NOT_FOUND',
@@ -25,13 +26,19 @@ const userNameSchema = z
   .max(
     USER_NAME_MAX_LENGTH,
     `Name must be at most ${USER_NAME_MAX_LENGTH} characters`,
-  );
+  )
+  .refine(hasNoNullChar, 'Name contains a character that is not allowed');
 
 export const userIdParamSchema = z.object({ id: z.uuid() });
 
 // `search` matches name or email, case-insensitive. An empty one is no filter.
 export const listUsersQuerySchema = paginationQuerySchema.extend({
-  search: z.string().trim().max(USER_SEARCH_MAX_LENGTH).optional(),
+  search: z
+    .string()
+    .trim()
+    .max(USER_SEARCH_MAX_LENGTH)
+    .refine(hasNoNullChar, 'Search contains a character that is not allowed')
+    .optional(),
   role: queryArray(roleSchema).optional(),
   isActive: queryBoolean().optional(),
 });

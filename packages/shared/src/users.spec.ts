@@ -61,6 +61,17 @@ describe('listUsersQuerySchema', () => {
   ])('rejects %s', (_, value) => {
     expect(listUsersQuerySchema.safeParse(value).success).toBe(false);
   });
+
+  it('says one plain thing for a NUL in the search', () => {
+    expect(
+      listUsersQuerySchema.safeParse({ search: 'a\0b' }).error?.issues,
+    ).toEqual([
+      expect.objectContaining({
+        path: ['search'],
+        message: 'Search contains a character that is not allowed',
+      }),
+    ]);
+  });
 });
 
 describe('createUserSchema', () => {
@@ -93,7 +104,19 @@ describe('createUserSchema', () => {
       'name',
       'Name must be at most 100 characters',
     ],
+    [
+      'a NUL in the name',
+      { ...NEW_USER, name: 'A\0da' },
+      'name',
+      'Name contains a character that is not allowed',
+    ],
     ['an empty email', { ...NEW_USER, email: '' }, 'email', 'Enter an email'],
+    [
+      'a NUL in the email',
+      { ...NEW_USER, email: 'a\0da@example.com' },
+      'email',
+      'Enter a valid email',
+    ],
     [
       'an invalid email',
       { ...NEW_USER, email: 'nope' },
@@ -137,15 +160,24 @@ describe('updateUserSchema', () => {
   it.each([
     ['an empty body', {}],
     ['an unknown field', { name: 'Ada', password: 'long enough' }],
+    ['a NUL in the name', { name: 'A\0da' }],
+    ['a NUL in the email', { email: 'a\0da@example.com' }],
   ])('rejects %s', (_, value) => {
     expect(updateUserSchema.safeParse(value).success).toBe(false);
   });
 });
 
 describe('updateMeSchema', () => {
-  it('says one plain thing for a blank name', () => {
-    expect(updateMeSchema.safeParse({ name: '  ' }).error?.issues).toEqual([
-      expect.objectContaining({ path: ['name'], message: 'Enter a name' }),
+  it.each([
+    ['a blank name', '  ', 'Enter a name'],
+    [
+      'a NUL in the name',
+      'A\0da',
+      'Name contains a character that is not allowed',
+    ],
+  ])('says one plain thing for %s', (_, name, message) => {
+    expect(updateMeSchema.safeParse({ name }).error?.issues).toEqual([
+      expect.objectContaining({ path: ['name'], message }),
     ]);
   });
 
