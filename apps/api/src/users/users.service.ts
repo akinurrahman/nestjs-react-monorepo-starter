@@ -35,7 +35,9 @@ const emailTaken = () =>
   });
 
 // Admin management of users, plus a user's own profile. Every rule lives
-// here; the repository only reads and writes.
+// here; the repository only reads and writes. Self rules compare the stored
+// user's id, never the id from the URL: Postgres matches a uuid in any case,
+// so an uppercase spelling of your own id finds your row.
 @Injectable()
 export class UsersService {
   constructor(
@@ -100,15 +102,15 @@ export class UsersService {
   }
 
   async disable(actor: AuthUser, id: string): Promise<PublicUser> {
-    if (id === actor.id) {
-      throw new ForbiddenError(
-        USER_ERROR_CODES.CANNOT_DISABLE_SELF,
-        'You cannot disable your own account',
-      );
-    }
     return this.users.transaction(async (tx) => {
       const user = await tx.findById(id);
       if (!user) throw userNotFound();
+      if (user.id === actor.id) {
+        throw new ForbiddenError(
+          USER_ERROR_CODES.CANNOT_DISABLE_SELF,
+          'You cannot disable your own account',
+        );
+      }
       if (!user.isActive) return toPublicUser(user);
 
       await assertNotLastAdmin(tx, user);

@@ -29,7 +29,9 @@ const userNameSchema = z
   )
   .refine(hasNoNullChar, 'Name contains a character that is not allowed');
 
-export const userIdParamSchema = z.object({ id: z.uuid() });
+// Lower-cased, the form Postgres prints, so an id from the URL compares
+// equal to the same id from a token or a row.
+export const userIdParamSchema = z.object({ id: z.uuid().toLowerCase() });
 
 // `search` matches name or email, case-insensitive. An empty one is no filter.
 export const listUsersQuerySchema = paginationQuerySchema.extend({

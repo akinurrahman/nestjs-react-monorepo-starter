@@ -20,6 +20,12 @@ describe('userIdParamSchema', () => {
     expect(userIdParamSchema.parse({ id })).toEqual({ id });
   });
 
+  it('lower-cases an uppercase uuid', () => {
+    expect(
+      userIdParamSchema.parse({ id: '019A0000-0000-7000-8000-00000000ABCD' }),
+    ).toEqual({ id: '019a0000-0000-7000-8000-00000000abcd' });
+  });
+
   it.each(['me', '123', ''])('rejects %j', (id) => {
     expect(userIdParamSchema.safeParse({ id }).success).toBe(false);
   });

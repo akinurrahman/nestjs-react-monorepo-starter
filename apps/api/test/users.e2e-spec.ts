@@ -670,21 +670,27 @@ describe('PATCH /api/users/:id', () => {
       );
   });
 
-  it('answers 403 CANNOT_CHANGE_OWN_ROLE for the caller', async () => {
-    const { headers, user } = await signInAdmin();
-    await createUser(prisma, { role: 'ADMIN' });
+  it.each([
+    ['their id', (id: string) => id],
+    ['their id in uppercase', (id: string) => id.toUpperCase()],
+  ])(
+    'answers 403 CANNOT_CHANGE_OWN_ROLE for the caller by %s',
+    async (_, spell) => {
+      const { headers, user } = await signInAdmin();
+      await createUser(prisma, { role: 'ADMIN' });
 
-    await api()
-      .patch(`/api/users/${user.id}`)
-      .set(headers)
-      .send({ role: 'USER' })
-      .expect(403)
-      .expect({
-        statusCode: 403,
-        code: 'CANNOT_CHANGE_OWN_ROLE',
-        message: 'You cannot change your own role',
-      });
-  });
+      await api()
+        .patch(`/api/users/${spell(user.id)}`)
+        .set(headers)
+        .send({ role: 'USER' })
+        .expect(403)
+        .expect({
+          statusCode: 403,
+          code: 'CANNOT_CHANGE_OWN_ROLE',
+          message: 'You cannot change your own role',
+        });
+    },
+  );
 
   it('lets the caller resend their own role with other changes', async () => {
     const { headers, user } = await signInAdmin();
@@ -735,20 +741,30 @@ describe('POST /api/users/:id/disable', () => {
       );
   });
 
-  it('answers 403 CANNOT_DISABLE_SELF for the caller', async () => {
-    const { headers, user } = await signInAdmin();
-    await createUser(prisma, { role: 'ADMIN' });
+  it.each([
+    ['their id', (id: string) => id],
+    ['their id in uppercase', (id: string) => id.toUpperCase()],
+  ])(
+    'answers 403 CANNOT_DISABLE_SELF for the caller by %s',
+    async (_, spell) => {
+      const { headers, user } = await signInAdmin();
+      await createUser(prisma, { role: 'ADMIN' });
 
-    await api()
-      .post(`/api/users/${user.id}/disable`)
-      .set(headers)
-      .expect(403)
-      .expect({
-        statusCode: 403,
-        code: 'CANNOT_DISABLE_SELF',
-        message: 'You cannot disable your own account',
+      await api()
+        .post(`/api/users/${spell(user.id)}/disable`)
+        .set(headers)
+        .expect(403)
+        .expect({
+          statusCode: 403,
+          code: 'CANNOT_DISABLE_SELF',
+          message: 'You cannot disable your own account',
+        });
+      const stored = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
       });
-  });
+      expect(stored.isActive).toBe(true);
+    },
+  );
 
   it('disables another admin while one stays active', async () => {
     const { headers } = await signInAdmin();

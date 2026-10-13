@@ -33,16 +33,19 @@ const USER: User = {
 
 const ACTOR: AuthUser = { id: ADMIN.id, sessionId: 'session', role: 'ADMIN' };
 
+// The uuid column matches any case, so an uppercase id finds the row.
+const sameId = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
 function setup(users: User[], activeAdminIds: string[]) {
   const tx = {
     findById: vi.fn((id: string) =>
-      Promise.resolve(users.find((u) => u.id === id) ?? null),
+      Promise.resolve(users.find((u) => sameId(u.id, id)) ?? null),
     ),
     findByEmail: vi.fn((email: string) =>
       Promise.resolve(users.find((u) => u.email === email) ?? null),
     ),
     update: vi.fn((id: string, data: Partial<User>) =>
-      Promise.resolve({ ...users.find((u) => u.id === id)!, ...data }),
+      Promise.resolve({ ...users.find((u) => sameId(u.id, id))!, ...data }),
     ),
     lockActiveAdminIds: vi.fn(() => Promise.resolve(activeAdminIds)),
   } satisfies UsersTransaction;
@@ -58,13 +61,16 @@ function setup(users: User[], activeAdminIds: string[]) {
 }
 
 describe('UsersService.disable', () => {
-  it('refuses to disable the caller', async () => {
+  it.each([
+    ['their id', ADMIN.id],
+    ['their id in uppercase', ADMIN.id.toUpperCase()],
+  ])('refuses to disable the caller by %s', async (_, id) => {
     const { service, tx } = setup(
       [ADMIN, OTHER_ADMIN],
       [ADMIN.id, OTHER_ADMIN.id],
     );
 
-    await expect(service.disable(ACTOR, ADMIN.id)).rejects.toMatchObject({
+    await expect(service.disable(ACTOR, id)).rejects.toMatchObject({
       statusCode: 403,
       code: 'CANNOT_DISABLE_SELF',
     });
@@ -120,15 +126,22 @@ describe('UsersService.disable', () => {
 });
 
 describe('UsersService.update', () => {
-  it('refuses to change the caller role', async () => {
-    const { service } = setup([ADMIN, OTHER_ADMIN], [ADMIN.id, OTHER_ADMIN.id]);
+  it.each([
+    ['their id', ADMIN.id],
+    ['their id in uppercase', ADMIN.id.toUpperCase()],
+  ])('refuses to change the caller role by %s', async (_, id) => {
+    const { service, tx } = setup(
+      [ADMIN, OTHER_ADMIN],
+      [ADMIN.id, OTHER_ADMIN.id],
+    );
 
     await expect(
-      service.update(ACTOR, ADMIN.id, { role: 'USER' }),
+      service.update(ACTOR, id, { role: 'USER' }),
     ).rejects.toMatchObject({
       statusCode: 403,
       code: 'CANNOT_CHANGE_OWN_ROLE',
     });
+    expect(tx.update).not.toHaveBeenCalled();
   });
 
   it('lets the caller send their own unchanged role', async () => {
