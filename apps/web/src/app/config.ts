@@ -5,8 +5,8 @@ export const APP_NAME = 'Starter';
 // of these; any other group warns in dev and is listed last. "Dev" holds the
 // routes in app/dev and exists only in development.
 export const NAV_GROUPS: readonly string[] = import.meta.env.DEV
-  ? ['General', 'Dev']
-  : ['General'];
+  ? ['General', 'Admin', 'Dev']
+  : ['General', 'Admin'];
 
 export function formatDocumentTitle(title: string | undefined): string {
   return title ? `${title} | ${APP_NAME}` : APP_NAME;

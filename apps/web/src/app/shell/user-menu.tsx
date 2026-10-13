@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ACCOUNT_PATH } from '@/features/account';
 import { loginPath, useLogout } from '@/features/auth';
 import { getInitials } from '@/lib/format';
 import { useSession } from '@/systems/session';
@@ -46,6 +47,10 @@ export function UserMenu() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => void navigate(ACCOUNT_PATH)}>
+          <UserRound />
+          Account
+        </DropdownMenuItem>
         <DropdownMenuItem
           disabled={logout.isPending}
           onClick={() =>
