@@ -18,7 +18,14 @@ export const USER_ERROR_CODES = {
 export const USER_NAME_MAX_LENGTH = 100;
 export const USER_SEARCH_MAX_LENGTH = 100;
 
-const userNameSchema = z.string().trim().min(1).max(USER_NAME_MAX_LENGTH);
+const userNameSchema = z
+  .string({ error: 'Enter a name' })
+  .trim()
+  .min(1, 'Enter a name')
+  .max(
+    USER_NAME_MAX_LENGTH,
+    `Name must be at most ${USER_NAME_MAX_LENGTH} characters`,
+  );
 
 export const userIdParamSchema = z.object({ id: z.uuid() });
 

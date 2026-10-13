@@ -9,9 +9,12 @@ const EMAIL_MAX_LENGTH = 254;
 const normalizedEmail = (required?: string) =>
   z.string({ error: required }).trim().toLowerCase();
 
-export const emailSchema = normalizedEmail()
-  .max(EMAIL_MAX_LENGTH)
-  .pipe(z.email());
+// The messages are written for a form, which shows them as they are. An
+// empty field stops at "Enter ..." and never reaches the format check.
+export const emailSchema = normalizedEmail('Enter an email')
+  .min(1, 'Enter an email')
+  .max(EMAIL_MAX_LENGTH, 'Enter a valid email')
+  .pipe(z.email('Enter a valid email'));
 
 // Argon2 takes any length; the cap keeps the cost of one attempt bounded.
 export const PASSWORD_MAX_LENGTH = 256;
@@ -19,15 +22,29 @@ export const PASSWORD_MAX_LENGTH = 256;
 export const PASSWORD_MIN_LENGTH = 8;
 
 // The policy for every password that gets set: create, admin reset, change
-// and the seed. Kept as is, with no trimming, like at login.
+// and the seed. Kept as is, with no trimming, like at login. abort keeps an
+// empty field to the one "Enter" message instead of adding the length one.
 export const newPasswordSchema = z
-  .string()
-  .min(PASSWORD_MIN_LENGTH)
-  .max(PASSWORD_MAX_LENGTH);
+  .string({ error: 'Enter a password' })
+  .min(1, { error: 'Enter a password', abort: true })
+  .min(
+    PASSWORD_MIN_LENGTH,
+    `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+  )
+  .max(
+    PASSWORD_MAX_LENGTH,
+    `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+  );
 
 // No minimum length here: the policy applies when a password is set, and
 // changing it must not lock out existing users.
-const currentPasswordSchema = z.string().min(1).max(PASSWORD_MAX_LENGTH);
+const currentPasswordSchema = z
+  .string({ error: 'Enter your current password' })
+  .min(1, 'Enter your current password')
+  .max(
+    PASSWORD_MAX_LENGTH,
+    `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+  );
 
 // The same rules as emailSchema and currentPasswordSchema, with messages
 // written for the sign-in form, which shows them as they are. An empty field

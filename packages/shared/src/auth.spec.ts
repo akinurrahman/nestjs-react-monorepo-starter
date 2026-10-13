@@ -1,6 +1,7 @@
 import {
   authResponseSchema,
   changePasswordSchema,
+  emailSchema,
   loginSchema,
   newPasswordSchema,
   PASSWORD_MIN_LENGTH,
@@ -115,6 +116,47 @@ describe('newPasswordSchema', () => {
   it('keeps the password as sent', () => {
     expect(newPasswordSchema.parse('  spaced  ')).toBe('  spaced  ');
   });
+
+  it.each([
+    ['a missing password', undefined, 'Enter a password'],
+    ['an empty password', '', 'Enter a password'],
+    [
+      'a short password',
+      'x'.repeat(7),
+      'Password must be at least 8 characters',
+    ],
+    [
+      'a password over the cap',
+      'x'.repeat(257),
+      'Password must be at most 256 characters',
+    ],
+  ])('says one plain thing for %s', (_, value, message) => {
+    expect(newPasswordSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ message }),
+    ]);
+  });
+});
+
+describe('emailSchema', () => {
+  it('trims and lower-cases the email', () => {
+    expect(emailSchema.parse('  Ada@Example.COM ')).toBe('ada@example.com');
+  });
+
+  it.each([
+    ['a missing email', undefined, 'Enter an email'],
+    ['an empty email', '', 'Enter an email'],
+    ['a blank email', '   ', 'Enter an email'],
+    ['an invalid email', 'nope', 'Enter a valid email'],
+    [
+      'an email over the cap',
+      `${'a'.repeat(250)}@example.com`,
+      'Enter a valid email',
+    ],
+  ])('says one plain thing for %s', (_, value, message) => {
+    expect(emailSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ message }),
+    ]);
+  });
 });
 
 describe('changePasswordSchema', () => {
@@ -135,6 +177,31 @@ describe('changePasswordSchema', () => {
     ],
   ])('rejects %s', (_, value) => {
     expect(changePasswordSchema.safeParse(value).success).toBe(false);
+  });
+
+  it.each([
+    [
+      'an empty current password',
+      { currentPassword: '', newPassword: 'long enough' },
+      'currentPassword',
+      'Enter your current password',
+    ],
+    [
+      'a missing current password',
+      { newPassword: 'long enough' },
+      'currentPassword',
+      'Enter your current password',
+    ],
+    [
+      'a short new password',
+      { currentPassword: 'x', newPassword: 'short' },
+      'newPassword',
+      'Password must be at least 8 characters',
+    ],
+  ])('says one plain thing for %s', (_, value, path, message) => {
+    expect(changePasswordSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path: [path], message }),
+    ]);
   });
 });
 

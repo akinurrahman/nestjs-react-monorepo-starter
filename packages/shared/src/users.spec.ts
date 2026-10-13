@@ -84,6 +84,41 @@ describe('createUserSchema', () => {
     expect(createUserSchema.safeParse(value).success).toBe(false);
   });
 
+  it.each([
+    ['an empty name', { ...NEW_USER, name: '' }, 'name', 'Enter a name'],
+    ['a blank name', { ...NEW_USER, name: '   ' }, 'name', 'Enter a name'],
+    [
+      'a name over the cap',
+      { ...NEW_USER, name: 'x'.repeat(101) },
+      'name',
+      'Name must be at most 100 characters',
+    ],
+    ['an empty email', { ...NEW_USER, email: '' }, 'email', 'Enter an email'],
+    [
+      'an invalid email',
+      { ...NEW_USER, email: 'nope' },
+      'email',
+      'Enter a valid email',
+    ],
+    ['an empty role', { ...NEW_USER, role: '' }, 'role', 'Pick a role'],
+    [
+      'an empty password',
+      { ...NEW_USER, password: '' },
+      'password',
+      'Enter a password',
+    ],
+    [
+      'a short password',
+      { ...NEW_USER, password: 'short' },
+      'password',
+      'Password must be at least 8 characters',
+    ],
+  ])('says one plain thing for %s', (_, value, path, message) => {
+    expect(createUserSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path: [path], message }),
+    ]);
+  });
+
   it('accepts a password of exactly the minimum length', () => {
     expect(
       createUserSchema.safeParse({ ...NEW_USER, password: 'x'.repeat(8) })
@@ -108,6 +143,12 @@ describe('updateUserSchema', () => {
 });
 
 describe('updateMeSchema', () => {
+  it('says one plain thing for a blank name', () => {
+    expect(updateMeSchema.safeParse({ name: '  ' }).error?.issues).toEqual([
+      expect.objectContaining({ path: ['name'], message: 'Enter a name' }),
+    ]);
+  });
+
   it.each([
     ['a role', { name: 'Ada', role: 'ADMIN' }],
     ['an email', { name: 'Ada', email: 'other@example.com' }],
