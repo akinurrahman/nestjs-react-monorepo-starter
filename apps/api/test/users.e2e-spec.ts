@@ -267,6 +267,57 @@ describe('Admin routes with a stale access token', () => {
   });
 });
 
+// This guards the outcome: exactly one of two admins demoting each other
+// wins and the other gets LAST_ADMIN, in either order. It guards the outcome
+// and only sometimes catches a missing lock: the two requests have to
+// interleave inside the service for the race to show, and that is timing.
+// Both requests are held after the role check until both passed it, so the
+// role check cannot turn the loser into a 403 or 401 and hide the rule under
+// test. That hold is why it failed 20 of 20 runs with the transaction removed
+// on the machine that wrote it, but that is not a guarantee elsewhere.
+describe('Two admins demoting each other at once', () => {
+  async function holdUntilBothPassRoleCheck() {
+    const { SessionsRepository } =
+      await import('./../src/auth/sessions.repository.js');
+    const sessions = app.get(SessionsRepository);
+    const findAccess = sessions.findAccess.bind(sessions);
+    let passed = 0;
+    let release!: () => void;
+    const bothPassed = new Promise<void>((resolve) => (release = resolve));
+    vi.spyOn(sessions, 'findAccess').mockImplementation(async (id) => {
+      const access = await findAccess(id);
+      passed += 1;
+      if (passed === 2) release();
+      await bothPassed;
+      return access;
+    });
+  }
+
+  it('lets exactly one demotion through and answers LAST_ADMIN to the other', async () => {
+    const a = await signInAdmin();
+    const b = await signInAdmin();
+    await holdUntilBothPassRoleCheck();
+
+    const [aDemotesB, bDemotesA] = await Promise.all([
+      api()
+        .patch(`/api/users/${b.user.id}`)
+        .set(a.headers)
+        .send({ role: 'USER' }),
+      api()
+        .patch(`/api/users/${a.user.id}`)
+        .set(b.headers)
+        .send({ role: 'USER' }),
+    ]);
+
+    expect([aDemotesB.status, bDemotesA.status].sort((x, y) => x - y)).toEqual([
+      200, 409,
+    ]);
+    const loser = aDemotesB.status === 409 ? aDemotesB : bDemotesA;
+    expect(loser.body).toMatchObject({ code: 'LAST_ADMIN' });
+    expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
+  });
+});
+
 // Postgres rejects a NUL byte in text, so without the schema check each of
 // these was a 500.
 describe('NUL byte in user text', () => {

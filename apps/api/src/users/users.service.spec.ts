@@ -4,8 +4,8 @@ import type { User } from '../generated/prisma/client.js';
 import type { UsersRepository, UsersTransaction } from './users.repository.js';
 import { UsersService } from './users.service.js';
 
-// The rules over a stubbed repository. The lock itself, and everything that
-// needs the database, is covered by test/users.e2e-spec.ts.
+// The rules over a stubbed repository. The lock needs a real database: the
+// e2e race test in test/users.e2e-spec.ts guards its outcome.
 
 const ADMIN: User = {
   id: '019a0000-0000-7000-8000-00000000000a',
