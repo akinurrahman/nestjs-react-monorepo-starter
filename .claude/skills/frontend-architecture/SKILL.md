@@ -118,8 +118,10 @@ features/<feature>/
 └── pages/                          route screens
 ```
 
-With one entity, the files sit flat and the prefix matches the feature name.
-With two or more, the prefix is what makes the folder navigable, and
+With one entity, the files sit flat. The prefix is always the entity name,
+singular, never the feature's: `features/users` holds `user.api.ts`,
+`USER_KEYS` and `useUser`, and `features/home` holds `health.*`. With two or
+more, the prefix is what makes the folder navigable, and
 `components/` and `pages/` gain a subfolder per entity as soon as the second
 entity arrives:
 
@@ -374,8 +376,15 @@ wrapper, e.g. `[--table-offset:calc(var(--header-height)+2*var(--page-padding)+1
 
 Dialogs, sheets and alert dialogs come from `components/ui` (`Dialog`, `Sheet`,
 `AlertDialog`), whose roots report to `components/ui/modal-registry`. The
-command palette reads that registry to stay out of the way. A modal built
-straight on `@base-ui/react` is not tracked; do not build one.
+command palette reads that registry to stay out of the way. The registry is
+internal bookkeeping: a feature never calls it, it only has to use those
+primitives. A modal built straight on `@base-ui/react` is not tracked; do not
+build one.
+
+A form in a side panel is `FormSheet` from `@/systems/form`. There is no
+`FormDialog`: a form in a dialog is a `Dialog` with a `Form` inside it, in the
+feature (`features/users/components/user-password-dialog.tsx`), until a
+second feature needs one and it moves to `systems/form`.
 
 Confirmations go through `useConfirm()` from `@/systems/confirmation`:
 `confirm({ title, description, variant, onConfirm })`, with `variant`
@@ -536,15 +545,25 @@ export const classStatusLookup = createLookup(
 export type ClassStatus = (typeof classStatusLookup.values)[number];
 ```
 
-Do NOT annotate the config as `LookupConfig<ClassStatus>` and declare the union
-by hand. `LookupConfig<T>` is a `Record<T, ...>`, so annotating pins `T` to a
+Do NOT pass the generic (`createLookup<ClassStatus>(...)`) and declare the
+union by hand. The config is a `Record<T, ...>`, so naming `T` pins it to a
 union you wrote elsewhere and kills the inference, leaving the same values
 maintained in two places.
 
 The one exception: when the union is not yours (`Role` from `@starter/shared`,
-generated types), import it and DO annotate. The `Record<T, ...>` constraint
-then fails to compile when the backend adds a value you have not handled, which
-is the whole point.
+generated types), import it and DO pass it as the generic. The
+`Record<T, ...>` constraint then fails to compile when the backend adds a value
+you have not handled, which is the whole point:
+
+```ts
+export const userRoleLookup = createLookup<Role>(
+  {
+    ADMIN: { label: 'Admin', badgeVariant: 'info' },
+    USER: { label: 'User', badgeVariant: 'secondary' },
+  },
+  'UserRole',
+);
+```
 
 One lookup feeds every consumer: `.options` for selects and filters,
 `.toZodEnum(message?)` for the schema, `.resolve()` via `<LookupBadge>` for
