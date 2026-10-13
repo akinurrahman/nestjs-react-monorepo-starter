@@ -151,6 +151,33 @@ describe('auth settings', () => {
   });
 
   it.each([
+    [
+      'an access TTL equal to the refresh TTL',
+      { AUTH_ACCESS_TTL: '600', AUTH_REFRESH_TTL: '600' },
+      'AUTH_ACCESS_TTL',
+    ],
+    [
+      'an access TTL longer than the refresh TTL',
+      { AUTH_ACCESS_TTL: '900', AUTH_REFRESH_TTL: '600' },
+      'AUTH_ACCESS_TTL',
+    ],
+    [
+      'a grace longer than the access TTL',
+      { AUTH_ACCESS_TTL: '60', AUTH_REFRESH_GRACE: '61' },
+      'AUTH_REFRESH_GRACE',
+    ],
+  ])('rejects %s', (_, env, key) => {
+    const result = parse(env);
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual([key]);
+  });
+
+  it('accepts a grace equal to the access TTL', () => {
+    expect(
+      parse({ AUTH_ACCESS_TTL: '60', AUTH_REFRESH_GRACE: '60' }).success,
+    ).toBe(true);
+  });
+
+  it.each([
     ['a zero access TTL', { AUTH_ACCESS_TTL: '0' }],
     ['a fractional refresh TTL', { AUTH_REFRESH_TTL: '1.5' }],
     ['a negative grace', { AUTH_REFRESH_GRACE: '-1' }],

@@ -79,6 +79,14 @@ export const envSchema = z
     (env) => env.NODE_ENV !== 'production' || env.CORS_ORIGINS !== undefined,
     { error: 'Required in production', path: ['CORS_ORIGINS'] },
   )
+  .refine((env) => env.AUTH_ACCESS_TTL < env.AUTH_REFRESH_TTL, {
+    error: 'Must be shorter than AUTH_REFRESH_TTL',
+    path: ['AUTH_ACCESS_TTL'],
+  })
+  .refine((env) => env.AUTH_REFRESH_GRACE <= env.AUTH_ACCESS_TTL, {
+    error: 'Must not exceed AUTH_ACCESS_TTL',
+    path: ['AUTH_REFRESH_GRACE'],
+  })
   // These defaults depend on NODE_ENV, so they are resolved after it is parsed.
   .transform((env) => ({
     ...env,
