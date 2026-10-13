@@ -169,7 +169,8 @@ No lint rule enforces that yet, so hold it by hand.
 
 ```
 lib/                          no react
-├── api/api.ts                the axios instance: base URL + /api, ApiError interceptor
+├── api/api.ts                the axios instance: base URL + /api, bearer token,
+│                             401 refresh and retry, ApiError interceptor
 ├── api/api-call.ts           apiCall, apiCallPaginated. The HTTP entry point
 ├── api/api-error.ts          ApiError, isApiError, getErrorMessage
 ├── lookup/create-lookup.ts   createLookup, BadgeVariant
@@ -185,7 +186,7 @@ systems/                      react-aware, shared, zero domain knowledge
 ├── filters/                  defineUrlFilters, useUrlFilters, FilterBar and controls
 ├── form/                     Form, fields, FormSheet, FormActions, async options
 ├── router/                   AppRouteObject, RouteHandle, canAccessRoute
-├── session/                  useSession (stub until auth lands)
+├── session/                  useSession: status, user, endedBy. Never the token
 ├── table/                    DataTable, createColumnHelper, ColumnDef, RowLink
 ├── theme/                    theme store, ThemeToggle, themeLookup
 └── ui/                       PageHeader, LookupBadge, Empty/Error/NotFound/
@@ -425,17 +426,20 @@ export const academicRoutes: AppRouteObject[] = [
   a parent with roles: there it counts as not public, and dev warns.
 - `roles` lists who may open the route, using `Role` from `@starter/shared`.
   Absent means any signed-in user. It binds every child, and
-  `RouteAccessGate` shows `AccessDeniedState` when a check fails. The sidebar
-  and the palette run the same `canAccessRoute` check, so a route the user
-  cannot open is not listed.
+  `RouteAccessGate` shows `AccessDeniedState` when a signed-in user fails a
+  check, and sends a signed-out one to `/login?redirect=<path and query>`.
+  The sidebar and the palette run the same `canAccessRoute` check, so a route
+  the user cannot open is not listed.
 - `nav` makes the route a sidebar and palette entry. `nav.group` must be one of
   `NAV_GROUPS` in `app/config.ts`; any other group warns in dev and sorts last.
   A path with params cannot have `nav`.
-- `app/router.ts` lists every feature's routes once, in `pages`, and adds
+- `app/router.ts` lists every feature's routes once, in `pages`, or in
+  `barePages` for a screen outside the shell (login), and adds
   `devRoutes` from `app/dev` behind `import.meta.env.DEV`. Adding a feature is
   one import and one spread there. `app/routes.tsx` (`buildRoutes`) wraps the
   pages in the root, layout and page levels: progress bar, shell, access gate,
-  error boundary, 404.
+  error boundary, 404. Bare pages get the same gate and boundary, without the
+  shell.
 - Dev-only routes and pages live in `app/dev`, never in `features/`, and are
   added only behind `import.meta.env.DEV` so the production build drops them.
 
@@ -595,8 +599,10 @@ it with `void`, or return it to make the mutation wait for the refetch.
 **8. All HTTP goes through `apiCall` or `apiCallPaginated`, from `*.api.ts`.**
 No bare `axios` or `fetch` in a feature, ever. The axios instance in
 `lib/api/api.ts` owns the base URL (`VITE_API_BASE_URL` plus `/api`) and turns
-every failure into an `ApiError`. Auth headers and 401 handling will go there
-too. A feature that bypasses `apiCall` opts out of all of it.
+every failure into an `ApiError`. It also attaches the access token (held in
+memory by `lib/api/access-token.ts`) and answers a 401 `UNAUTHORIZED` with one
+shared refresh and a single retry. A feature that bypasses `apiCall` opts out of
+all of it.
 
 The API wraps every success body: `{ data }`, or `{ data, pagination, summary? }`
 for a paginated list. `apiCall<T>` unwraps `{ data }` and returns `T`;
@@ -731,7 +737,10 @@ Code follows the repo's Prettier config: single quotes, trailing commas,
 - HTTP goes through msw (`test/msw-server.ts`); an unhandled request fails the
   test.
 - `test/render-app.tsx` renders the real app root and route tree around test
-  pages; `render-with-router` and `render-with-query` cover smaller pieces.
+  pages, signed in as a test ADMIN unless told otherwise (`user`, or `restore`
+  to run the real startup refresh). A test about access or roles passes its
+  `user` explicitly. `render-with-router` and `render-with-query` cover smaller
+  pieces. `test/auth-fixtures.ts` has test users and auth msw handlers.
 - Mutation-check new tests: break the code, confirm a test fails, restore.
 
 ## Build order
@@ -755,8 +764,8 @@ For each entity, skipping anything the request does not need:
 9. Pages, thin, with the three query states.
 10. Route entries in `routes.tsx`, with handles and lazy pages.
 11. `index.ts` exporting the route array, plus anything another feature needs.
-12. Spread the routes into `pages` in `app/router.ts`, add a new nav group to
-    `NAV_GROUPS`, then run the definition-of-done list.
+12. Spread the routes into `pages` (or `barePages`) in `app/router.ts`, add a
+    new nav group to `NAV_GROUPS`, then run the definition-of-done list.
 
 ## Definition of done
 
@@ -776,7 +785,7 @@ For each entity, skipping anything the request does not need:
     survived
 12. No em dashes in code, comments, copy, or your summary
 13. `index.ts` exports only what another feature or the router actually needs
-14. The route array is spread into `pages` in `app/router.ts`, and every
-    `nav.group` is in `NAV_GROUPS`
+14. The route array is spread into `pages` or `barePages` in `app/router.ts`,
+    and every `nav.group` is in `NAV_GROUPS`
 15. Any new piece in `components/ui` or `systems` has its section on the theme
     preview page

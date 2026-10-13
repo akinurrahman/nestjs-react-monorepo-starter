@@ -123,8 +123,9 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   `@starter/shared` (`ROLES`, `Role`).
 - Routes are `AppRouteObject` config objects. The `handle` (title, icon, roles, nav,
   keywords) sits on the config object, never in a lazy module. Pages load through
-  `lazy: async () => ({ Component })`. Feature routes are listed once, in `pages` in
-  `src/app/router.ts`. A nav group must be in `NAV_GROUPS` (`src/app/config.ts`).
+  `lazy: async () => ({ Component })`. Feature routes are listed once, in `pages` or
+  `barePages` (screens outside the shell) in `src/app/router.ts`. A nav group must
+  be in `NAV_GROUPS` (`src/app/config.ts`).
 - Routes are denied by default. `public: true` only for pages that work with no user
   (login, forgot password, the 404), and never under a parent with `roles`.
 - Dev-only routes live in `src/app/dev`, added behind `import.meta.env.DEV`.
