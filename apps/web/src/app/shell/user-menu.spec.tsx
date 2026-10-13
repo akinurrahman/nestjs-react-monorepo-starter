@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { House, Users } from 'lucide-react';
 import { http, HttpResponse } from 'msw';
@@ -41,6 +41,9 @@ const pages: AppRouteObject[] = [
 ];
 
 const PREVIOUS_USER_KEY = ['members', 'list'];
+
+const LOGOUT_FAILED =
+  'Sign out did not reach the server. Sign in and sign out again to end it there.';
 
 function NotesPage() {
   const { data } = useQuery({
@@ -122,22 +125,32 @@ describe('user menu', () => {
 
       expect(calls.value).toBe(1);
       expectSignedOut(app);
+      // The global mutation toast fires a macrotask after the error.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(screen.queryByText(LOGOUT_FAILED)).toBeNull();
     });
 
-    it('clears everything locally when the request fails', async () => {
+    it('clears everything locally and warns when the request fails', async () => {
       serveLogout(() => HttpResponse.json(internalError, { status: 500 }));
 
       const app = await signOut();
 
       expectSignedOut(app);
-      // No toast: the person is signed out here either way.
-      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+      expect(await screen.findByText(LOGOUT_FAILED)).toBeInTheDocument();
+      // Its own message replaces the global one, not added to it.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(
+        screen.queryByText(
+          'Something went wrong on our side. Please try again.',
+        ),
+      ).toBeNull();
     });
 
-    it('clears everything locally when the api is unreachable', async () => {
+    it('clears everything locally and warns when the api is unreachable', async () => {
       serveLogout(() => HttpResponse.error());
 
       expectSignedOut(await signOut());
+      expect(await screen.findByText(LOGOUT_FAILED)).toBeInTheDocument();
     });
 
     it('never shows the previous user data to the next user', async () => {
