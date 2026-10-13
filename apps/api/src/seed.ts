@@ -5,6 +5,7 @@ import {
   createUserSchema,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  USER_NAME_MAX_LENGTH,
 } from '@starter/shared';
 import { PasswordModule } from './auth/password.module.js';
 import { PasswordService } from './auth/password.service.js';
@@ -39,18 +40,19 @@ async function seed(): Promise<void> {
   });
   try {
     const config = app.get(ConfigService<Env, true>);
-    const name = config.get('SEED_ADMIN_NAME', { infer: true });
     // Same rules as creating a user through the api: the email is
-    // normalized like at login, the password meets the policy.
+    // normalized like at login, the name is trimmed and bounded, the
+    // password meets the policy.
     const credentials = createUserSchema
-      .pick({ email: true, password: true })
+      .pick({ email: true, name: true, password: true })
       .safeParse({
         email: config.get('SEED_ADMIN_EMAIL', { infer: true }),
+        name: config.get('SEED_ADMIN_NAME', { infer: true }),
         password: config.get('SEED_ADMIN_PASSWORD', { infer: true }),
       });
-    if (!credentials.success || name === undefined) {
+    if (!credentials.success) {
       throw new Error(
-        `Set SEED_ADMIN_EMAIL (a valid email), SEED_ADMIN_PASSWORD (${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters) and SEED_ADMIN_NAME`,
+        `Set SEED_ADMIN_EMAIL (a valid email), SEED_ADMIN_PASSWORD (${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters) and SEED_ADMIN_NAME (1 to ${USER_NAME_MAX_LENGTH} characters)`,
       );
     }
 
@@ -65,7 +67,7 @@ async function seed(): Promise<void> {
       .hash(credentials.data.password);
     await users.create({
       email: credentials.data.email,
-      name,
+      name: credentials.data.name,
       passwordHash,
       role: 'ADMIN',
     });
