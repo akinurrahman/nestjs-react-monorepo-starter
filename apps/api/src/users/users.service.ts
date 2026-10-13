@@ -123,6 +123,8 @@ export class UsersService {
     });
   }
 
+  // No transaction, unlike disable and update: enabling is idempotent and
+  // cannot break the last admin rule, so there is nothing to lock.
   async enable(id: string): Promise<PublicUser> {
     const user = await this.users.findById(id);
     if (!user) throw userNotFound();
@@ -130,6 +132,9 @@ export class UsersService {
     return toPublicUser(await this.users.update(id, { isActive: true }));
   }
 
+  // One write, so no transaction. Ends every session of the user, because
+  // the admin acts for someone else; a self change (AuthService.changePassword)
+  // keeps the caller's own session instead.
   async setPassword(
     actor: AuthUser,
     id: string,
@@ -151,7 +156,9 @@ export class UsersService {
   }
 
   // Same check as AuthService.me: a disabled user's access token still
-  // verifies until it expires, but it changes nothing.
+  // verifies until it expires, but it changes nothing. The generic
+  // UnauthorizedError code is load-bearing: the web refreshes its access
+  // token only on UNAUTHORIZED, so do not give it a specific code.
   async updateMe(actor: AuthUser, input: UpdateMeInput): Promise<PublicUser> {
     const user = await this.users.findById(actor.id);
     if (!user || !user.isActive) throw new UnauthorizedError();

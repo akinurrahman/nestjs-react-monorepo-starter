@@ -169,7 +169,9 @@ export class AuthService {
   }
 
   // Fresh from the database, so a role change or deactivation shows here
-  // before the access token expires.
+  // before the access token expires. The generic UnauthorizedError code is
+  // load-bearing: the web refreshes its access token only on UNAUTHORIZED,
+  // so do not give it a specific code (also in changePassword below).
   async me(userId: string): Promise<PublicUser> {
     const user = await this.users.findById(userId);
     if (!user || !user.isActive) throw new UnauthorizedError();
