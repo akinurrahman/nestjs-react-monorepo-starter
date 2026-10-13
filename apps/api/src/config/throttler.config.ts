@@ -19,6 +19,11 @@ export const LOGIN_RATE_LIMIT = {
   ttl: 60_000,
 } satisfies Pick<ThrottlerOptions, 'limit' | 'ttl'>;
 
+//
+// There is no per-account cap across IPs. One would slow distributed guessing
+// on a single account, but it would also let anyone lock a known user out by
+// failing their login on purpose. Which side to favour is a per-project
+// policy, so none is set here.
 // Changing your own password is limited per user, like login. Keyed on the
 // user, so a stolen access token cannot guess the current password faster
 // from many IPs, and colleagues behind one IP do not share a bucket.
