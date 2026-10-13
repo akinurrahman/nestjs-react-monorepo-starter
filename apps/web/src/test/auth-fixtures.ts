@@ -62,6 +62,46 @@ export const invalidCredentials = {
   message: 'Invalid email or password',
 } satisfies ErrorResponse;
 
+export const serviceUnavailable = {
+  statusCode: 503,
+  code: ERROR_CODES.SERVICE_UNAVAILABLE,
+  message: 'Service unavailable',
+} satisfies ErrorResponse;
+
+export const tooManyRequests = {
+  statusCode: 429,
+  code: ERROR_CODES.TOO_MANY_REQUESTS,
+  message: 'Too many requests, try again later',
+} satisfies ErrorResponse;
+
+// The refresh failing without saying anything about the session, with the
+// error code and message a request that needed it then fails with.
+export const REFRESH_UNAVAILABLE = [
+  [
+    'a 503',
+    () => HttpResponse.json(serviceUnavailable, { status: 503 }),
+    'SERVICE_UNAVAILABLE',
+    'Something went wrong on our side. Please try again.',
+  ],
+  [
+    'a 429',
+    () => HttpResponse.json(tooManyRequests, { status: 429 }),
+    'TOO_MANY_REQUESTS',
+    'Too many requests, try again later',
+  ],
+  [
+    'a network error',
+    () => HttpResponse.error(),
+    'NETWORK_ERROR',
+    'Could not reach the server. Check your connection and try again.',
+  ],
+] as const satisfies readonly (readonly [
+  string,
+  () => Response,
+  string,
+  string,
+])[];
+
 // Serves POST /api/auth/refresh and counts the calls.
 export function serveRefresh(resolver: () => Response | Promise<Response>) {
   const count = { value: 0 };

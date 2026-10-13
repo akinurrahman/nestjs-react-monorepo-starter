@@ -57,10 +57,16 @@ function isExpiredAccess(
 
 // Refresh once, shared by every request waiting on it, then retry this
 // request once. The retry runs the request interceptor again, which attaches
-// the new token. A failed refresh has already cleared the session.
+// the new token. A refresh refused with a 401 has already cleared the
+// session, and the original 401 stands. One that failed otherwise (offline,
+// 429, 5xx) left the session as it was, so the request fails with the
+// refresh's error, which says what actually went wrong, and the next request
+// tries again.
 api.interceptors.response.use(undefined, async (error: unknown) => {
   if (!isExpiredAccess(error)) throw error;
-  if (!(await refreshAccessToken())) throw error;
+  const result = await refreshAccessToken();
+  if (result.status === 'ended') throw error;
+  if (result.status === 'unavailable') throw result.error;
   return api.request({ ...error.config, authRetried: true });
 });
 

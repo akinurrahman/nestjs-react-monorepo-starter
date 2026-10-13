@@ -10,7 +10,9 @@ export type SessionEnd = 'logout' | 'expired';
 export type Session = {
   // 'checking' until the startup refresh has answered. Nothing behind a
   // route renders before then, so a signed-in person never sees /login.
-  status: 'checking' | 'ready';
+  // 'unreachable' when it could not get an answer at all (offline, 429,
+  // 5xx): whether there is a session is unknown until a retry.
+  status: 'checking' | 'ready' | 'unreachable';
   user: SessionUser | null;
   endedBy: SessionEnd | null;
 };
@@ -37,6 +39,14 @@ export function getSession(): Session {
 
 export function setSessionUser(user: SessionUser): void {
   useSessionStore.setState({ status: 'ready', user, endedBy: null });
+}
+
+export function setSessionChecking(): void {
+  useSessionStore.setState({ status: 'checking' });
+}
+
+export function setSessionUnreachable(): void {
+  useSessionStore.setState({ status: 'unreachable' });
 }
 
 // null: there was no session to end, as when the startup refresh finds none.

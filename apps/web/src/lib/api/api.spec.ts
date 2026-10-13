@@ -4,8 +4,10 @@ import {
   authResponse,
   invalidCredentials,
   invalidSession,
+  REFRESH_UNAVAILABLE,
   refreshFails,
   refreshSucceeds,
+  serveRefresh,
   unauthorized,
 } from '@/test/auth-fixtures';
 import { server } from '@/test/msw-server';
@@ -20,10 +22,12 @@ import { isApiError } from './api-error';
 import { refreshAccessToken, setRefreshHandlers } from './auth-refresh';
 
 const onFailed = vi.fn();
+const onUnavailable = vi.fn();
 
 // What the auth feature registers, minus the session store.
 beforeEach(() => {
   onFailed.mockReset();
+  onUnavailable.mockReset();
   setRefreshHandlers({
     refresh: async () => {
       const { accessToken } = await apiCall<AuthResponse>('/auth/refresh', {
@@ -32,6 +36,7 @@ beforeEach(() => {
       setAccessToken(accessToken);
     },
     onFailed,
+    onUnavailable,
   });
 });
 
@@ -134,10 +139,33 @@ describe('401 refresh', () => {
 
     expect(refresh.value).toBe(1);
     expect(onFailed).toHaveBeenCalledTimes(1);
+    expect(onUnavailable).not.toHaveBeenCalled();
     for (const error of errors) {
       expect(isApiError(error) && error.code).toBe('UNAUTHORIZED');
     }
   });
+
+  it.each(REFRESH_UNAVAILABLE)(
+    'keeps the session and rejects with the refresh error for %s',
+    async (_, respond, code) => {
+      const refresh = serveRefresh(respond);
+      serveProtected('/api/a');
+      serveProtected('/api/b');
+
+      const errors = await Promise.all([
+        rejection(apiCall('/a')),
+        rejection(apiCall('/b')),
+      ]);
+
+      expect(refresh.value).toBe(1);
+      expect(onFailed).not.toHaveBeenCalled();
+      expect(onUnavailable).toHaveBeenCalledTimes(1);
+      expect(getAccessToken()).toBe('stale-token');
+      for (const error of errors) {
+        expect(isApiError(error) && error.code).toBe(code);
+      }
+    },
+  );
 
   it.each([
     ['/auth/login', 'POST'],
@@ -160,7 +188,7 @@ describe('401 refresh', () => {
   it('never refreshes when the refresh itself answers 401', async () => {
     const refresh = serveRefreshWith(unauthorized);
 
-    expect(await refreshAccessToken()).toBe(false);
+    expect(await refreshAccessToken()).toEqual({ status: 'ended' });
     expect(refresh.value).toBe(1);
     expect(onFailed).toHaveBeenCalledTimes(1);
   });
@@ -190,7 +218,7 @@ describe('refreshAccessToken', () => {
       refreshAccessToken(),
     ]);
 
-    expect(results).toEqual([true, true]);
+    expect(results).toEqual([{ status: 'refreshed' }, { status: 'refreshed' }]);
     expect(refresh.value).toBe(1);
     expect(getAccessToken()).toBe('fresh-token');
   });
