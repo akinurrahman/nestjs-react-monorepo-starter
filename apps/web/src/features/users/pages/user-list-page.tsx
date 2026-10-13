@@ -1,5 +1,5 @@
 import { Plus, Users, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ACCOUNT_PATH } from '@/features/account';
@@ -47,39 +47,35 @@ export default function UserListPage() {
   const enableUser = useEnableUser();
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
 
-  const columns = useMemo(
-    () =>
-      userColumns({
-        currentUserId,
-        editPath,
-        onEdit: (user) => void navigate(editPath(user)),
-        onSetPassword: setPasswordUser,
-        onChangeOwnPassword: () => void navigate(ACCOUNT_PATH),
-        onEnable: (user) =>
-          confirm({
-            title: `Enable ${user.name}?`,
-            description: 'They can sign in again.',
-            confirmText: 'Enable',
-            pendingText: 'Enabling',
-            onConfirm: async () => {
-              await enableUser.mutateAsync(user);
-            },
-          }),
-        onDisable: (user) =>
-          confirm({
-            title: `Disable ${user.name}?`,
-            description:
-              'They are signed out everywhere and cannot sign in until enabled.',
-            variant: 'destructive',
-            confirmText: 'Disable',
-            pendingText: 'Disabling',
-            onConfirm: async () => {
-              await disableUser.mutateAsync(user);
-            },
-          }),
+  const columns = userColumns({
+    currentUserId,
+    editPath,
+    onEdit: (user) => void navigate(editPath(user)),
+    onSetPassword: setPasswordUser,
+    onChangeOwnPassword: () => void navigate(ACCOUNT_PATH),
+    onEnable: (user) =>
+      confirm({
+        title: `Enable ${user.name}?`,
+        description: 'They can sign in again.',
+        confirmText: 'Enable',
+        pendingText: 'Enabling',
+        onConfirm: async () => {
+          await enableUser.mutateAsync(user);
+        },
       }),
-    [currentUserId, navigate, confirm, enableUser, disableUser],
-  );
+    onDisable: (user) =>
+      confirm({
+        title: `Disable ${user.name}?`,
+        description:
+          'They are signed out everywhere and cannot sign in until enabled.',
+        variant: 'destructive',
+        confirmText: 'Disable',
+        pendingText: 'Disabling',
+        onConfirm: async () => {
+          await disableUser.mutateAsync(user);
+        },
+      }),
+  });
 
   if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;
