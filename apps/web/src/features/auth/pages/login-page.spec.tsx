@@ -140,6 +140,41 @@ describe('login page', () => {
     );
   });
 
+  it('asks for both fields in plain words on an empty submit, without a request', async () => {
+    const user = userEvent.setup();
+    const bodies = serveLogin(() => HttpResponse.json(authResponse()));
+    renderApp(pages, '/login', { user: null });
+    await findLoginHeading();
+
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(
+      await screen.findByLabelText(/Email/, {
+        selector: '[aria-invalid="true"]',
+      }),
+    ).toHaveAccessibleDescription('Enter your email');
+    expect(screen.getByLabelText(/^Password/)).toHaveAccessibleDescription(
+      'Enter your password',
+    );
+    expect(bodies).toHaveLength(0);
+  });
+
+  it('asks for a valid email', async () => {
+    const user = userEvent.setup();
+    renderApp(pages, '/login', { user: null });
+    await findLoginHeading();
+
+    await user.type(screen.getByLabelText(/Email/), 'not-an-email');
+    await user.type(screen.getByLabelText(/^Password/), 'x');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(
+      await screen.findByLabelText(/Email/, {
+        selector: '[aria-invalid="true"]',
+      }),
+    ).toHaveAccessibleDescription('Enter a valid email');
+  });
+
   it('sends a signed-in visitor home', async () => {
     const { router } = renderApp(pages, '/login', { user: testUser('USER') });
 

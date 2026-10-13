@@ -1,13 +1,16 @@
 import { z } from 'zod';
 import { roleSchema } from './roles.js';
 
+// 254 is the SMTP limit.
+const EMAIL_MAX_LENGTH = 254;
+
 // Trimmed and lower-cased before it is validated, so lookups and the unique
-// index only ever see one spelling of an address. 254 is the SMTP limit.
-export const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .max(254)
+// index only ever see one spelling of an address.
+const normalizedEmail = (required?: string) =>
+  z.string({ error: required }).trim().toLowerCase();
+
+export const emailSchema = normalizedEmail()
+  .max(EMAIL_MAX_LENGTH)
   .pipe(z.email());
 
 // Argon2 takes any length; the cap keeps the cost of one attempt bounded.
@@ -26,9 +29,18 @@ export const newPasswordSchema = z
 // changing it must not lock out existing users.
 const currentPasswordSchema = z.string().min(1).max(PASSWORD_MAX_LENGTH);
 
+// The same rules as emailSchema and currentPasswordSchema, with messages
+// written for the sign-in form, which shows them as they are. An empty field
+// stops at "Enter ..." and never reaches the format check.
 export const loginSchema = z.strictObject({
-  email: emailSchema,
-  password: currentPasswordSchema,
+  email: normalizedEmail('Enter your email')
+    .min(1, 'Enter your email')
+    .max(EMAIL_MAX_LENGTH, 'Enter a valid email')
+    .pipe(z.email('Enter a valid email')),
+  password: z
+    .string({ error: 'Enter your password' })
+    .min(1, 'Enter your password')
+    .max(PASSWORD_MAX_LENGTH),
 });
 
 export const changePasswordSchema = z.strictObject({
