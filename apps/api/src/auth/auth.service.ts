@@ -125,7 +125,10 @@ export class AuthService {
     const isCurrent = refreshSecretMatches(token.secret, session.tokenHash);
     if (!isCurrent && !this.inGrace(session, token.secret, now)) {
       // A valid session id with a secret it no longer (or never) had: the
-      // token was copied. Revoking ends the session for both holders.
+      // token was copied. Revoking ends the session for both holders. It also
+      // means anyone who knows a session id can end that session with a random
+      // secret. The id is readable in the access token (sid) and the warn log.
+      // Accepted: ending a session is all it gives, and the user logs in again.
       await this.sessions.revoke(session.id, now);
       this.logger.warn({ sessionId: session.id }, 'Refresh token reuse');
       throw invalidSession();
