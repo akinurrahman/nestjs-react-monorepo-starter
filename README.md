@@ -34,14 +34,14 @@ It's also built for AI-driven development. A consistent structure, strict types 
 
 ## What's inside
 
-| Layer | Choice |
-|---|---|
-| **Monorepo** | pnpm workspaces + Turborepo, with cached and ordered tasks |
-| **API** | NestJS 12 on ESM, tested with Vitest |
-| **Database** | Prisma 7 with a multi-file schema, Postgres 18 in Docker |
-| **Validation** | Zod, for env config today and shared schemas soon |
-| **Linting** | Oxlint, type-aware |
-| **Web** | React + Vite *(coming)* |
+| Layer          | Choice                                                     |
+| -------------- | ---------------------------------------------------------- |
+| **Monorepo**   | pnpm workspaces + Turborepo, with cached and ordered tasks |
+| **API**        | NestJS 12 on ESM, tested with Vitest                       |
+| **Database**   | Prisma 7 with a multi-file schema, Postgres 18 in Docker   |
+| **Validation** | Zod, for env config today and shared schemas soon          |
+| **Linting**    | Oxlint, type-aware                                         |
+| **Web**        | React + Vite _(coming)_                                    |
 
 ## Quick start
 
@@ -89,26 +89,26 @@ If a local Postgres or another project's database is already on 5432, move this 
 
 Run everything from the repo root. Turbo runs each task in every app that has it, in the right order, and skips work that hasn't changed.
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Start all apps in watch mode |
-| `pnpm build` | Build all apps for production |
-| `pnpm typecheck` | Check types across the repo |
-| `pnpm lint` | Lint with Oxlint |
-| `pnpm format` | Format the whole repo with Prettier |
-| `pnpm format:check` | Check formatting without writing |
-| `pnpm test` | Run unit tests |
-| `pnpm test:e2e` | Run end-to-end tests against `starter_test` *(needs the database running)* |
+| Command             | What it does                                                               |
+| ------------------- | -------------------------------------------------------------------------- |
+| `pnpm dev`          | Start all apps in watch mode                                               |
+| `pnpm build`        | Build all apps for production                                              |
+| `pnpm typecheck`    | Check types across the repo                                                |
+| `pnpm lint`         | Lint with Oxlint                                                           |
+| `pnpm format`       | Format the whole repo with Prettier                                        |
+| `pnpm format:check` | Check formatting without writing                                           |
+| `pnpm test`         | Run unit tests                                                             |
+| `pnpm test:e2e`     | Run end-to-end tests against `starter_test` _(needs the database running)_ |
 
 **Database**
 
-| Command | What it does |
-|---|---|
-| `pnpm --filter @starter/api db:migrate` | Create and apply a migration after a schema change |
-| `pnpm --filter @starter/api db:deploy` | Apply existing migrations, without creating new ones |
-| `pnpm --filter @starter/api db:seed` | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Does nothing if that email already exists |
-| `pnpm --filter @starter/api db:studio` | Browse and edit data in your browser |
-| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it |
+| Command                                      | What it does                                                                                                                                             |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @starter/api db:migrate`      | Create and apply a migration after a schema change                                                                                                       |
+| `pnpm --filter @starter/api db:deploy`       | Apply existing migrations, without creating new ones                                                                                                     |
+| `pnpm --filter @starter/api db:seed`         | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Does nothing if that email already exists |
+| `pnpm --filter @starter/api db:studio`       | Browse and edit data in your browser                                                                                                                     |
+| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it                                                                                            |
 
 The seed builds the API and runs `dist/seed.js` through `nest start --entryFile seed`, configured as the seed command in `apps/api/prisma7.config.ts`.
 

@@ -52,16 +52,16 @@ file:
 that cost more than they return when applied too early. Build the thing inline
 first. Extract when the trigger fires:
 
-| Thing | Trigger |
-| --- | --- |
-| A component file | the JSX has a second caller, or the parent passes ~150 lines |
-| A `<entity>-columns.tsx` file | the column array outgrows the page, roughly 8 columns |
-| A hook in `hooks/` | the logic has a second caller, or the page passes ~150 lines |
+| Thing                                     | Trigger                                                                                |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| A component file                          | the JSX has a second caller, or the parent passes ~150 lines                           |
+| A `<entity>-columns.tsx` file             | the column array outgrows the page, roughly 8 columns                                  |
+| A hook in `hooks/`                        | the logic has a second caller, or the page passes ~150 lines                           |
 | A `queryOptions` factory next to the hook | you need `prefetchQuery`, `ensureQueryData`, a route loader, or a typed `getQueryData` |
-| A `systems/` extraction | a second feature needs it. Not the first |
-| An `index.ts` export | another feature or `app/router.ts` imports it |
-| A detail page | there is something to show that the edit form does not already show |
-| A separate feature folder | see "When a sub-entity becomes its own feature" |
+| A `systems/` extraction                   | a second feature needs it. Not the first                                               |
+| An `index.ts` export                      | another feature or `app/router.ts` imports it                                          |
+| A detail page                             | there is something to show that the edit form does not already show                    |
+| A separate feature folder                 | see "When a sub-entity becomes its own feature"                                        |
 
 **Never, at any size:** a wrapper component that only forwards props. If it
 adds no defaults, no derived values and no logic, it is a rename. Import the
@@ -262,7 +262,10 @@ export const classOptionsSource: AsyncOptionsSource = {
   queryKey: CLASS_KEYS.options(),
   fetch: async ({ search, page, limit, parentValues, signal }) =>
     fromPaginated(
-      await classApi.getOptions({ search, page, limit, ...parentValues }, signal),
+      await classApi.getOptions(
+        { search, page, limit, ...parentValues },
+        signal,
+      ),
       (item) => ({ value: item.id, label: item.name }),
     ),
 };
@@ -486,20 +489,20 @@ importing from a feature, means the thing is in the wrong folder.
 
 ## What goes in which file
 
-| File | Owns | Never contains |
-| --- | --- | --- |
-| `definitions/*.lookup.ts` | `createLookup` configs, unions derived from them | anything not enum-related |
-| `definitions/*.types.ts` | API shapes, re-export of the lookup unions | enum unions declared by hand, runtime code |
-| `definitions/*.schema.ts` | zod schemas, `z.infer` types | fetching, react, re-typed enum values |
-| `definitions/*.constants.ts` | query keys, filter spec, defaults, limits | enums, functions with side effects |
-| `api/*.api.ts` | endpoint + method + payload, via typed `apiCall<T>` | bare axios/fetch, react, react-query, toasts |
-| `api/*.queries.ts` | `useQuery` hooks, async select sources, a `queryOptions` factory once earned | mutations, JSX |
-| `api/*.mutations.ts` | `useMutation`, invalidation, success toast | navigation, error toasts, route-specific copy |
-| `hooks/*` | derived state, orchestration that a second caller needs | JSX, filter parsing |
-| `components/*` | UI. Props in, JSX out | route knowledge (`useNavigate`, `useParams`) |
-| `pages/*` | hooks to components, page chrome, navigation, query states | business rules, inline fetch config |
-| `routes.tsx` | paths, handles, lazy imports | anything else |
-| `index.ts` | re-exports | implementation |
+| File                         | Owns                                                                         | Never contains                                |
+| ---------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------- |
+| `definitions/*.lookup.ts`    | `createLookup` configs, unions derived from them                             | anything not enum-related                     |
+| `definitions/*.types.ts`     | API shapes, re-export of the lookup unions                                   | enum unions declared by hand, runtime code    |
+| `definitions/*.schema.ts`    | zod schemas, `z.infer` types                                                 | fetching, react, re-typed enum values         |
+| `definitions/*.constants.ts` | query keys, filter spec, defaults, limits                                    | enums, functions with side effects            |
+| `api/*.api.ts`               | endpoint + method + payload, via typed `apiCall<T>`                          | bare axios/fetch, react, react-query, toasts  |
+| `api/*.queries.ts`           | `useQuery` hooks, async select sources, a `queryOptions` factory once earned | mutations, JSX                                |
+| `api/*.mutations.ts`         | `useMutation`, invalidation, success toast                                   | navigation, error toasts, route-specific copy |
+| `hooks/*`                    | derived state, orchestration that a second caller needs                      | JSX, filter parsing                           |
+| `components/*`               | UI. Props in, JSX out                                                        | route knowledge (`useNavigate`, `useParams`)  |
+| `pages/*`                    | hooks to components, page chrome, navigation, query states                   | business rules, inline fetch config           |
+| `routes.tsx`                 | paths, handles, lazy imports                                                 | anything else                                 |
+| `index.ts`                   | re-exports                                                                   | implementation                                |
 
 ## The rules that actually matter
 
@@ -677,12 +680,14 @@ Default is zero comments. A comment is an exception you justify, not a
 courtesy you add.
 
 Do not comment:
+
 - A component, hook, or api method whose name and types already say it.
   Presentational components, query and mutation hooks, api wrappers
 - Prop interfaces, lookup values, filter specs, query key factories
 - Anything a reader learns by reading the next two lines
 
 Comment only when:
+
 - A line looks wrong and is not. Backend quirk, race, ordering constraint,
   intentional stale value
 - A magic value has a source outside the file (spec, backend limit, protocol)
@@ -691,6 +696,7 @@ Comment only when:
   wrong
 
 Form:
+
 - Default is one `//` line above the line it explains
 - A `/** */` block is for the third case only, and it explains why or how the
   thing is used, not what the name already says. Argument-by-argument `@param`
