@@ -24,7 +24,7 @@ Built so every project starts from the same solid ground, and ships faster with 
 <br>
 
 > [!NOTE]
-> **Work in progress.** The backend skeleton is ready. The web app, shared package, auth and CI are next. See the [roadmap](#roadmap).
+> **Work in progress.** The API, shared package, web app, auth and the users module are in place. Repo-wide tooling, CI and the init script are next. See the [roadmap](#roadmap).
 
 ## Why this exists
 
@@ -150,9 +150,9 @@ starter-react-nest/
 - [x] Prisma 7 and Postgres in Docker
 - [x] Validated environment config
 - [x] Request validation, error handling, logging, Swagger, health check
-- [ ] Shared package for schemas and types
-- [ ] React web app
-- [ ] Auth and the users module
+- [x] Shared package for schemas and types
+- [x] React web app
+- [x] Auth and the users module
 - [ ] Repo-wide tooling and CI
 - [ ] Init script to set up a new project in one command
 

@@ -56,7 +56,7 @@ The dev shell may be PowerShell on Windows. Prefer commands that work in both.
 ## Backend rules
 
 - ESM: `.js` extension on every relative import.
-- New modules follow `src/health/` until the users golden module exists.
+- New modules follow `src/users/`, the golden module. `src/health/` is the minimal layout.
 - Only repositories inject PrismaService.
 - Services throw AppError subclasses from `src/common/errors`, never HttpException.
   Use specific codes (`new NotFoundError('USER_NOT_FOUND', 'User not found')`). Check
