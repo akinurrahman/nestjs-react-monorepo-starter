@@ -1,3 +1,4 @@
+import { ERROR_CODES } from '@starter/shared';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getErrorMessage, isApiError } from '@/lib/api/api-error';
@@ -24,6 +25,13 @@ function isClientError(error: unknown): boolean {
   return isApiError(error) && error.status >= 400 && error.status < 500;
 }
 
+// An UNAUTHORIZED that gets this far outlived a failed refresh: the session
+// is already cleared and the person is on their way to /login, which says
+// more than "Authentication required" would.
+function isSessionEnd(error: unknown): boolean {
+  return isApiError(error) && error.code === ERROR_CODES.UNAUTHORIZED;
+}
+
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     queryCache: new QueryCache({
@@ -34,7 +42,7 @@ export function createQueryClient(): QueryClient {
       // folds identical messages, as when every open query fails at once on
       // a window focus while offline.
       onError: (error, query) => {
-        if (query.meta?.handledError) return;
+        if (query.meta?.handledError || isSessionEnd(error)) return;
         if (query.state.data === undefined || !isApiError(error)) return;
         const message = getErrorMessage(error);
         toast.error(message, { id: `query-refetch:${message}` });
@@ -46,6 +54,7 @@ export function createQueryClient(): QueryClient {
         // mutate(vars, { onError }) never reaches the cache, so that caller
         // opts out with meta instead.
         if (mutation.options.onError || mutation.meta?.handledError) return;
+        if (isSessionEnd(error)) return;
         // This runs before mutateAsync rejects, so a Form awaiting the
         // mutation has not caught and shown the error yet. Its catch runs in
         // the same microtask chain, so one macrotask later it has.

@@ -1,9 +1,9 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import type { DataRouter } from 'react-router';
-import { RouterProvider } from 'react-router/dom';
 import { Toaster } from '@/components/ui/sonner';
 import { ConfirmationHost } from '@/systems/confirmation';
 import { ThemeSync, useResolvedTheme } from '@/systems/theme';
+import { SessionGate } from './session-gate';
 
 type AppProps = {
   router: DataRouter;
@@ -28,12 +28,15 @@ function ThemedToaster() {
  *
  * ThemeSync keeps the .dark class current after the inline script in
  * index.html has set the first one.
+ *
+ * SessionGate renders the router once the startup session check is done, and
+ * sits inside the client because a failed refresh clears its cache.
  */
 export function App({ router, queryClient }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeSync />
-      <RouterProvider router={router} />
+      <SessionGate router={router} />
       <ThemedToaster />
       <ConfirmationHost />
     </QueryClientProvider>

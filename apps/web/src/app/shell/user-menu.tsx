@@ -1,4 +1,5 @@
 import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,12 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { loginPath, useLogout } from '@/features/auth';
 import { getInitials } from '@/lib/format';
 import { useSession } from '@/systems/session';
-import { DevRoleSwitcher } from './dev-role-switcher';
 
 export function UserMenu() {
   const { user } = useSession();
+  const navigate = useNavigate();
+  const logout = useLogout();
   if (!user) return null;
 
   return (
@@ -42,10 +45,17 @@ export function UserMenu() {
             {user.name}
           </DropdownMenuLabel>
         </DropdownMenuGroup>
-        {import.meta.env.DEV ? <DevRoleSwitcher role={user.role} /> : null}
         <DropdownMenuSeparator />
-        {/* Enabled by the auth step. */}
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem
+          disabled={logout.isPending}
+          onClick={() =>
+            logout.mutate(undefined, {
+              // A protected page already redirects once the session is gone;
+              // a public one (the 404) would otherwise stay put.
+              onSettled: () => void navigate(loginPath()),
+            })
+          }
+        >
           <LogOut />
           Sign out
         </DropdownMenuItem>

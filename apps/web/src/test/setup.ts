@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react';
 import type { StoreApi } from 'zustand';
 import { usePaletteStore } from '@/app/shell/palette-store';
 import { useSidebarStore } from '@/components/ui/sidebar-store';
+import { clearAccessToken } from '@/lib/api/access-token';
 import { useConfirmationStore } from '@/systems/confirmation/confirmation-store';
 import { useSessionStore } from '@/systems/session/session-store';
 import { useThemeStore } from '@/systems/theme/theme-store';
@@ -20,6 +21,7 @@ function resetStore<T>(store: StoreApi<T>) {
 // which the clear then empties.
 beforeEach(() => {
   installMatchMedia();
+  clearAccessToken();
   resetStore(useSessionStore);
   resetStore(useThemeStore);
   resetStore(useSidebarStore);

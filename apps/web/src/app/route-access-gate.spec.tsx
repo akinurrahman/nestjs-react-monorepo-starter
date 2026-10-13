@@ -1,8 +1,11 @@
 import { screen } from '@testing-library/react';
 import { FileText, Lock, Users } from 'lucide-react';
-import { setStubRole } from '@/systems/session';
-import { useSessionStore } from '@/systems/session/session-store';
 import type { AppRouteObject } from '@/systems/router';
+import {
+  findLoginHeading,
+  preloadLoginPage,
+  testUser,
+} from '@/test/auth-fixtures';
 import { renderApp } from '@/test/render-app';
 import { APP_NAME } from './config';
 
@@ -40,68 +43,73 @@ async function expectDenied() {
   expect(screen.getByRole('link', { name: APP_NAME })).toBeInTheDocument();
 }
 
+beforeAll(preloadLoginPage, 30_000);
+
 describe('route access', () => {
   it('renders a role-free page for any user', async () => {
-    setStubRole('USER');
-    renderApp(pages, '/open');
+    renderApp(pages, '/open', { user: testUser('USER') });
 
     expect(await screen.findByText('open page')).toBeInTheDocument();
   });
 
   it('renders a page the role is allowed on', async () => {
-    setStubRole('USER');
-    renderApp(pages, '/members');
+    renderApp(pages, '/members', { user: testUser('USER') });
 
     expect(await screen.findByText('members page')).toBeInTheDocument();
   });
 
   it('shows access denied inside the layout for a role not allowed', async () => {
-    setStubRole('ADMIN');
-    renderApp(pages, '/members');
+    renderApp(pages, '/members', { user: testUser('ADMIN') });
 
     await expectDenied();
     expect(screen.queryByText('members page')).toBeNull();
   });
 
   it('checks the roles of every matched ancestor', async () => {
-    setStubRole('USER');
-    renderApp(pages, '/admin/users');
+    renderApp(pages, '/admin/users', { user: testUser('USER') });
 
     await expectDenied();
     expect(screen.queryByText('admin users page')).toBeNull();
   });
 
   it('allows a nested page when every ancestor allows the role', async () => {
-    setStubRole('ADMIN');
-    renderApp(pages, '/admin/users');
+    renderApp(pages, '/admin/users', { user: testUser('ADMIN') });
 
     expect(await screen.findByText('admin users page')).toBeInTheDocument();
   });
 
   describe('without a user', () => {
-    beforeEach(() => useSessionStore.setState({ user: null }));
-
     it('renders a public route', async () => {
-      renderApp(pages, '/welcome');
+      renderApp(pages, '/welcome', { user: null });
 
       expect(await screen.findByText('welcome page')).toBeInTheDocument();
     });
 
-    it('denies a route that is not public, even without roles', async () => {
-      renderApp(pages, '/open');
+    it('redirects a route that is not public to login, keeping path and query', async () => {
+      const { router } = renderApp(pages, '/open?tab=2', { user: null });
 
-      await expectDenied();
+      expect(await findLoginHeading()).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/login');
+      expect(router.state.location.search).toBe('?redirect=%2Fopen%3Ftab%3D2');
       expect(screen.queryByText('open page')).toBeNull();
     });
 
-    it('denies a route with roles', async () => {
-      renderApp(pages, '/members');
+    it('redirects a route with roles to login', async () => {
+      const { router } = renderApp(pages, '/members', { user: null });
 
-      await expectDenied();
+      await findLoginHeading();
+      expect(router.state.location.search).toBe('?redirect=%2Fmembers');
+    });
+
+    it('replaces the history entry, so Back does not bounce', async () => {
+      const { router } = renderApp(pages, '/members', { user: null });
+
+      await findLoginHeading();
+      expect(router.state.historyAction).toBe('REPLACE');
     });
 
     it('still shows the 404 for an unknown url', async () => {
-      renderApp(pages, '/no/such/page');
+      renderApp(pages, '/no/such/page', { user: null });
 
       expect(
         await screen.findByText(/This page does not exist/),

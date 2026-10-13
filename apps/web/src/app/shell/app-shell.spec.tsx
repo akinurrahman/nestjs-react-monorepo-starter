@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { FileText, House, Lock } from 'lucide-react';
 import { useSidebarStore } from '@/components/ui/sidebar-store';
 import type { AppRouteObject } from '@/systems/router';
-import { setStubRole } from '@/systems/session';
+import { testUser } from '@/test/auth-fixtures';
 import { setViewportWidth } from '@/test/match-media';
 import { renderApp } from '@/test/render-app';
 
@@ -182,8 +182,7 @@ describe('app shell', () => {
     });
 
     it('shows access denied', async () => {
-      setStubRole('ADMIN');
-      renderApp(pages, '/members');
+      renderApp(pages, '/members', { user: testUser('ADMIN') });
 
       expect(
         await within(screen.getByRole('main')).findByText('Access denied'),

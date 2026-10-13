@@ -10,6 +10,8 @@ import { AppShell } from './shell/app-shell';
 /**
  * root      title, progress bar, scroll restoration. Its boundary is the
  *           last resort and replaces everything, layout included.
+ * bare      pathless, outside the shell, for screens like login. Same access
+ *           check, error boundary and initial load as page.
  * layout    the shell. Its sidebar lists the pages from this config, so
  *           every nav entry shows before its chunk loads.
  * page      pathless, inside the layout. Checks access, catches page errors
@@ -17,7 +19,10 @@ import { AppShell } from './shell/app-shell';
  *
  * Tests build the same tree around their own pages.
  */
-export function buildRoutes(pages: AppRouteObject[]): AppRouteObject[] {
+export function buildRoutes(
+  pages: AppRouteObject[],
+  barePages: AppRouteObject[] = [],
+): AppRouteObject[] {
   return [
     {
       id: 'root',
@@ -25,6 +30,13 @@ export function buildRoutes(pages: AppRouteObject[]): AppRouteObject[] {
       Component: RootRoute,
       ErrorBoundary: RootErrorBoundary,
       children: [
+        {
+          id: 'bare',
+          Component: RouteAccessGate,
+          ErrorBoundary: RouteErrorBoundary,
+          HydrateFallback: ProgressBar,
+          children: barePages,
+        },
         {
           id: 'layout',
           element: <AppShell navRoutes={pages} />,

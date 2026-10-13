@@ -8,9 +8,10 @@ import {
 import userEvent from '@testing-library/user-event';
 import { BarChart, House, Lock, Users } from 'lucide-react';
 import type { AppRouteObject } from '@/systems/router';
-import { setStubRole } from '@/systems/session';
+import { setSessionUser } from '@/systems/session';
 import { useThemeStore } from '@/systems/theme/theme-store';
 import { confirm } from '@/systems/confirmation/confirmation-store';
+import { testUser } from '@/test/auth-fixtures';
 import { setViewportWidth } from '@/test/match-media';
 import { renderApp } from '@/test/render-app';
 import { usePaletteStore } from './palette-store';
@@ -66,8 +67,8 @@ const sidebarNames = () =>
     .getAllByRole('link', { hidden: true })
     .map((link) => link.textContent);
 
-async function renderShell() {
-  const result = renderApp(pages, '/');
+async function renderShell(user = testUser('ADMIN')) {
+  const result = renderApp(pages, '/', { user });
   await screen.findByRole('textbox', { name: 'Name' });
   return result;
 }
@@ -176,7 +177,7 @@ describe('command palette', () => {
   describe('pages', () => {
     it('lists what the sidebar lists, in sidebar order', async () => {
       const user = userEvent.setup();
-      await renderShell();
+      await renderShell(testUser('ADMIN'));
       await user.click(screen.getByRole('button', { name: 'Search' }));
       await palette();
 
@@ -185,13 +186,13 @@ describe('command palette', () => {
       expect(screen.queryByRole('option', { name: 'Hidden page' })).toBeNull();
     });
 
-    it('follows a role switch', async () => {
+    it('follows a change of user role', async () => {
       const user = userEvent.setup();
-      await renderShell();
+      await renderShell(testUser('ADMIN'));
       await user.click(screen.getByRole('button', { name: 'Search' }));
       await palette();
 
-      act(() => setStubRole('USER'));
+      act(() => setSessionUser(testUser('USER')));
 
       expect(optionNames('General')).toEqual(['Home', 'Reports', 'Members']);
       expect(optionNames('General')).toEqual(sidebarNames());

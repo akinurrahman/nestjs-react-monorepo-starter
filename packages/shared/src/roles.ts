@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-// Ordered from most to least privileged. The web dev session stub takes the
-// first entry as its default role.
+// Ordered from most to least privileged.
 export const ROLES = ['ADMIN', 'USER'] as const;
 
 export const roleSchema = z.enum(ROLES);

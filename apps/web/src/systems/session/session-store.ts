@@ -1,41 +1,45 @@
-// Stub session until the auth step. That step replaces this module's
-// internals and keeps useSession's shape, so routes and guards must not need
-// to change when it lands.
-import { ROLES, type Role } from '@starter/shared';
+import type { PublicUser } from '@starter/shared';
 import { create } from 'zustand';
 
-export type SessionUser = {
-  id: string;
-  name: string;
-  role: Role;
-};
+export type SessionUser = PublicUser;
+
+// Why the last session ended. Logout sends the person to plain /login, an
+// expired session sends them there with a redirect back to where they were.
+export type SessionEnd = 'logout' | 'expired';
 
 export type Session = {
+  // 'checking' until the startup refresh has answered. Nothing behind a
+  // route renders before then, so a signed-in person never sees /login.
+  status: 'checking' | 'ready';
   user: SessionUser | null;
+  endedBy: SessionEnd | null;
 };
 
-// import.meta.env.DEV is replaced with false in a production build, so this
-// whole branch, the stub user included, is dropped from the bundle.
-const initialUser: SessionUser | null = import.meta.env.DEV
-  ? {
-      id: '00000000-0000-7000-8000-00000000d3e5',
-      name: 'Dev Stub User',
-      role: ROLES[0],
-    }
-  : null;
-
+// Holds the user, never the access token: components read who is signed in,
+// and only lib/api ever touches the token.
 export const useSessionStore = create<Session>()(() => ({
-  user: initialUser,
+  status: 'checking',
+  user: null,
+  endedBy: null,
 }));
 
 export function useSession(): Session {
+  const status = useSessionStore((state) => state.status);
   const user = useSessionStore((state) => state.user);
-  return { user };
+  const endedBy = useSessionStore((state) => state.endedBy);
+  return { status, user, endedBy };
 }
 
-// No-op without a user, so a production build never gains one.
-export function setStubRole(role: Role): void {
-  useSessionStore.setState((state) =>
-    state.user ? { user: { ...state.user, role } } : state,
-  );
+// For code outside React, such as the refresh failure handler.
+export function getSession(): Session {
+  return useSessionStore.getState();
+}
+
+export function setSessionUser(user: SessionUser): void {
+  useSessionStore.setState({ status: 'ready', user, endedBy: null });
+}
+
+// null: there was no session to end, as when the startup refresh finds none.
+export function endSession(endedBy: SessionEnd | null): void {
+  useSessionStore.setState({ status: 'ready', user: null, endedBy });
 }
