@@ -90,18 +90,18 @@ describe.each(Object.keys(loggers))('Prisma errors through %s', (name) => {
     expect(err.stack).toMatch(/\n {4}at /);
   });
 
-  it('logs a raw query error with its code and kind only', () => {
+  it('logs a raw query error with its code and names only', () => {
     const { text, err } = logged(createLogger, rawQueryError());
 
     expect(text).not.toMatch(USER_DATA);
-    expect(err).toMatchObject({
+    expect(err).toEqual({
       type: 'PrismaClientKnownRequestError',
       code: 'P2010',
-      meta: {
-        modelName: 'User',
-        kind: 'InvalidInputValue',
-        originalCode: '22P02',
-      },
+      message:
+        'P2010 [model User, database 22P02, kind InvalidInputValue] (message not logged: it can contain query data)',
+      stack: expect.stringMatching(
+        /^PrismaClientKnownRequestError: P2010 \[.*\n {4}at /,
+      ),
     });
   });
 
@@ -113,19 +113,77 @@ describe.each(Object.keys(loggers))('Prisma errors through %s', (name) => {
     const { text, err } = logged(createLogger, outer);
 
     expect(text).not.toMatch(USER_DATA);
-    expect(err.type).toBe('ServiceUnavailableError');
-    expect(err.message).toMatch(/^Service unavailable: .*message not logged/);
-    expect(err.stack).toContain('caused by: PrismaClientValidationError');
+    expect(err).toMatchObject({
+      type: 'ServiceUnavailableError',
+      message: 'Service unavailable',
+      code: 'SERVICE_UNAVAILABLE',
+      cause: {
+        type: 'PrismaClientValidationError',
+        message: expect.stringContaining('message not logged'),
+      },
+    });
   });
 
-  it('leaves other errors and causes as they are', () => {
+  it('leaves other messages and causes as they are', () => {
     const outer = new ServiceUnavailableError(undefined, undefined, {
       cause: new Error('Timed out after 2000ms'),
     });
 
     const { err } = logged(createLogger, outer);
 
-    expect(err.message).toBe('Service unavailable: Timed out after 2000ms');
+    expect(err).toMatchObject({
+      message: 'Service unavailable',
+      cause: { type: 'Error', message: 'Timed out after 2000ms' },
+    });
+  });
+
+  // What an HTTP client error looks like: the request it sent, with its
+  // headers and body, hangs off the error and its cause.
+  it('keeps only type, message, stack, code and cause, at any depth', () => {
+    const secrets = {
+      config: {
+        headers: { Authorization: 'Bearer SECRET-TOKEN' },
+        data: { password: 'SECRET-PASSWORD' },
+      },
+      body: { user: { password: 'SECRET-PASSWORD' } },
+      response: { data: { token: 'SECRET-TOKEN' } },
+    };
+    const cause = Object.assign(new Error('socket hang up'), {
+      code: 'ECONNRESET',
+      ...secrets,
+    });
+    const outer = Object.assign(
+      new Error('Request failed', { cause }),
+      secrets,
+    );
+
+    const { text, err } = logged(createLogger, outer);
+
+    expect(text).not.toMatch(/SECRET-/);
+    expect(Object.keys(err).sort()).toEqual(
+      ['cause', 'message', 'stack', 'type'].sort(),
+    );
+    expect(Object.keys(err.cause as object).sort()).toEqual(
+      ['code', 'message', 'stack', 'type'].sort(),
+    );
+    expect(err.cause).toMatchObject({
+      type: 'Error',
+      message: 'socket hang up',
+      code: 'ECONNRESET',
+    });
+  });
+
+  it('survives a cause cycle', () => {
+    const a = new Error('a');
+    const b = new Error('b', { cause: a });
+    a.cause = b;
+
+    const { err } = logged(createLogger, a);
+
+    expect(err).toMatchObject({
+      message: 'a',
+      cause: { message: 'b', cause: { message: '[Circular]' } },
+    });
   });
 });
 

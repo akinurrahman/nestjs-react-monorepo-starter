@@ -1,99 +1,105 @@
-import { stdSerializers } from 'pino';
 import { Prisma } from '../generated/prisma/client.js';
 
 // These put query data in their message: a validation error prints the call's
 // arguments, a raw query error the database's message, which can quote input
-// values. Only their code and a few metadata fields are logged.
+// values. Only their code and a few names are logged.
 const QUERY_ERRORS = [
   Prisma.PrismaClientKnownRequestError,
   Prisma.PrismaClientUnknownRequestError,
   Prisma.PrismaClientValidationError,
 ];
 
-// pino's `err` serializer, with Prisma query errors replaced anywhere in the
-// cause chain unless `scrubQueryErrors` is off. pino-http wraps it and hands it
-// an already serialized error, whose `raw` is the original.
+export interface SerializedError {
+  type: string;
+  message: string;
+  stack?: string;
+  code?: string | number;
+  cause?: SerializedError;
+}
+
+// pino's `err` serializer. It keeps type, message, stack, code and cause
+// (serialized the same way) and drops every other field, at any depth: an
+// error can carry an HTTP client's config with its headers or a request body,
+// which redaction paths cannot follow. Prisma query errors lose their message
+// anywhere in the cause chain unless `scrubQueryErrors` is off. pino-http wraps
+// the serializer and hands it an already serialized error, whose `raw` is the
+// original.
 export function createErrorSerializer(
   scrubQueryErrors: boolean,
-): (err: unknown) => unknown {
+): (err: unknown) => SerializedError {
   return (err) => {
     const source = (err as { raw?: unknown } | undefined)?.raw ?? err;
-    return stdSerializers.err(
-      (scrubQueryErrors ? scrub(source, new Set()) : source) as Error,
-    );
+    return serialize(source, scrubQueryErrors, new Set());
   };
 }
 
-function scrub(err: unknown, seen: Set<unknown>): unknown {
-  if (!(err instanceof Error) || seen.has(err)) return err;
+function serialize(
+  err: unknown,
+  scrubQueryErrors: boolean,
+  seen: Set<unknown>,
+): SerializedError {
+  if (!(err instanceof Error)) {
+    return { type: typeof err, message: String(err) };
+  }
+  if (seen.has(err)) return { type: typeName(err), message: '[Circular]' };
   seen.add(err);
 
-  const cause = scrub(err.cause, seen);
-  if (QUERY_ERRORS.some((type) => err instanceof type)) {
-    return scrubbedPrismaError(err, cause);
-  }
-  return cause === err.cause ? err : copyWithCause(err, cause);
+  const scrubbed =
+    scrubQueryErrors && QUERY_ERRORS.some((type) => err instanceof type);
+  const message = scrubbed ? queryErrorMessage(err) : err.message;
+  // The stack starts with the message, so a scrubbed one keeps its frames only.
+  const stack = scrubbed ? `${err.name}: ${message}${frames(err)}` : err.stack;
+  const { code } = err as { code?: unknown };
+
+  return {
+    type: typeName(err),
+    message,
+    ...(stack !== undefined && { stack }),
+    ...((typeof code === 'string' || typeof code === 'number') && { code }),
+    ...(err.cause !== undefined && {
+      cause: serialize(err.cause, scrubQueryErrors, seen),
+    }),
+  };
 }
 
-function scrubbedPrismaError(err: Error, cause: unknown): Error {
-  const { code, clientVersion, meta } = err as {
-    code?: string;
-    clientVersion?: string;
-    meta?: unknown;
-  };
-  const message = `${code ?? 'Query error'} (message not logged: it can contain query data)`;
-  // The stack starts with the message, so only its frames are kept.
+function typeName(err: Error): string {
+  return typeof err.constructor === 'function'
+    ? err.constructor.name
+    : err.name;
+}
+
+function frames(err: Error): string {
   const stack = err.stack ?? '';
   const framesAt = stack.indexOf('\n    at ');
-  const frames = framesAt === -1 ? '' : stack.slice(framesAt);
-
-  const copy = Object.assign(Object.create(Object.getPrototypeOf(err)), {
-    name: err.name,
-    message,
-    stack: `${err.name}: ${message}${frames}`,
-    code,
-    clientVersion,
-    meta: safeMeta(meta),
-  }) as Error;
-  return withCause(copy, cause);
+  return framesAt === -1 ? '' : stack.slice(framesAt);
 }
 
-// Names only, never values: the model, the target fields and the database's
-// error kind and code.
-function safeMeta(meta: unknown) {
-  if (!isRecord(meta)) return undefined;
-  const adapterError = isRecord(meta.driverAdapterError)
-    ? meta.driverAdapterError
+// Names only, never values: the code, the model, the target fields and the
+// database's error code and kind.
+function queryErrorMessage(err: Error): string {
+  const { code, meta } = err as { code?: unknown; meta?: unknown };
+  const record = isRecord(meta) ? meta : {};
+  const adapterError = isRecord(record.driverAdapterError)
+    ? record.driverAdapterError
     : {};
   const adapterCause = isRecord(adapterError.cause) ? adapterError.cause : {};
-  return {
-    modelName: meta.modelName,
-    target: meta.target,
-    kind: adapterCause.kind,
-    originalCode: adapterCause.originalCode,
-  };
+  const details = [
+    namePart('model', record.modelName),
+    namePart('target', record.target),
+    namePart('database', adapterCause.originalCode),
+    namePart('kind', adapterCause.kind),
+  ].filter(Boolean);
+  const head = typeof code === 'string' ? code : 'Query error';
+  const where = details.length > 0 ? ` [${details.join(', ')}]` : '';
+  return `${head}${where} (message not logged: it can contain query data)`;
 }
 
-function copyWithCause(err: Error, cause: unknown): Error {
-  const copy = Object.assign(Object.create(Object.getPrototypeOf(err)), err, {
-    message: err.message,
-    stack: err.stack,
-  }) as Error;
-  return withCause(copy, cause);
-}
-
-// Non-enumerable, like `cause` set through the Error constructor, so the
-// serializer follows it as a cause instead of copying it as a field.
-function withCause(err: Error, cause: unknown): Error {
-  if (cause !== undefined) {
-    Object.defineProperty(err, 'cause', {
-      value: cause,
-      enumerable: false,
-      writable: true,
-      configurable: true,
-    });
+function namePart(label: string, value: unknown): string | undefined {
+  if (typeof value === 'string') return `${label} ${value}`;
+  if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+    return `${label} ${value.join(',')}`;
   }
-  return err;
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
