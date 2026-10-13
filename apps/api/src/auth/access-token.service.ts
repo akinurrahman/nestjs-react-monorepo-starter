@@ -15,8 +15,10 @@ const claimsSchema = z.object({
 });
 
 // Access tokens are verified from the signature alone, with no database
-// read. The accepted tradeoff: one stays valid until it expires, even after
-// logout revokes its session.
+// read. The accepted tradeoff, on routes without @Roles(): one stays valid
+// until it expires, even after logout revokes its session or the user is
+// disabled. Routes with @Roles() close that window: RolesGuard reads the
+// user's current role and active flag and the session's state.
 @Injectable()
 export class AccessTokenService {
   private readonly key: Uint8Array;

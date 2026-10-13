@@ -384,7 +384,8 @@ describe('POST /api/auth/logout', () => {
     expect(session.revokedAt).not.toBeNull();
     await refresh(app, cookie).expect(401);
 
-    // Accepted tradeoff: the access token works until it expires.
+    // Accepted tradeoff on routes without @Roles(): the access token works
+    // until it expires. Admin routes refuse it, see users.e2e-spec.ts.
     await request(app.getHttpServer())
       .get('/api/auth/me')
       .set('Authorization', `Bearer ${accessToken}`)

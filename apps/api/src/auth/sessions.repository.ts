@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Role } from '@starter/shared';
 import { PrismaService } from '../database/prisma.service.js';
 import type { Session } from '../generated/prisma/client.js';
 
@@ -18,6 +19,14 @@ export interface RotateSessionData {
   now: Date;
 }
 
+// What RolesGuard needs to know about a token's session and its user now.
+export interface SessionAccess {
+  userId: string;
+  revokedAt: Date | null;
+  expiresAt: Date;
+  user: { role: Role; isActive: boolean };
+}
+
 @Injectable()
 export class SessionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -28,6 +37,18 @@ export class SessionsRepository {
 
   findById(id: string): Promise<Session | null> {
     return this.prisma.session.findUnique({ where: { id } });
+  }
+
+  findAccess(id: string): Promise<SessionAccess | null> {
+    return this.prisma.session.findUnique({
+      where: { id },
+      select: {
+        userId: true,
+        revokedAt: true,
+        expiresAt: true,
+        user: { select: { role: true, isActive: true } },
+      },
+    });
   }
 
   // Swaps the secret only if the session still holds `currentHash` and is

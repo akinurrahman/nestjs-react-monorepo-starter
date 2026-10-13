@@ -8,7 +8,8 @@ import type { AuthenticatedRequest } from './auth.types.js';
 const BEARER = /^Bearer ([A-Za-z0-9_.-]+)$/;
 
 // Global and deny by default: a route without @Public() needs a valid access
-// token. The token alone is trusted, with no database read.
+// token. The token alone is trusted, with no database read; RolesGuard
+// adds one on routes with @Roles().
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

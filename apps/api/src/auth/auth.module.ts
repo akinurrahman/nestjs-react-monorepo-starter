@@ -16,7 +16,7 @@ import { SessionsRepository } from './sessions.repository.js';
     AccessTokenService,
     AuthCookieService,
   ],
-  // For the global AuthGuard.
-  exports: [AccessTokenService],
+  // For the global AuthGuard and RolesGuard.
+  exports: [AccessTokenService, SessionsRepository],
 })
 export class AuthModule {}

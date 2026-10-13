@@ -5,7 +5,8 @@ import { SignJWT } from 'jose';
 import request from 'supertest';
 import { CurrentUser, Roles } from './../src/auth/auth.decorators.js';
 import type { AuthUser } from './../src/auth/auth.types.js';
-import { createApp } from './auth-helpers.js';
+import type { PrismaService } from './../src/database/prisma.service.js';
+import { createApp, createUser, loginCookie } from './auth-helpers.js';
 import { readTestEnv } from './test-db.js';
 
 // No @Public(): what any new route gets by default.
@@ -36,9 +37,10 @@ const UNAUTHORIZED = {
 };
 
 let app: NestExpressApplication;
+let prisma: PrismaService;
 
 beforeEach(async () => {
-  ({ app } = await createApp({ controllers: [GuardsTestController] }));
+  ({ app, prisma } = await createApp({ controllers: [GuardsTestController] }));
 });
 
 afterEach(async () => {
@@ -46,13 +48,19 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 
-// Signed by the app's own token service, for ids that are in no table: the
-// guard trusts the token alone and never reads the database.
+// Signed by the app's own token service, for ids that are in no table: on a
+// route without @Roles the guard trusts the token alone.
 async function tokenFor(role: 'USER' | 'ADMIN') {
   const { AccessTokenService } =
     await import('./../src/auth/access-token.service.js');
   const user: AuthUser = { id: randomUUID(), sessionId: randomUUID(), role };
   return { user, accessToken: await app.get(AccessTokenService).sign(user) };
+}
+
+// A real user with a live session, for routes with @Roles, which check both.
+async function signedIn(role: 'USER' | 'ADMIN') {
+  const user = await createUser(prisma, { role });
+  return loginCookie(app, user.email);
 }
 
 function get(path: string, token?: string) {
@@ -151,8 +159,29 @@ describe('Deny by default (e2e)', () => {
       .expect(401);
   });
 
+  // The user and session in these tokens exist in no table. A route that
+  // read the database for them would answer 401.
+  it('reads no database on a route without @Roles', async () => {
+    const { SessionsRepository } =
+      await import('./../src/auth/sessions.repository.js');
+    const findAccess = vi.spyOn(app.get(SessionsRepository), 'findAccess');
+    const { accessToken } = await tokenFor('ADMIN');
+
+    await get('/api/guards-test/plain', accessToken).expect(200);
+    await get('/api/guards-test/private', accessToken).expect(200);
+    expect(findAccess).not.toHaveBeenCalled();
+  });
+
+  it('answers 401 on an @Roles route for a token whose user does not exist', async () => {
+    const { accessToken } = await tokenFor('ADMIN');
+
+    await get('/api/guards-test/admin', accessToken)
+      .expect(401)
+      .expect(UNAUTHORIZED);
+  });
+
   it('answers 403 FORBIDDEN on an @Roles(ADMIN) route for a user', async () => {
-    const { accessToken } = await tokenFor('USER');
+    const { accessToken } = await signedIn('USER');
 
     await get('/api/guards-test/admin', accessToken).expect(403).expect({
       statusCode: 403,
@@ -162,7 +191,7 @@ describe('Deny by default (e2e)', () => {
   });
 
   it('lets an admin through @Roles(ADMIN)', async () => {
-    const { accessToken } = await tokenFor('ADMIN');
+    const { accessToken } = await signedIn('ADMIN');
 
     await get('/api/guards-test/admin', accessToken)
       .expect(200)

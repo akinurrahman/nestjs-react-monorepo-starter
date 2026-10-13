@@ -4,6 +4,7 @@ import request from 'supertest';
 import { createSwaggerDocument } from './../src/config/swagger.config.js';
 import type { PrismaService } from './../src/database/prisma.service.js';
 import {
+  cookieHeader,
   createApp,
   createUser,
   login,
@@ -53,6 +54,24 @@ async function isRevoked(cookie: string): Promise<boolean> {
     where: { id: sessionIdOf(cookie) },
   });
   return session.revokedAt !== null;
+}
+
+// RolesGuard only lets an active admin through, so the last admin rules are
+// reached when a concurrent request disables the caller after the guard has
+// passed. This disables the caller in that window, on the next role check.
+async function disableAfterRoleCheck(callerId: string) {
+  const { SessionsRepository } =
+    await import('./../src/auth/sessions.repository.js');
+  const sessions = app.get(SessionsRepository);
+  const findAccess = sessions.findAccess.bind(sessions);
+  vi.spyOn(sessions, 'findAccess').mockImplementationOnce(async (id) => {
+    const access = await findAccess(id);
+    await prisma.user.update({
+      where: { id: callerId },
+      data: { isActive: false },
+    });
+    return access;
+  });
 }
 
 function expectNoSecrets(res: request.Response) {
@@ -146,6 +165,105 @@ describe.each([
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });
+  });
+});
+
+// An access token keeps the role it was signed with. Admin routes check the
+// database, so a token that outlives a demotion, a disable or a logout
+// stops working there at once.
+describe('Admin routes with a stale access token', () => {
+  async function twoAdmins() {
+    const a = await signInAdmin();
+    const b = await signInAdmin();
+    return { a, b };
+  }
+
+  it('answers 403 to a demoted admin creating an ADMIN or disabling one', async () => {
+    const { a, b } = await twoAdmins();
+    await api()
+      .patch(`/api/users/${a.user.id}`)
+      .set(b.headers)
+      .send({ role: 'USER' })
+      .expect(200);
+
+    const forbidden = {
+      statusCode: 403,
+      code: 'FORBIDDEN',
+      message: 'Access denied',
+    };
+    await api()
+      .post('/api/users')
+      .set(a.headers)
+      .send({
+        email: uniqueEmail(),
+        name: 'Sneaky',
+        role: 'ADMIN',
+        password: NEW_PASSWORD,
+      })
+      .expect(403)
+      .expect(forbidden);
+    await api()
+      .post(`/api/users/${b.user.id}/disable`)
+      .set(a.headers)
+      .expect(403)
+      .expect(forbidden);
+
+    expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
+    const stored = await prisma.user.findUniqueOrThrow({
+      where: { id: b.user.id },
+    });
+    expect(stored.isActive).toBe(true);
+  });
+
+  it('answers 401 to a disabled admin', async () => {
+    const { a, b } = await twoAdmins();
+    await api()
+      .post(`/api/users/${a.user.id}/disable`)
+      .set(b.headers)
+      .expect(200);
+
+    await api().get('/api/users').set(a.headers).expect(401).expect({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required',
+    });
+    await api()
+      .post(`/api/users/${b.user.id}/disable`)
+      .set(a.headers)
+      .expect(401);
+  });
+
+  // The disable route also revokes the sessions; this one does not, so the
+  // active flag is the only thing that stops the token.
+  it('answers 401 to an inactive admin whose session is still live', async () => {
+    const admin = await signInAdmin();
+    await prisma.user.update({
+      where: { id: admin.user.id },
+      data: { isActive: false },
+    });
+
+    await api().get('/api/users').set(admin.headers).expect(401);
+  });
+
+  it('answers 401 to the token of a revoked session', async () => {
+    const admin = await signInAdmin();
+    await api()
+      .post('/api/auth/logout')
+      .set('Cookie', cookieHeader(admin.cookie))
+      .expect(204);
+
+    await api().get('/api/users').set(admin.headers).expect(401).expect({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required',
+    });
+  });
+
+  it('keeps serving the token of a live session', async () => {
+    const admin = await signInAdmin();
+    await loginCookie(app, admin.user.email);
+
+    await api().get('/api/users').set(admin.headers).expect(200);
   });
 });
 
@@ -578,16 +696,11 @@ describe('PATCH /api/users/:id', () => {
       .expect(200);
   });
 
-  // The caller passes the role guard on their token, but was disabled in the
-  // database since, so the target is the only active admin left. The access
-  // token outliving a disable is the accepted window of a stateless token.
+  // See disableAfterRoleCheck for how the caller gets here.
   it('answers 409 LAST_ADMIN when demoting the last active admin', async () => {
     const caller = await signInAdmin();
     const last = await createUser(prisma, { role: 'ADMIN' });
-    await prisma.user.update({
-      where: { id: caller.user.id },
-      data: { isActive: false },
-    });
+    await disableAfterRoleCheck(caller.user.id);
 
     await api()
       .patch(`/api/users/${last.id}`)
@@ -644,14 +757,11 @@ describe('POST /api/users/:id/disable', () => {
     await api().post(`/api/users/${other.id}/disable`).set(headers).expect(200);
   });
 
-  // See the LAST_ADMIN test under PATCH for how the caller gets here.
+  // See disableAfterRoleCheck for how the caller gets here.
   it('answers 409 LAST_ADMIN for the last active admin', async () => {
     const caller = await signInAdmin();
     const last = await createUser(prisma, { role: 'ADMIN' });
-    await prisma.user.update({
-      where: { id: caller.user.id },
-      data: { isActive: false },
-    });
+    await disableAfterRoleCheck(caller.user.id);
 
     await api()
       .post(`/api/users/${last.id}/disable`)
