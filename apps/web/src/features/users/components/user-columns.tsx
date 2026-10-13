@@ -8,11 +8,14 @@ import type { User } from '../definitions/user.types';
 const helper = createColumnHelper<User>();
 
 type UserColumnsOptions = {
-  // The signed-in admin. Their own row has no disable action.
+  // The signed-in admin. Their own row has no disable action, and changes
+  // its password through onChangeOwnPassword: the api refuses the admin
+  // set-password route for the caller.
   currentUserId: string | undefined;
   editPath: (user: User) => string;
   onEdit: (user: User) => void;
   onSetPassword: (user: User) => void;
+  onChangeOwnPassword: () => void;
   onEnable: (user: User) => void;
   onDisable: (user: User) => void;
 };
@@ -25,17 +28,24 @@ export function userColumns({
   editPath,
   onEdit,
   onSetPassword,
+  onChangeOwnPassword,
   onEnable,
   onDisable,
 }: UserColumnsOptions) {
   const actionsFor = (user: User): RowAction[] => {
     const actions: RowAction[] = [
       { label: 'Edit', icon: Pencil, onSelect: () => onEdit(user) },
-      {
-        label: 'Set password',
-        icon: KeyRound,
-        onSelect: () => onSetPassword(user),
-      },
+      user.id === currentUserId
+        ? {
+            label: 'Change password',
+            icon: KeyRound,
+            onSelect: onChangeOwnPassword,
+          }
+        : {
+            label: 'Set password',
+            icon: KeyRound,
+            onSelect: () => onSetPassword(user),
+          },
     ];
     if (!user.isActive) {
       actions.push({

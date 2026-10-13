@@ -828,6 +828,30 @@ describe('POST /api/users/:id/password', () => {
   });
 
   it.each([
+    ['their id', (id: string) => id],
+    ['their id in uppercase', (id: string) => id.toUpperCase()],
+  ])(
+    'answers 403 CANNOT_SET_OWN_PASSWORD for the caller by %s, changing nothing',
+    async (_, spell) => {
+      const { headers, user, cookie } = await signInAdmin();
+
+      await api()
+        .post(`/api/users/${spell(user.id)}/password`)
+        .set(headers)
+        .send({ password: NEW_PASSWORD })
+        .expect(403)
+        .expect({
+          statusCode: 403,
+          code: 'CANNOT_SET_OWN_PASSWORD',
+          message: 'Change your own password from your account page',
+        });
+
+      expect(await isRevoked(cookie)).toBe(false);
+      await login(app, user.email).expect(200);
+    },
+  );
+
+  it.each([
     ['a short password', { password: 'x'.repeat(7) }],
     ['an unknown field', { password: NEW_PASSWORD, revoke: false }],
   ])('answers 400 for %s', async (_, body) => {

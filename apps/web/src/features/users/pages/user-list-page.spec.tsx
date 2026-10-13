@@ -167,7 +167,7 @@ describe('user list', () => {
       );
     });
 
-    it('offers no disable action on your own row', async () => {
+    it('offers no disable or set password action on your own row', async () => {
       serveUsers();
       renderApp(usersRoutes, '/users', { user: testUser('ADMIN') });
       await openActions('Ada Admin');
@@ -175,8 +175,25 @@ describe('user list', () => {
       expect(
         await screen.findByRole('menuitem', { name: 'Edit' }),
       ).toBeVisible();
-      expect(menuItem('Set password')).toBeVisible();
+      expect(menuItem('Change password')).toBeVisible();
+      expect(menuItem('Set password')).toBeNull();
       expect(menuItem('Disable')).toBeNull();
+    });
+
+    it('sends you to your account to change your own password', async () => {
+      serveUsers();
+      const { router } = renderApp(usersRoutes, '/users', {
+        user: testUser('ADMIN'),
+      });
+      const user = await openActions('Ada Admin');
+
+      await user.click(
+        await screen.findByRole('menuitem', { name: 'Change password' }),
+      );
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe('/account'),
+      );
     });
 
     it('shows the LAST_ADMIN message and keeps the dialog open', async () => {

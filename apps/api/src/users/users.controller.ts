@@ -98,13 +98,15 @@ export class UsersController {
   @Post(':id/password')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({
-    description: 'Password set. Revokes all sessions of the user.',
+    description:
+      'Password set. Revokes all sessions of the user. Not for the caller, who uses POST /auth/password.',
   })
   @ApiErrorResponses(400, 401, 403, 404, 429)
   setPassword(
+    @CurrentUser() actor: AuthUser,
     @Param() { id }: UserIdParamDto,
     @Body() body: SetPasswordDto,
   ): Promise<void> {
-    return this.users.setPassword(id, body.password);
+    return this.users.setPassword(actor, id, body.password);
   }
 }

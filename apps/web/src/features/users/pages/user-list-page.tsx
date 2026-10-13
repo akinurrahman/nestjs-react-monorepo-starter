@@ -2,6 +2,7 @@ import { Plus, Users, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
+import { ACCOUNT_PATH } from '@/features/account';
 import { useConfirm } from '@/systems/confirmation';
 import {
   FilterBar,
@@ -53,6 +54,7 @@ export default function UserListPage() {
         editPath,
         onEdit: (user) => void navigate(editPath(user)),
         onSetPassword: setPasswordUser,
+        onChangeOwnPassword: () => void navigate(ACCOUNT_PATH),
         onEnable: (user) =>
           confirm({
             title: `Enable ${user.name}?`,

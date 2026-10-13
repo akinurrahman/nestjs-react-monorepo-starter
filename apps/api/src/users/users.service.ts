@@ -130,9 +130,19 @@ export class UsersService {
     return toPublicUser(await this.users.update(id, { isActive: true }));
   }
 
-  async setPassword(id: string, password: string): Promise<void> {
+  async setPassword(
+    actor: AuthUser,
+    id: string,
+    password: string,
+  ): Promise<void> {
     const user = await this.users.findById(id);
     if (!user) throw userNotFound();
+    if (user.id === actor.id) {
+      throw new ForbiddenError(
+        USER_ERROR_CODES.CANNOT_SET_OWN_PASSWORD,
+        'Change your own password from your account page',
+      );
+    }
     await this.users.update(
       id,
       { passwordHash: await this.passwords.hash(password) },

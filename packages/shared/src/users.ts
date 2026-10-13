@@ -14,6 +14,9 @@ export const USER_ERROR_CODES = {
   LAST_ADMIN: 'LAST_ADMIN',
   CANNOT_DISABLE_SELF: 'CANNOT_DISABLE_SELF',
   CANNOT_CHANGE_OWN_ROLE: 'CANNOT_CHANGE_OWN_ROLE',
+  // The admin route would skip the current password check and revoke the
+  // caller's own session. Their own password changes on the account page.
+  CANNOT_SET_OWN_PASSWORD: 'CANNOT_SET_OWN_PASSWORD',
 } as const;
 
 export const USER_NAME_MAX_LENGTH = 100;

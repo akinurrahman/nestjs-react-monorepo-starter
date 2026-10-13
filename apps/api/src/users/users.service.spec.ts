@@ -53,9 +53,10 @@ function setup(users: User[], activeAdminIds: string[]) {
     ...tx,
     transaction: <T>(run: (t: UsersTransaction) => Promise<T>) => run(tx),
   };
+  const passwords = { hash: () => Promise.resolve('NEW-HASH') };
   const service = new UsersService(
     repository as unknown as UsersRepository,
-    {} as PasswordService,
+    passwords as unknown as PasswordService,
   );
   return { service, tx };
 }
@@ -122,6 +123,35 @@ describe('UsersService.disable', () => {
       isActive: false,
     });
     expect(tx.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('UsersService.setPassword', () => {
+  it.each([
+    ['their id', ADMIN.id],
+    ['their id in uppercase', ADMIN.id.toUpperCase()],
+  ])('refuses to set the caller password by %s', async (_, id) => {
+    const { service, tx } = setup([ADMIN, USER], [ADMIN.id]);
+
+    await expect(
+      service.setPassword(ACTOR, id, 'a brand new password'),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'CANNOT_SET_OWN_PASSWORD',
+    });
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it('sets another user password and revokes their sessions', async () => {
+    const { service, tx } = setup([ADMIN, USER], [ADMIN.id]);
+
+    await service.setPassword(ACTOR, USER.id, 'a brand new password');
+
+    expect(tx.update).toHaveBeenCalledWith(
+      USER.id,
+      { passwordHash: 'NEW-HASH' },
+      { revokeSessions: {} },
+    );
   });
 });
 
