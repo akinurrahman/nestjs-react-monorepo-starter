@@ -21,7 +21,10 @@ export class PasswordService implements OnModuleInit {
   }
 
   // Burns the same time as a real check, for logins with an unknown email:
-  // without it, how fast the 401 comes back tells which emails exist.
+  // without it, how fast the 401 comes back tells which emails exist. The
+  // dummy uses the current DEFAULT_ARGON2_PARAMS, so after raising them,
+  // users with older hashes verify faster than an unknown email until their
+  // hash is replaced. Rehashing on login would close that gap.
   async verifyDummy(password: string): Promise<void> {
     this.dummyHash ??= await hashPassword(
       randomBytes(32).toString('base64url'),
