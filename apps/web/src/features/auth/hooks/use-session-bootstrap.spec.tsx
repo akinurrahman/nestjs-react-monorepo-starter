@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
-import { act, screen } from '@testing-library/react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FileText } from 'lucide-react';
 import { delay, http, HttpResponse } from 'msw';
+import { toast } from 'sonner';
 import { getAccessToken } from '@/lib/api/access-token';
 import { apiCall } from '@/lib/api/api-call';
+import { pageLocation } from '@/lib/platform';
 import type { AppRouteObject } from '@/systems/router';
 import { useSessionStore } from '@/systems/session/session-store';
 import { ErrorState } from '@/systems/ui';
@@ -255,6 +257,89 @@ describe('session expiry', () => {
       });
     },
   );
+
+  describe('when another tab signed in meanwhile', () => {
+    function ProfilePage() {
+      const save = useMutation({
+        mutationFn: () =>
+          apiCall<string>('/profile', { method: 'PATCH', body: { name: 'x' } }),
+        onSuccess: () => toast.success('Profile saved'),
+      });
+      return (
+        <button type="button" onClick={() => save.mutate()}>
+          Save
+        </button>
+      );
+    }
+
+    const profilePages: AppRouteObject[] = [
+      {
+        path: 'profile',
+        handle: { title: 'Profile', icon: FileText },
+        Component: ProfilePage,
+      },
+    ];
+
+    // The Authorization header of every PATCH, answering 200 only to the
+    // fresh token.
+    function serveProfile() {
+      const seen: (string | null)[] = [];
+      server.use(
+        http.patch('/api/profile', ({ request }) => {
+          const auth = request.headers.get('Authorization');
+          seen.push(auth);
+          return auth === 'Bearer fresh-token'
+            ? HttpResponse.json({ data: 'saved' })
+            : HttpResponse.json(unauthorized, { status: 401 });
+        }),
+      );
+      return seen;
+    }
+
+    let replace: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      replace = vi.spyOn(pageLocation, 'replace').mockImplementation(() => {});
+    });
+    afterEach(() => replace.mockRestore());
+
+    it('drops the request and reloads when the refresh returns another user', async () => {
+      const user = userEvent.setup();
+      const refresh = serveRefresh(() =>
+        HttpResponse.json(authResponse(testUser('ADMIN'))),
+      );
+      const patches = serveProfile();
+      const { queryClient } = renderApp(profilePages, '/profile', {
+        user: testUser('USER'),
+      });
+      await screen.findByRole('button', { name: 'Save' });
+      queryClient.setQueryData(PREVIOUS_KEY, 'cached for Uma');
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+      expect(replace).toHaveBeenCalledWith('/');
+      expect(refresh.value).toBe(1);
+      expect(patches).toEqual(['Bearer test-token']);
+      expect(getAccessToken()).toBeNull();
+      expect(useSessionStore.getState().user).toBeNull();
+      expect(queryClient.getQueryData(PREVIOUS_KEY)).toBeUndefined();
+      expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(0);
+    });
+
+    it('retries once when the refresh returns the same user with a new token', async () => {
+      const user = userEvent.setup();
+      serveRefresh(() => HttpResponse.json(authResponse(testUser('USER'))));
+      const patches = serveProfile();
+      renderApp(profilePages, '/profile', { user: testUser('USER') });
+
+      await user.click(await screen.findByRole('button', { name: 'Save' }));
+
+      expect(await screen.findByText('Profile saved')).toBeInTheDocument();
+      expect(patches).toEqual(['Bearer test-token', 'Bearer fresh-token']);
+      expect(getAccessToken()).toBe('fresh-token');
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
 
   it('refreshes silently and keeps the person on the page', async () => {
     const refresh = serveRefresh(() =>

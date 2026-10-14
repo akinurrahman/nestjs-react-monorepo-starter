@@ -8,6 +8,7 @@ import {
   refreshFails,
   refreshSucceeds,
   serveRefresh,
+  testUser,
   unauthorized,
 } from '@/test/auth-fixtures';
 import { server } from '@/test/msw-server';
@@ -23,18 +24,21 @@ import { refreshAccessToken, setRefreshHandlers } from './auth-refresh';
 
 const onFailed = vi.fn();
 const onUnavailable = vi.fn();
+const onSwitched = vi.fn();
+// The tab's user. testUser() is the default refresh answer, so it matches.
+let currentUserId: string | null = testUser().id;
 
 // What the auth feature registers, minus the session store.
 beforeEach(() => {
   onFailed.mockReset();
   onUnavailable.mockReset();
+  onSwitched.mockReset();
+  currentUserId = testUser().id;
   setRefreshHandlers({
-    refresh: async () => {
-      const { accessToken } = await apiCall<AuthResponse>('/auth/refresh', {
-        method: 'POST',
-      });
-      setAccessToken(accessToken);
-    },
+    refresh: () => apiCall<AuthResponse>('/auth/refresh', { method: 'POST' }),
+    currentUserId: () => currentUserId,
+    onRefreshed: ({ accessToken }) => setAccessToken(accessToken),
+    onSwitched,
     onFailed,
     onUnavailable,
   });
@@ -143,6 +147,40 @@ describe('401 refresh', () => {
     for (const error of errors) {
       expect(isApiError(error) && error.code).toBe('UNAUTHORIZED');
     }
+  });
+
+  it('never retries as another user, and switches once for concurrent 401s', async () => {
+    currentUserId = testUser('USER').id;
+    const refresh = serveSlowRefresh();
+    const seen = ['/a', '/b', '/c'].map((path) =>
+      serveProtected(`/api${path}`),
+    );
+
+    const errors = await Promise.all(
+      ['/a', '/b', '/c'].map((path) => rejection(apiCall(path))),
+    );
+
+    expect(refresh.value).toBe(1);
+    expect(onSwitched).toHaveBeenCalledTimes(1);
+    expect(getAccessToken()).toBe('stale-token');
+    for (const requests of seen)
+      expect(requests).toEqual(['Bearer stale-token']);
+    for (const error of errors) {
+      expect(isApiError(error) && error.code).toBe('UNAUTHORIZED');
+    }
+
+    // Sticky until the page reloads: no later refresh adopts the other user.
+    expect(await refreshAccessToken()).toEqual({ status: 'switched' });
+    expect(refresh.value).toBe(1);
+  });
+
+  it('adopts whoever answers when the tab has no user yet', async () => {
+    currentUserId = null;
+    refreshSucceeds(testUser('USER'));
+
+    expect(await refreshAccessToken()).toEqual({ status: 'refreshed' });
+    expect(getAccessToken()).toBe('fresh-token');
+    expect(onSwitched).not.toHaveBeenCalled();
   });
 
   it.each(REFRESH_UNAVAILABLE)(

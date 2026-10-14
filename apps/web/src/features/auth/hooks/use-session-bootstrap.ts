@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { refreshAccessToken, setRefreshHandlers } from '@/lib/api/auth-refresh';
+import { pageLocation } from '@/lib/platform';
 import {
   getSession,
   setSessionChecking,
@@ -30,7 +31,16 @@ export function useSessionBootstrap(): {
 
   useEffect(() => {
     setRefreshHandlers({
-      refresh: async () => startSession(await authApi.refresh()),
+      refresh: () => authApi.refresh(),
+      currentUserId: () => getSession().user?.id ?? null,
+      onRefreshed: startSession,
+      // Another tab signed in as someone else. Boot fresh as the cookie's
+      // user rather than turn this page into theirs. The navigation starts
+      // first so it is already under way when the cleared session re-renders.
+      onSwitched: () => {
+        pageLocation.replace('/');
+        endLocalSession(queryClient, null);
+      },
       // No user means this was the startup check, and there was no session
       // to expire.
       onFailed: () =>
