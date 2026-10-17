@@ -47,6 +47,8 @@ It's also built for AI-driven development. A consistent structure, strict types 
 
 **You'll need:** Node 24 (see `.nvmrc`), pnpm 10, and Docker Desktop running.
 
+On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a tool from deep inside `node_modules`, and it fails to start past Windows' 260-character path limit.
+
 ```bash
 # 1. Clone and install
 git clone https://github.com/akinurrahman/nestjs-react-monorepo-starter.git
