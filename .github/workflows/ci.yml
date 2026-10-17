@@ -52,3 +52,65 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:e2e
+
+  # Its own job, in parallel with the gate: it needs a build and two
+  # browsers, which the gate does not, and its failures show as their own
+  # check.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      # Same as the gate's. The api start script creates starter_browser.
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - id: playwright
+        run: echo "version=$(pnpm --filter @starter/browser-tests exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      # Keyed on the Playwright version, which pins the browser builds.
+      - id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @starter/browser-tests exec playwright install --with-deps chromium firefox
+
+      # The cache holds the browsers only; their system libraries come from
+      # apt on every run.
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @starter/browser-tests exec playwright install-deps chromium firefox
+
+      - run: pnpm test:browser
+
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            apps/browser-tests/playwright-report
+            apps/browser-tests/test-results
+          retention-days: 7

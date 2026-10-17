@@ -89,16 +89,18 @@ If a local Postgres or another project's database is already on 5432, move this 
 
 Run everything from the repo root. Turbo runs each task in every app that has it, in the right order, and skips work that hasn't changed.
 
-| Command             | What it does                                                               |
-| ------------------- | -------------------------------------------------------------------------- |
-| `pnpm dev`          | Start all apps in watch mode                                               |
-| `pnpm build`        | Build all apps for production                                              |
-| `pnpm typecheck`    | Check types across the repo                                                |
-| `pnpm lint`         | Lint with Oxlint                                                           |
-| `pnpm format`       | Format the whole repo with Prettier                                        |
-| `pnpm format:check` | Check formatting without writing                                           |
-| `pnpm test`         | Run unit tests                                                             |
-| `pnpm test:e2e`     | Run end-to-end tests against `starter_test` _(needs the database running)_ |
+| Command                | What it does                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`             | Start all apps in watch mode                                                                                    |
+| `pnpm build`           | Build all apps for production                                                                                   |
+| `pnpm typecheck`       | Check types across the repo                                                                                     |
+| `pnpm lint`            | Lint with Oxlint                                                                                                |
+| `pnpm format`          | Format the whole repo with Prettier                                                                             |
+| `pnpm format:check`    | Check formatting without writing                                                                                |
+| `pnpm test`            | Run unit tests                                                                                                  |
+| `pnpm test:e2e`        | Run end-to-end tests against `starter_test` _(needs the database running)_                                      |
+| `pnpm test:browser`    | Run the browser tests in Chromium and Firefox _(needs the database running)_                                    |
+| `pnpm test:browser:ui` | Build, then open the browser tests in Playwright's UI mode to run and debug them _(needs the database running)_ |
 
 **Database**
 
@@ -113,6 +115,8 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 The seed builds the API and runs `dist/seed.js` through `nest start --entryFile seed`, configured as the seed command in `apps/api/prisma7.config.ts`.
 
 E2E tests never touch your dev database. They use a second database, `starter_test`, in the same Postgres container, set in `apps/api/.env.test`. `pnpm test:e2e` creates and migrates it on every run and empties the app tables before each test file. A name that does not end in `_test` stops the run before it connects.
+
+Browser tests (`apps/browser-tests`) cover what only a real browser can: the refresh cookie, reloads, several tabs and redirects. They also open every page as an admin to check it renders without errors, and run the main admin flow of creating and disabling a user. Playwright runs them in Chromium and Firefox against production builds of the API and web app, served by `vite preview`. They use a third database, `starter_browser`, dropped and recreated on every run, and an access token that lasts 5 seconds, so a test can see it expire. Install the browsers once with `pnpm --filter @starter/browser-tests exec playwright install chromium firefox`. A failed run keeps a trace and screenshot in `apps/browser-tests/test-results`, and `playwright-report` holds the HTML report.
 
 ## Project structure
 

@@ -1,0 +1,19 @@
+{
+  "name": "@starter/browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "playwright test",
+    "test:browser:ui": "playwright test --ui",
+    "lint": "oxlint --type-aware -c ../../.oxlintrc.json tests/ server/ playwright.config.ts browser-env.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@prisma/adapter-pg": "7.10.0",
+    "@types/node": "24.19.1",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "typescript": "6.0.3"
+  }
+}

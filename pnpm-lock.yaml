@@ -118,6 +118,27 @@ importers:
         specifier: 4.1.11
         version: 4.1.11(@types/node@24.19.1)(@vitest/coverage-v8@4.1.11)(jsdom@30.1.1(@noble/hashes@1.8.0))(msw@2.15.0(@types/node@24.19.1)(typescript@6.0.3))(vite@8.3.1(@types/node@24.19.1)(jiti@2.7.0))
 
+  apps/browser-tests:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.63.0
+        version: 1.63.0
+      '@prisma/adapter-pg':
+        specifier: 7.10.0
+        version: 7.10.0
+      '@types/node':
+        specifier: 24.19.1
+        version: 24.19.1
+      oxlint:
+        specifier: 1.87.0
+        version: 1.87.0(oxlint-tsgolint@7.0.2003)
+      oxlint-tsgolint:
+        specifier: 7.0.2003
+        version: 7.0.2003
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   apps/web:
     dependencies:
       '@base-ui/react':
@@ -1127,6 +1148,11 @@ packages:
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@prisma/adapter-pg@7.10.0':
     resolution: {integrity: sha512-N7nwSor0HO1Kz6xBv0TPAjAPysKK0fac6p4fVN3ensLOuzc/83Fgmln5k92eK/cvzqdkSR/2kkAqlbcdwVrwpw==}
@@ -3442,6 +3468,16 @@ packages:
     resolution: {integrity: sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA==}
     engines: {node: '>=8'}
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
@@ -5063,6 +5099,10 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
+
   '@prisma/adapter-pg@7.10.0':
     dependencies:
       '@prisma/driver-adapter-utils': 7.10.0
@@ -5532,6 +5572,7 @@ snapshots:
   '@types/node@26.6.3':
     dependencies:
       undici-types: 8.9.0
+    optional: true
 
   '@types/pg@8.23.1':
     dependencies:
@@ -5562,7 +5603,7 @@ snapshots:
 
   '@types/set-cookie-parser@2.4.10':
     dependencies:
-      '@types/node': 26.6.3
+      '@types/node': 24.19.1
 
   '@types/statuses@2.0.6': {}
 
@@ -7267,6 +7308,12 @@ snapshots:
     dependencies:
       find-up: 3.0.0
 
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
+
   pluralize@8.0.0: {}
 
   postcss-selector-parser@7.1.6:
@@ -7860,7 +7907,8 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici-types@8.9.0: {}
+  undici-types@8.9.0:
+    optional: true
 
   undici@7.30.0: {}
 

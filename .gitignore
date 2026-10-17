@@ -17,6 +17,8 @@ build
 
 # tests
 coverage
+playwright-report
+test-results
 
 # logs
 *.log
