@@ -1,3 +1,5 @@
+<!-- template:start -->
+
 <div align="center">
 
 # nestjs-react-monorepo-starter
@@ -32,6 +34,8 @@ Every new project used to start the same way: a day or two of wiring up folders,
 
 It's also built for AI-driven development. A consistent structure, strict types and clear conventions give coding agents a pattern to follow instead of one to invent.
 
+<!-- template:end -->
+
 ## What's inside
 
 | Layer          | Choice                                                     |
@@ -48,6 +52,20 @@ It's also built for AI-driven development. A consistent structure, strict types 
 **You'll need:** Node 24 (see `.nvmrc`), pnpm 10, and Docker Desktop running.
 
 On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a tool from deep inside `node_modules`, and it fails to start past Windows' 260-character path limit.
+
+<!-- template:start -->
+
+**Starting a new project?** Create a repo from this template (**Use this template** on GitHub), clone it, and run:
+
+```bash
+pnpm init:project
+```
+
+It asks for a project name and the first admin, then renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, deletes itself and the template-only parts of this README, and commits the result as `chore: initialize <name>`. It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails, fix the cause and run it again with the same `--name`: every step is safe to repeat.
+
+The steps below are what it automates, and what anyone who clones the new project runs.
+
+<!-- template:end -->
 
 ```bash
 # 1. Clone and install
@@ -152,6 +170,8 @@ nestjs-react-monorepo-starter/
 - **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds nothing but the local Docker credentials for the throwaway test database and a fake JWT secret.
 - **Rate limits are per instance.** The throttler keeps its counts in memory, so with more than one API instance each keeps its own count. Running several instances needs shared storage for the throttler.
 
+<!-- template:start -->
+
 ## Roadmap
 
 - [x] Monorepo with pnpm and Turborepo
@@ -163,8 +183,10 @@ nestjs-react-monorepo-starter/
 - [x] React web app
 - [x] Auth and the users module
 - [ ] Repo-wide tooling and CI
-- [ ] Init script to set up a new project in one command
+- [x] Init script to set up a new project in one command
 
 ## License
 
 [MIT](LICENSE) © Akinur Rahman
+
+<!-- template:end -->

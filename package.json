@@ -18,7 +18,8 @@
     "db:seed": "turbo db:seed --filter=@starter/api",
     "test:browser:ui": "turbo build --filter=@starter/api --filter=@starter/web && pnpm --filter @starter/browser-tests test:browser:ui",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "init:project": "node scripts/init-project/init-project.ts"
   },
   "devDependencies": {
     "prettier": "3.9.9",

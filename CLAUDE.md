@@ -47,6 +47,25 @@ Don't pass `--name` to `db:migrate`: it lands on the chained `prisma generate`.
 
 The dev shell may be PowerShell on Windows. Prefer commands that work in both.
 
+<!-- template:start -->
+
+## Init script (template only)
+
+`pnpm init:project` (`scripts/init-project`, a workspace package so the gate covers it)
+turns a fresh copy of this template into a named project, once, then deletes itself and
+every `<!-- template:start/end -->` block in this file and README.md.
+
+- Pure logic in `init-project.lib.ts`, unit-tested. I/O, prompts and steps in
+  `init-project.ts`. Both run by Node's type stripping before `pnpm install`: `node:`
+  imports only, `.ts` extensions on relative imports.
+- `smoke.ts` (`pnpm --filter @starter/init-project smoke`) clones the repo to a temp
+  folder, initializes it under its own compose name and port, runs the full gate there
+  and checks for leftover "starter". It starts a Postgres container: ask first.
+- A change to a template name, an env key, or a line the script rewrites or fills in
+  (see `rewriteFile`, `renderApiEnv`) updates the script in the same change.
+
+<!-- template:end -->
+
 ## Layout (apps/api)
 
 - `src/config/`: env schema, `configureApp`, http, swagger, logger, throttler

@@ -18,6 +18,12 @@
       }
     },
     {
+      "files": ["scripts/init-project/**"],
+      "env": {
+        "node": true
+      }
+    },
+    {
       "files": ["apps/web/**"],
       "plugins": ["react", "jsx-a11y"],
       "env": {
