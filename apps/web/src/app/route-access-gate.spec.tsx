@@ -39,7 +39,9 @@ const pages: AppRouteObject[] = [
 ];
 
 async function expectDenied() {
-  expect(await screen.findByText('Access denied')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Access denied' }),
+  ).toBeInTheDocument();
   expect(screen.getByRole('link', { name: APP_NAME })).toBeInTheDocument();
 }
 

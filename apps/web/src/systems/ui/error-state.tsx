@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/lib/api/api-error';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import type { StateHeadingLevel } from './empty-state';
 
 type ErrorStateProps = {
   title?: string;
@@ -10,6 +11,7 @@ type ErrorStateProps = {
   onRetry?: () => void;
   // Ways out beside Retry, e.g. a reload or a link home.
   action?: ReactNode;
+  level?: StateHeadingLevel;
   className?: string;
 };
 
@@ -18,8 +20,10 @@ export function ErrorState({
   error,
   onRetry,
   action,
+  level = 1,
   className,
 }: ErrorStateProps) {
+  const Heading = `h${level}` as const;
   return (
     <div
       role="alert"
@@ -31,7 +35,7 @@ export function ErrorState({
       <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-destructive/10">
         <TriangleAlert className="size-5 text-destructive" />
       </span>
-      <p className="text-sm font-medium text-foreground">{title}</p>
+      <Heading className="text-sm font-medium text-foreground">{title}</Heading>
       <p className="max-w-sm text-sm text-muted-foreground">
         {getErrorMessage(error)}
       </p>

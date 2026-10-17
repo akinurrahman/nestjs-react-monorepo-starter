@@ -6,7 +6,12 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-import { useTable, type RowData } from '@tanstack/react-table';
+import {
+  useTable,
+  type Cell,
+  type Header,
+  type RowData,
+} from '@tanstack/react-table';
 import type { PaginationMeta } from '@starter/shared';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -136,6 +141,28 @@ function startsInControl(event: MouseEvent<HTMLTableRowElement>): boolean {
   return control !== null && event.currentTarget.contains(control);
 }
 
+// FlexRender hands a function renderer to createElement, making it the
+// component type. Columns built in render are new functions each time, so
+// every re-render (a refetch landing) would remount every cell and close an
+// open row menu. Calling the renderer inside these keeps the type stable.
+function DataTableCell<TData extends RowData>({
+  cell,
+}: {
+  cell: Cell<typeof dataTableFeatures, TData>;
+}): ReactNode {
+  const render = cell.column.columnDef.cell;
+  return typeof render === 'function' ? render(cell.getContext()) : render;
+}
+
+function DataTableHeader<TData extends RowData>({
+  header,
+}: {
+  header: Header<typeof dataTableFeatures, TData>;
+}): ReactNode {
+  const render = header.column.columnDef.header;
+  return typeof render === 'function' ? render(header.getContext()) : render;
+}
+
 export function DataTable<TData extends RowData>({
   columns,
   data,
@@ -262,7 +289,7 @@ export function DataTable<TData extends RowData>({
                     style={columnStyle(header.column.id, meta)}
                   >
                     {header.isPlaceholder ? null : (
-                      <table.FlexRender header={header} />
+                      <DataTableHeader header={header} />
                     )}
                   </TableHead>
                 );
@@ -321,7 +348,7 @@ export function DataTable<TData extends RowData>({
                         )}
                         style={columnStyle(cell.column.id, meta)}
                       >
-                        <table.FlexRender cell={cell} />
+                        <DataTableCell cell={cell} />
                       </TableCell>
                     );
                   })}

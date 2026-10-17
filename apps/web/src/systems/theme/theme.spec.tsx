@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import indexHtml from '../../../index.html?raw';
 import { setPrefersDark } from '@/test/match-media';
@@ -30,6 +30,18 @@ describe('theme', () => {
 
     expect(isDark()).toBe(true);
     expect(storedTheme()).toBe('dark');
+  });
+
+  it('closes the menu once a theme is picked', async () => {
+    const user = userEvent.setup();
+    render(<ThemeToggle />);
+
+    await user.click(screen.getByRole('button', { name: 'Theme' }));
+    await user.click(
+      await screen.findByRole('menuitemradio', { name: 'Light' }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
   });
 
   it('follows a live change of the system setting', () => {

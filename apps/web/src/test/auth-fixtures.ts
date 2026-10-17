@@ -81,7 +81,17 @@ export const REFRESH_UNAVAILABLE = [
     'a 503',
     () => HttpResponse.json(serviceUnavailable, { status: 503 }),
     'SERVICE_UNAVAILABLE',
-    'Something went wrong on our side. Please try again.',
+    'Could not reach the server. Check your connection and try again.',
+  ],
+  [
+    'a proxy 502',
+    () =>
+      new HttpResponse('<html><body>Bad Gateway</body></html>', {
+        status: 502,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+    'BAD_RESPONSE',
+    'Could not reach the server. Check your connection and try again.',
   ],
   [
     'a 429',

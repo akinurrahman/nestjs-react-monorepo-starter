@@ -39,7 +39,9 @@ export function configureHttp(app: NestExpressApplication): void {
       callback: (err: Error | null, allow?: boolean) => void,
     ) => callback(null, origin !== undefined && allowedOrigins.has(origin)),
     credentials: true,
-    exposedHeaders: [REQUEST_ID_HEADER],
+    // Retry-After is not CORS-safelisted: without this a web app on another
+    // origin cannot read how long a 429 asks it to wait.
+    exposedHeaders: [REQUEST_ID_HEADER, 'Retry-After'],
   });
 
   // Rejects state-changing requests a browser reports as cross-origin

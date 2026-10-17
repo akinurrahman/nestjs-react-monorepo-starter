@@ -32,7 +32,7 @@ export function ThemeToggle() {
           {themeLookup.options.map(({ value, label }) => {
             const Icon = themeLookup.resolve(value)?.icon;
             return (
-              <DropdownMenuRadioItem key={value} value={value}>
+              <DropdownMenuRadioItem key={value} value={value} closeOnClick>
                 {Icon ? <Icon /> : null}
                 {label}
               </DropdownMenuRadioItem>

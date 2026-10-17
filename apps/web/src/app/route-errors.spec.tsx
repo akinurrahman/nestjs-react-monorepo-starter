@@ -62,9 +62,12 @@ describe('route errors', () => {
     const user = userEvent.setup();
     renderApp(pages, '/throws');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This page could not be shown',
-    );
+    expect(
+      within(await screen.findByRole('alert')).getByRole('heading', {
+        level: 1,
+        name: 'This page could not be shown',
+      }),
+    ).toBeInTheDocument();
 
     await user.click(shellLink());
 
@@ -116,7 +119,10 @@ describe('route errors', () => {
     await act(() => router.navigate('/stale'));
 
     expect(
-      await screen.findByText('A new version is available'),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'A new version is available',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();

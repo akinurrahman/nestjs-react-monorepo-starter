@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { testUser } from '@/test/auth-fixtures';
@@ -113,7 +113,10 @@ describe('user list', () => {
     const user = userEvent.setup();
     const { router } = renderApp(usersRoutes, '/users');
 
-    expect(await screen.findByText('No users yet')).toBeInTheDocument();
+    // An h2, under the page's h1.
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'No users yet' }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('combobox', { name: 'Status' }));
     await user.click(await screen.findByRole('option', { name: 'Active' }));
@@ -126,6 +129,19 @@ describe('user list', () => {
     );
     await waitFor(() => expect(router.state.location.search).toBe(''));
     expect(await screen.findByText('No users yet')).toBeInTheDocument();
+  });
+
+  it('keeps an open row menu open while the list refetches', async () => {
+    const api = serveUsers();
+    const { queryClient } = renderApp(usersRoutes, '/users');
+    await openActions('Linus User');
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    const fetches = api.listQueries().length;
+
+    await act(() => queryClient.invalidateQueries());
+
+    expect(api.listQueries().length).toBeGreaterThan(fetches);
+    expect(screen.getByRole('menuitem', { name: 'Disable' })).toBeVisible();
   });
 
   describe('disable and enable', () => {

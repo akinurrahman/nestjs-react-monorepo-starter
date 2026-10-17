@@ -18,6 +18,8 @@ type ApiErrorInit = {
   code: ErrorCode | ClientErrorCode | (string & {});
   message: string;
   fieldErrors?: FieldError[];
+  // Seconds, from the Retry-After header. The api sends it with a 429.
+  retryAfter?: number;
   cause?: unknown;
 };
 
@@ -25,12 +27,14 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorInit['code'];
   readonly fieldErrors: FieldError[];
+  readonly retryAfter: number | undefined;
 
   constructor({
     status,
     code,
     message,
     fieldErrors = [],
+    retryAfter,
     cause,
   }: ApiErrorInit) {
     super(message, { cause });
@@ -38,7 +42,18 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
     this.fieldErrors = fieldErrors;
+    this.retryAfter = retryAfter;
   }
+}
+
+// Retry-After is either delta seconds or an HTTP date (RFC 9110).
+function parseRetryAfter(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  const seconds = /^\d+$/.test(trimmed)
+    ? Number(trimmed)
+    : Math.ceil((Date.parse(trimmed) - Date.now()) / 1000);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 export function isApiError(error: unknown): error is ApiError {
@@ -77,6 +92,7 @@ export function toApiError(error: unknown): unknown {
     code: body.data.code,
     message: body.data.message,
     fieldErrors: body.data.errors,
+    retryAfter: parseRetryAfter(response.headers['retry-after']),
     cause: error,
   });
 }
@@ -87,10 +103,28 @@ const MESSAGES = {
   unknown: 'Something went wrong. Please try again.',
 };
 
+function formatWait(seconds: number): string {
+  if (seconds < 60) return seconds === 1 ? '1 second' : `${seconds} seconds`;
+  const minutes = Math.ceil(seconds / 60);
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+}
+
+// In production a reverse proxy answers these while the api is down, and the
+// api's own 503 (database down) leaves the person just as stuck.
+const UNREACHABLE_STATUSES = new Set([502, 503, 504]);
+
 export function getErrorMessage(error: unknown): string {
   if (!isApiError(error)) return MESSAGES.unknown;
-  if (error.code === CLIENT_ERROR_CODES.NETWORK_ERROR) return MESSAGES.network;
+  if (
+    error.code === CLIENT_ERROR_CODES.NETWORK_ERROR ||
+    UNREACHABLE_STATUSES.has(error.status)
+  ) {
+    return MESSAGES.network;
+  }
   if (error.code === CLIENT_ERROR_CODES.BAD_RESPONSE) return MESSAGES.server;
+  if (error.status === 429 && error.retryAfter !== undefined) {
+    return `Too many requests. Try again in ${formatWait(error.retryAfter)}.`;
+  }
   if (error.status >= 400 && error.status < 500) return error.message;
   return MESSAGES.server;
 }

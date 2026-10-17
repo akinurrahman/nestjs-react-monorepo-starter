@@ -197,7 +197,7 @@ describe('query errors', () => {
 
     expect(
       await screen.findByText(
-        'Something went wrong on our side. Please try again.',
+        'Could not reach the server. Check your connection and try again.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Ada' })).toBeInTheDocument();
