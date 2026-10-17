@@ -126,7 +126,7 @@ describe('HTTP setup (e2e)', () => {
   });
 
   describe('CORS', () => {
-    it('allows a configured origin with credentials and x-request-id exposed', async () => {
+    it('allows a configured origin with credentials, x-request-id and Retry-After exposed', async () => {
       const res = await request(app.getHttpServer())
         .get('/api/prefix-test')
         .set('Origin', ALLOWED_ORIGIN)
@@ -134,7 +134,9 @@ describe('HTTP setup (e2e)', () => {
 
       expect(res.headers['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
       expect(res.headers['access-control-allow-credentials']).toBe('true');
-      expect(res.headers['access-control-expose-headers']).toBe('x-request-id');
+      expect(res.headers['access-control-expose-headers']).toBe(
+        'x-request-id,Retry-After',
+      );
       expect(res.headers.vary).toContain('Origin');
     });
 
