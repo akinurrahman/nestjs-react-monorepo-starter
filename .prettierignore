@@ -4,4 +4,6 @@ apps/api/prisma/migrations
 .claude/skills/prisma-*
 dist
 coverage
+playwright-report
+test-results
 .turbo

@@ -22,20 +22,23 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
 ## Commands
 
 Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
-(or `@starter/shared`, `@starter/web`).
+(or `@starter/shared`, `@starter/web`, `@starter/browser-tests`).
 
-| Task                     | Command                                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| DB up                    | `docker compose up -d`                                                                    |
-| Dev                      | `pnpm dev`                                                                                |
-| Typecheck / lint         | `pnpm typecheck` / `pnpm lint`                                                            |
-| Unit tests               | `pnpm test`                                                                               |
-| E2E tests                | `pnpm test:e2e` (Postgres must be running, uses `starter_test` from `apps/api/.env.test`) |
-| Prepare e2e DB by hand   | `pnpm --filter @starter/api db:test:prepare`                                              |
-| Format / check           | `pnpm format` / `pnpm format:check` (root only, one Prettier config)                      |
-| Build                    | `pnpm build`                                                                              |
-| Regenerate Prisma client | `pnpm --filter @starter/api db:generate`                                                  |
-| Apply migrations         | `pnpm --filter @starter/api db:deploy`                                                    |
+| Task                     | Command                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| DB up                    | `docker compose up -d`                                                                     |
+| Dev                      | `pnpm dev`                                                                                 |
+| Typecheck / lint         | `pnpm typecheck` / `pnpm lint`                                                             |
+| Unit tests               | `pnpm test`                                                                                |
+| E2E tests                | `pnpm test:e2e` (Postgres must be running, uses `starter_test` from `apps/api/.env.test`)  |
+| Prepare e2e DB by hand   | `pnpm --filter @starter/api db:test:prepare`                                               |
+| Browser tests            | `pnpm test:browser` (Postgres must be running, builds api and web, uses `starter_browser`) |
+| Browser tests, UI mode   | `pnpm test:browser:ui` (builds api and web through Turbo, then opens Playwright UI)        |
+| Install test browsers    | `pnpm --filter @starter/browser-tests exec playwright install chromium firefox`            |
+| Format / check           | `pnpm format` / `pnpm format:check` (root only, one Prettier config)                       |
+| Build                    | `pnpm build`                                                                               |
+| Regenerate Prisma client | `pnpm --filter @starter/api db:generate`                                                   |
+| Apply migrations         | `pnpm --filter @starter/api db:deploy`                                                     |
 
 New migration: `pnpm --filter @starter/api exec prisma migrate dev --create-only --name <name>`,
 show the SQL and wait for approval, then `pnpm --filter @starter/api db:migrate`.
@@ -155,6 +158,12 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
 - Unit: `*.spec.ts` next to the code, never touch the DB (override PrismaService or the repository).
 - E2E: `test/*.e2e-spec.ts`, real AppModule through `configureApp`, test-only controllers
   for anything not yet in the app.
+- Browser: `apps/browser-tests`, Playwright in Chromium and Firefox against production
+  builds. What needs a real browser (cookies, reloads, tabs, redirects), a render check of
+  every page and the main admin flow. Pages without a nav entry are listed by hand in
+  `tests/routes.spec.ts`. Not part of the per-commit gate: CI runs it on every PR. Run it
+  locally before committing any change to auth, the session or the token refresh, in the
+  api or the web app.
 - Tests go in the same commit as the code they cover.
 - Mutation-check new tests: break the code, confirm a test fails, restore.
 
