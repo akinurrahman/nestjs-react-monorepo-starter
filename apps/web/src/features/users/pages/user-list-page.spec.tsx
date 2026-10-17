@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { testUser } from '@/test/auth-fixtures';
@@ -126,6 +126,19 @@ describe('user list', () => {
     );
     await waitFor(() => expect(router.state.location.search).toBe(''));
     expect(await screen.findByText('No users yet')).toBeInTheDocument();
+  });
+
+  it('keeps an open row menu open while the list refetches', async () => {
+    const api = serveUsers();
+    const { queryClient } = renderApp(usersRoutes, '/users');
+    await openActions('Linus User');
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    const fetches = api.listQueries().length;
+
+    await act(() => queryClient.invalidateQueries());
+
+    expect(api.listQueries().length).toBeGreaterThan(fetches);
+    expect(screen.getByRole('menuitem', { name: 'Disable' })).toBeVisible();
   });
 
   describe('disable and enable', () => {

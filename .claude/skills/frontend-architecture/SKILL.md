@@ -346,6 +346,11 @@ Column meta: `align` (header, cells and skeleton together), `size` in px,
 `hideBelow: 'sm' | 'md' | 'lg'`, `sticky: 'left'` (leading columns only, and
 every sticky column but the last needs a `size`; dev warns otherwise).
 
+`DataTable` calls `cell` and `header` renderers as functions inside a stable
+component, so columns rebuilt on every render keep their cells mounted, and a
+renderer may call hooks. Keep a column's renderer the same for a given column
+id: swapping in one with different hooks breaks the hook order.
+
 `DataTable` wiring on a list page:
 
 ```tsx

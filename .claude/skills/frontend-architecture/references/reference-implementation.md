@@ -423,7 +423,6 @@ the array outgrows the page, roughly eight columns or a page over 150 lines.
 
 ```tsx
 import { Plus, School, X } from 'lucide-react';
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { formatMoney } from '@/lib/format';
@@ -459,56 +458,52 @@ export default function ClassListPage() {
     useClassList(filters);
   const deleteClass = useDeleteClass();
 
-  const columns = useMemo(
-    () =>
-      helper.columns([
-        helper.accessor('name', {
-          header: 'Class',
-          meta: { sticky: 'left', size: 200 },
-          cell: (info) => (
-            <RowLink to={`/academic/classes/${info.row.original.id}/edit`}>
-              {info.getValue()}
-            </RowLink>
-          ),
-        }),
-        helper.accessor('status', {
-          header: 'Status',
-          cell: (info) => (
-            <LookupBadge lookup={classStatusLookup} value={info.getValue()} />
-          ),
-        }),
-        helper.accessor('sectionCount', {
-          header: 'Sections',
-          meta: { align: 'right', hideBelow: 'md' },
-        }),
-        helper.accessor('monthlyFee', {
-          header: 'Monthly fee',
-          meta: { align: 'right' },
-          cell: (info) => formatMoney(info.getValue()),
-        }),
-        helper.display({
-          id: 'actions',
-          header: () => <span className="sr-only">Actions</span>,
-          cell: ({ row }) => (
-            <RowActions
-              subject={row.original.name}
-              onEdit={() =>
-                void navigate(`/academic/classes/${row.original.id}/edit`)
-              }
-              onDelete={() =>
-                confirm({
-                  title: `Delete ${row.original.name}?`,
-                  description: 'Its sections and timetable go with it.',
-                  variant: 'destructive',
-                  onConfirm: () => deleteClass.mutateAsync(row.original.id),
-                })
-              }
-            />
-          ),
-        }),
-      ]),
-    [navigate, confirm, deleteClass],
-  );
+  const columns = helper.columns([
+    helper.accessor('name', {
+      header: 'Class',
+      meta: { sticky: 'left', size: 200 },
+      cell: (info) => (
+        <RowLink to={`/academic/classes/${info.row.original.id}/edit`}>
+          {info.getValue()}
+        </RowLink>
+      ),
+    }),
+    helper.accessor('status', {
+      header: 'Status',
+      cell: (info) => (
+        <LookupBadge lookup={classStatusLookup} value={info.getValue()} />
+      ),
+    }),
+    helper.accessor('sectionCount', {
+      header: 'Sections',
+      meta: { align: 'right', hideBelow: 'md' },
+    }),
+    helper.accessor('monthlyFee', {
+      header: 'Monthly fee',
+      meta: { align: 'right' },
+      cell: (info) => formatMoney(info.getValue()),
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <RowActions
+          subject={row.original.name}
+          onEdit={() =>
+            void navigate(`/academic/classes/${row.original.id}/edit`)
+          }
+          onDelete={() =>
+            confirm({
+              title: `Delete ${row.original.name}?`,
+              description: 'Its sections and timetable go with it.',
+              variant: 'destructive',
+              onConfirm: () => deleteClass.mutateAsync(row.original.id),
+            })
+          }
+        />
+      ),
+    }),
+  ]);
 
   if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;

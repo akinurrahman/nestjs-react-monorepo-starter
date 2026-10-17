@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Routes, Route } from 'react-router';
 import { renderWithRouter } from '@/test/render-with-router';
@@ -535,6 +536,77 @@ describe('DataTable row click', () => {
     bodyRows().forEach((row) =>
       expect(row).not.toHaveAttribute('data-interactive'),
     );
+  });
+});
+
+// A page that builds its columns in render hands the table new renderer
+// functions every time. A refetch re-rendering the page must not remount the
+// cells, or an open row menu closes under the person using it.
+describe('DataTable column rebuilds', () => {
+  function Counter({ label }: { label: string }) {
+    const [count, setCount] = useState(0);
+    return (
+      <button type="button" onClick={() => setCount(count + 1)}>
+        {label} {count}
+      </button>
+    );
+  }
+
+  const buildColumns = () =>
+    helper.columns([
+      helper.accessor('name', {
+        header: () => <Counter label="Header" />,
+        cell: ({ row }) => <Counter label={row.original.name} />,
+      }),
+      helper.display({
+        id: 'hook',
+        header: 'Hook',
+        cell: function HookCell({ row }) {
+          const [count, setCount] = useState(0);
+          return (
+            <button type="button" onClick={() => setCount(count + 1)}>
+              Hook {row.original.name} {count}
+            </button>
+          );
+        },
+      }),
+    ]);
+
+  async function clickThenRebuild(name: string) {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <DataTable columns={buildColumns()} data={PEOPLE} label={LABEL} />,
+    );
+    await user.click(screen.getByRole('button', { name: `${name} 0` }));
+    rerender(
+      <DataTable columns={buildColumns()} data={PEOPLE} label={LABEL} />,
+    );
+  }
+
+  it('keeps a cell component mounted', async () => {
+    await clickThenRebuild('Ada');
+
+    expect(screen.getByRole('button', { name: 'Ada 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grace 0' })).toBeInTheDocument();
+  });
+
+  it('keeps the state of a cell renderer that calls a hook', async () => {
+    await clickThenRebuild('Hook Ada');
+
+    expect(
+      screen.getByRole('button', { name: 'Hook Ada 1' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hook Grace 0' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a header component mounted', async () => {
+    await clickThenRebuild('Header');
+
+    expect(
+      screen.getByRole('button', { name: 'Header 1' }),
+    ).toBeInTheDocument();
   });
 });
 
