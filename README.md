@@ -83,6 +83,8 @@ If a local Postgres or another project's database is already on 5432, move this 
 2. In `apps/api/.env`, change the port in `DATABASE_URL` to `5433`
 3. Run `docker compose up -d` again
 
+The e2e and browser tests read `DB_PORT` from the root `.env` too, so they follow without any change to the committed `apps/api/.env.test` or `apps/browser-tests/browser-env.ts`.
+
 </details>
 
 ## Commands

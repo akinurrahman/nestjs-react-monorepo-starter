@@ -1,7 +1,12 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   assertTestDatabaseUrl,
+  localDbPort,
   readTestEnv,
   truncateAppTables,
+  withDbPort,
 } from './test-db.js';
 
 describe('readTestEnv', () => {
@@ -11,6 +16,63 @@ describe('readTestEnv', () => {
     expect(Object.keys(readTestEnv())).toEqual(
       expect.arrayContaining(['DATABASE_URL', 'JWT_SECRET']),
     );
+  });
+
+  it('moves DATABASE_URL to DB_PORT when that is set', () => {
+    vi.stubEnv('DB_PORT', '5439');
+    try {
+      expect(new URL(readTestEnv()['DATABASE_URL']!).port).toBe('5439');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe('localDbPort', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'db-port-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('prefers DB_PORT from the environment', () => {
+    const file = join(dir, '.env');
+    writeFileSync(file, 'DB_PORT=5433\n');
+    expect(localDbPort({ DB_PORT: '5434' }, file)).toBe('5434');
+  });
+
+  it('falls back to the root .env', () => {
+    const file = join(dir, '.env');
+    writeFileSync(file, 'DB_PORT=5433\n');
+    expect(localDbPort({}, file)).toBe('5433');
+  });
+
+  it('is undefined with neither, as in CI', () => {
+    expect(localDbPort({}, join(dir, 'missing.env'))).toBeUndefined();
+  });
+
+  it('refuses a value that is not a port', () => {
+    expect(() => localDbPort({ DB_PORT: 'abc' }, join(dir, 'x'))).toThrow(
+      /must be a port number/,
+    );
+  });
+});
+
+describe('withDbPort', () => {
+  it('replaces the port and keeps the rest', () => {
+    expect(
+      withDbPort(
+        'postgresql://postgres:postgres@localhost:5432/x_test',
+        '5433',
+      ),
+    ).toBe('postgresql://postgres:postgres@localhost:5433/x_test');
+  });
+
+  it('leaves the url alone without a port', () => {
+    const url = 'postgresql://postgres:postgres@localhost:5432/x_test';
+    expect(withDbPort(url, undefined)).toBe(url);
   });
 });
 

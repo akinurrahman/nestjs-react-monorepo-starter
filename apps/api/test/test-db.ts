@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,15 +13,48 @@ const API_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 const TEST_ENV_FILE = resolve(API_ROOT, '.env.test');
 
-// Every key in .env.test. The e2e setup puts them all in process.env, and
-// AppModule ignores apps/api/.env under NODE_ENV=test, so this is the whole
-// environment the tests see.
+// The gitignored root .env, which docker compose reads DB_PORT from.
+const ROOT_ENV_FILE = resolve(API_ROOT, '../../.env');
+
+// Where the local Postgres listens, when it is not the 5432 that .env.test
+// commits: DB_PORT from the environment, else from the root .env. CI has
+// neither, so it keeps 5432.
+export function localDbPort(
+  env: NodeJS.ProcessEnv = process.env,
+  rootEnvFile: string = ROOT_ENV_FILE,
+): string | undefined {
+  const port =
+    env['DB_PORT'] ||
+    (existsSync(rootEnvFile)
+      ? parseEnv(readFileSync(rootEnvFile, 'utf8'))['DB_PORT']
+      : undefined);
+  if (!port) return undefined;
+  if (!/^\d{1,5}$/.test(port)) {
+    throw new Error(`DB_PORT must be a port number, got "${port}"`);
+  }
+  return port;
+}
+
+export function withDbPort(url: string, port: string | undefined): string {
+  if (!port) return url;
+  const next = new URL(url);
+  next.port = port;
+  return next.toString();
+}
+
+// Every key in .env.test, with the port moved to DB_PORT when that is set.
+// The e2e setup puts them all in process.env, and AppModule ignores
+// apps/api/.env under NODE_ENV=test, so this is the whole environment the
+// tests see.
 export function readTestEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(
     parseEnv(readFileSync(TEST_ENV_FILE, 'utf8')),
   )) {
     if (value !== undefined) env[key] = value;
+  }
+  if (env['DATABASE_URL']) {
+    env['DATABASE_URL'] = withDbPort(env['DATABASE_URL'], localDbPort());
   }
   return env;
 }
