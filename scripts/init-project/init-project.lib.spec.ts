@@ -5,14 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
+  choosePort,
   deriveNames,
   DIRTY_TREE_MESSAGE,
+  firstFreePort,
   initState,
   isLeftAlone,
   lineDiff,
   NAME_MAX_LENGTH,
   parseCli,
   parseGitHubRemote,
+  parsePort,
   quoteEnvValue,
   removeInitScript,
   removeTemplateBlocks,
@@ -497,6 +500,124 @@ describe('lineDiff', () => {
   });
 });
 
+describe('parsePort', () => {
+  it.each([
+    ['1', 1],
+    ['5432', 5432],
+    ['65535', 65535],
+  ])('reads %j', (text, port) => {
+    expect(parsePort(text)).toBe(port);
+  });
+
+  it.each(['0', '65536', '123456', 'abc', '54.3', '', ' 5432', '-1'])(
+    'refuses %j',
+    (text) => {
+      expect(parsePort(text)).toBeUndefined();
+    },
+  );
+});
+
+// isFree for a machine where `taken` are in use, recording every port asked.
+function machine(taken: number[]) {
+  const asked: number[] = [];
+  return {
+    asked,
+    isFree: async (port: number) => {
+      asked.push(port);
+      return !taken.includes(port);
+    },
+  };
+}
+
+describe('firstFreePort', () => {
+  it('returns the start when it is free', async () => {
+    expect(await firstFreePort(5432, machine([]).isFree)).toBe(5432);
+  });
+
+  it('skips taken ports', async () => {
+    expect(await firstFreePort(5432, machine([5432, 5433]).isFree)).toBe(5434);
+  });
+
+  it('gives up after the limit', async () => {
+    const m = machine(Array.from({ length: 30 }, (_, i) => 5432 + i));
+    expect(await firstFreePort(5432, m.isFree, 20)).toBeUndefined();
+    expect(m.asked).toEqual(Array.from({ length: 20 }, (_, i) => 5432 + i));
+  });
+
+  it('never goes past 65535', async () => {
+    const m = machine([65534, 65535]);
+    expect(await firstFreePort(65534, m.isFree, 20)).toBeUndefined();
+    expect(m.asked).toEqual([65534, 65535]);
+  });
+});
+
+describe('choosePort', () => {
+  // Answers in order; an empty answer takes the default, like the real
+  // prompt.
+  function prompt(taken: number[], answers: string[]) {
+    const m = machine(taken);
+    const questions: { question: string; fallback?: string }[] = [];
+    const said: string[] = [];
+    const io = {
+      ask: async (question: string, fallback?: string) => {
+        questions.push({ question, fallback });
+        const answer = answers.shift();
+        if (answer === undefined) throw new Error('asked too often');
+        return answer === '' && fallback !== undefined ? fallback : answer;
+      },
+      isFree: m.isFree,
+      say: (line: string) => said.push(line),
+    };
+    return { io, questions, said, asked: m.asked };
+  }
+
+  it('suggests 5432 when it is free', async () => {
+    const p = prompt([], ['']);
+    expect(await choosePort(p.io)).toBe(5432);
+    expect(p.questions).toEqual([
+      { question: 'Local Postgres port', fallback: '5432' },
+    ]);
+  });
+
+  it('suggests the next free port when 5432 is taken, and says so', async () => {
+    const p = prompt([5432, 5433], ['']);
+    expect(await choosePort(p.io)).toBe(5434);
+    expect(p.questions[0]!.fallback).toBe('5434');
+    expect(p.questions[0]!.question).toMatch(/5432 is taken/);
+    expect(p.questions[0]!.question).toMatch(/5434 is free/);
+  });
+
+  it('has no default when no port nearby is free', async () => {
+    const taken = Array.from({ length: 20 }, (_, i) => 5432 + i);
+    const p = prompt(taken, ['6000']);
+    expect(await choosePort(p.io)).toBe(6000);
+    expect(p.questions[0]!.fallback).toBeUndefined();
+    expect(p.questions[0]!.question).toMatch(/5432 to 5451 are all taken/);
+  });
+
+  it('takes a typed port over the default', async () => {
+    const p = prompt([], ['5500']);
+    expect(await choosePort(p.io)).toBe(5500);
+  });
+
+  it('asks again right after an answer that is not a port', async () => {
+    const p = prompt([], ['abc', '5433']);
+    expect(await choosePort(p.io)).toBe(5433);
+    expect(p.questions).toHaveLength(2);
+    expect(p.said).toEqual([expect.stringMatching(/"abc" is not a port/)]);
+  });
+
+  it('asks again right after a port that is in use', async () => {
+    const p = prompt([5500], ['5500', '5501']);
+    expect(await choosePort(p.io)).toBe(5501);
+    expect(p.questions).toHaveLength(2);
+    expect(p.said).toEqual([
+      expect.stringMatching(/Port 5500 is already in use/),
+    ]);
+    expect(p.asked).toContain(5500);
+  });
+});
+
 describe('parseCli', () => {
   it('reads every flag', () => {
     expect(
@@ -532,7 +653,9 @@ describe('parseCli', () => {
   });
 
   it('defaults to port 5432 and a commit', () => {
-    expect(parseCli([], {})).toMatchObject({ dbPort: 5432, commit: true });
+    expect(parseCli([], {})).toMatchObject({ commit: true });
+    // Not passed is undefined, not 5432: the script prompts for it.
+    expect(parseCli([], {}).dbPort).toBeUndefined();
   });
 
   it('takes the password from INIT_ADMIN_PASSWORD, the flag first', () => {

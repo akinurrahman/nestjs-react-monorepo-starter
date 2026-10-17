@@ -507,7 +507,9 @@ export type CliOptions = {
   adminEmail?: string;
   adminName?: string;
   adminPassword?: string;
-  dbPort: number;
+  // Undefined when --db-port is not passed: the script prompts, or takes
+  // DEFAULT_DB_PORT with --yes.
+  dbPort?: number;
   repo?: GitHubRepo;
   commit: boolean;
   dryRun: boolean;
@@ -517,6 +519,59 @@ export type CliOptions = {
 
 export const DEFAULT_DB_PORT = 5432;
 export const DEFAULT_ADMIN_NAME = 'Admin';
+
+// How far past DEFAULT_DB_PORT the prompt looks for a free port to suggest.
+export const PORT_SEARCH_LIMIT = 20;
+
+export function parsePort(text: string): number | undefined {
+  if (!/^\d{1,5}$/.test(text)) return undefined;
+  const port = Number(text);
+  return port >= 1 && port <= 65535 ? port : undefined;
+}
+
+// The first free port from `start` on, checking at most `limit` of them.
+export async function firstFreePort(
+  start: number,
+  isFree: (port: number) => Promise<boolean>,
+  limit: number = PORT_SEARCH_LIMIT,
+): Promise<number | undefined> {
+  for (let port = start; port < start + limit && port <= 65535; port++) {
+    if (await isFree(port)) return port;
+  }
+  return undefined;
+}
+
+export type PortPromptIo = {
+  // Shows the question with `fallback` as the default an empty answer takes.
+  ask: (question: string, fallback?: string) => Promise<string>;
+  isFree: (port: number) => Promise<boolean>;
+  say: (line: string) => void;
+};
+
+// Prompts for the local Postgres port. Suggests DEFAULT_DB_PORT, or the next
+// free port when that is taken (and says so), and checks each answer right
+// away, asking again until it is a free port.
+export async function choosePort(io: PortPromptIo): Promise<number> {
+  const start = DEFAULT_DB_PORT;
+  const suggested = await firstFreePort(start, io.isFree);
+  const question =
+    suggested === start
+      ? 'Local Postgres port'
+      : suggested === undefined
+        ? `Local Postgres port (${start} to ${start + PORT_SEARCH_LIMIT - 1} are all taken on this machine)`
+        : `Local Postgres port (${start} is taken on this machine, ${suggested} is free)`;
+  for (;;) {
+    const answer = await io.ask(question, suggested?.toString());
+    const port = parsePort(answer);
+    if (port === undefined) {
+      io.say(`  "${answer}" is not a port: enter a number from 1 to 65535`);
+    } else if (!(await io.isFree(port))) {
+      io.say(`  Port ${port} is already in use on this machine: pick another`);
+    } else {
+      return port;
+    }
+  }
+}
 
 export const HELP = `Usage: pnpm init:project [options]
 
@@ -534,8 +589,8 @@ removes this script and commits the result. Prompts for anything not passed.
   --admin-password <text>  First admin's password. Prefer the prompt or the
                            INIT_ADMIN_PASSWORD env var: a flag ends up in your
                            shell history. Empty at the prompt generates one
-  --db-port <port>         Local Postgres port (default: ${DEFAULT_DB_PORT}). Pick another
-                           when 5432 is taken
+  --db-port <port>         Local Postgres port. The prompt suggests ${DEFAULT_DB_PORT}, or the
+                           next free port when that is taken; --yes takes ${DEFAULT_DB_PORT}
   --repo <owner/name>      GitHub repo for the README (default: from origin)
   --no-commit              Leave the changes uncommitted
   --dry-run                Print every file change and command, change nothing
@@ -566,10 +621,10 @@ export function parseCli(
     },
   });
 
-  let dbPort = DEFAULT_DB_PORT;
+  let dbPort: number | undefined;
   if (values['db-port'] !== undefined) {
-    dbPort = Number(values['db-port']);
-    if (!/^\d+$/.test(values['db-port']) || dbPort < 1 || dbPort > 65535) {
+    dbPort = parsePort(values['db-port']);
+    if (dbPort === undefined) {
       throw new Error(
         `--db-port must be a port number, got "${values['db-port']}"`,
       );
