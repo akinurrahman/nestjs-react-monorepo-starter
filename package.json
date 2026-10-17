@@ -15,6 +15,7 @@
     "test": "turbo test",
     "test:e2e": "turbo test:e2e",
     "test:browser": "turbo test:browser",
+    "db:seed": "turbo db:seed --filter=@starter/api",
     "test:browser:ui": "turbo build --filter=@starter/api --filter=@starter/web && pnpm --filter @starter/browser-tests test:browser:ui",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

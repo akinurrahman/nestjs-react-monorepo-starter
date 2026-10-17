@@ -15,8 +15,9 @@ import { UsersModule } from './users/users.module.js';
 import { UsersRepository } from './users/users.repository.js';
 
 // Creates the first admin from SEED_ADMIN_*. Idempotent: does nothing when a
-// user with that email exists. Run with `pnpm --filter @starter/api db:seed`
-// (prisma db seed, which builds and runs this file through `nest start`).
+// user with that email exists. Run with `pnpm db:seed` from the repo root:
+// Turbo builds the shared package, then prisma db seed builds and runs this
+// file through `nest start`.
 
 @Module({
   imports: [

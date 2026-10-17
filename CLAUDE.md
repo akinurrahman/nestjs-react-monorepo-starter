@@ -39,6 +39,7 @@ Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
 | Build                    | `pnpm build`                                                                               |
 | Regenerate Prisma client | `pnpm --filter @starter/api db:generate`                                                   |
 | Apply migrations         | `pnpm --filter @starter/api db:deploy`                                                     |
+| Seed the first admin     | `pnpm db:seed` (through Turbo, so shared is built first)                                   |
 
 New migration: `pnpm --filter @starter/api exec prisma migrate dev --create-only --name <name>`,
 show the SQL and wait for approval, then `pnpm --filter @starter/api db:migrate`.
@@ -84,7 +85,7 @@ The dev shell may be PowerShell on Windows. Prefer commands that work in both.
 ## packages/shared (@starter/shared)
 
 Code both api and web import. Consumed as built `dist` through package `exports`, not
-source: Turbo builds it first (`^build` on build, dev, typecheck, test). If an import
+source: Turbo builds it first (`^build` on build, dev, typecheck, test, db:seed). If an import
 fails outside Turbo, run `pnpm --filter @starter/shared build`.
 
 - Goes in: request schemas, response types (`ApiResponse`, `PaginatedResponse`), error
