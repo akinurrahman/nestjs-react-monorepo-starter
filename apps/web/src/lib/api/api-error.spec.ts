@@ -112,6 +112,40 @@ describe('ApiError from a response', () => {
   });
 });
 
+describe('ApiError retryAfter', () => {
+  const tooMany = (headers?: Record<string, string>) =>
+    failure(() => HttpResponse.json(tooManyRequests, { status: 429, headers }));
+
+  afterEach(() => vi.useRealTimers());
+
+  it('reads delta seconds from Retry-After', async () => {
+    expect(await tooMany({ 'Retry-After': '42' })).toMatchObject({
+      retryAfter: 42,
+    });
+  });
+
+  it('reads an HTTP date from Retry-After, rounding up', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-17T12:00:00.500Z'));
+
+    expect(
+      await tooMany({ 'Retry-After': 'Sat, 17 Oct 2026 12:01:30 GMT' }),
+    ).toMatchObject({ retryAfter: 90 });
+  });
+
+  it.each([
+    ['no header', undefined],
+    ['a value that is not a number or date', { 'Retry-After': 'soon' }],
+    ['zero', { 'Retry-After': '0' }],
+    ['a date in the past', { 'Retry-After': 'Thu, 01 Jan 2015 00:00:00 GMT' }],
+  ])('is undefined for %s', async (_, headers) => {
+    expect((await tooMany(headers)) as ApiError).toHaveProperty(
+      'retryAfter',
+      undefined,
+    );
+  });
+});
+
 describe('ApiError without a response', () => {
   it('is NETWORK_ERROR with status 0', async () => {
     const error = await failure(() => HttpResponse.error());
@@ -154,6 +188,26 @@ describe('getErrorMessage', () => {
     );
 
     expect(getErrorMessage(error)).toBe(expected);
+  });
+
+  it.each([
+    [1, '1 second'],
+    [42, '42 seconds'],
+    [59, '59 seconds'],
+    [60, '1 minute'],
+    [61, '2 minutes'],
+    [600, '10 minutes'],
+  ])('says how long to wait for a 429 with retryAfter %i', (seconds, wait) => {
+    const error = new ApiError({
+      status: 429,
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many requests, try again later',
+      retryAfter: seconds,
+    });
+
+    expect(getErrorMessage(error)).toBe(
+      `Too many requests. Try again in ${wait}.`,
+    );
   });
 
   it('hides the message of a 5xx even when the server sends one', () => {

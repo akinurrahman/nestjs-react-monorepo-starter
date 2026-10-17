@@ -130,6 +130,21 @@ describe('login page', () => {
     );
   });
 
+  it('says how long to wait when a 429 sends Retry-After', async () => {
+    serveLogin(() =>
+      HttpResponse.json(tooManyRequests, {
+        status: 429,
+        headers: { 'Retry-After': '42' },
+      }),
+    );
+
+    await submitLogin('/login');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Too many requests. Try again in 42 seconds.',
+    );
+  });
+
   it('shows safe copy for a server error', async () => {
     serveLogin(() => HttpResponse.json(internalError, { status: 500 }));
 
