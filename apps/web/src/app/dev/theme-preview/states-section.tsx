@@ -71,6 +71,7 @@ export function StatesSection() {
             icon={Inbox}
             title="No invoices yet"
             description="Invoices you create show up here."
+            level={3}
             action={
               <Button variant="outline">
                 <Plus />
@@ -80,17 +81,18 @@ export function StatesSection() {
           />
         </Frame>
         <Frame label="ErrorState, 4xx with retry">
-          <ErrorState error={CONFLICT} onRetry={retry} />
+          <ErrorState error={CONFLICT} onRetry={retry} level={3} />
         </Frame>
         <Frame label="ErrorState, network error">
-          <ErrorState error={NETWORK_DOWN} onRetry={retry} />
+          <ErrorState error={NETWORK_DOWN} onRetry={retry} level={3} />
         </Frame>
         <Frame label="ErrorState, unknown error, no retry">
-          <ErrorState title="This page could not be shown" />
+          <ErrorState title="This page could not be shown" level={3} />
         </Frame>
         <Frame label="ErrorState with actions">
           <ErrorState
             title="This page could not be shown"
+            level={3}
             onRetry={retry}
             action={
               <Button variant="outline">
@@ -102,11 +104,12 @@ export function StatesSection() {
         </Frame>
         <Frame label="NotFoundState">
           <NotFoundState
+            level={3}
             action={<Button variant="outline">Back to the list</Button>}
           />
         </Frame>
         <Frame label="AccessDeniedState">
-          <AccessDeniedState />
+          <AccessDeniedState level={3} />
         </Frame>
       </div>
 

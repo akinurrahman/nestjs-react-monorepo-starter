@@ -238,6 +238,7 @@ export function TableSection() {
               icon={Users}
               title="No people match"
               description="Nobody fits these filters."
+              level={3}
               action={
                 <Button type="button" variant="outline" onClick={resetFilters}>
                   <X />
@@ -250,6 +251,7 @@ export function TableSection() {
               icon={Users}
               title="No people yet"
               description="Turn off Empty to see the rows."
+              level={3}
             />
           )
         }

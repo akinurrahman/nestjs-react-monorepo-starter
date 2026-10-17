@@ -176,7 +176,10 @@ describe('app shell', () => {
       renderApp(pages, '/no/such/page');
 
       expect(
-        await within(screen.getByRole('main')).findByText('Not found'),
+        await within(screen.getByRole('main')).findByRole('heading', {
+          level: 1,
+          name: 'Not found',
+        }),
       ).toBeInTheDocument();
       expect(mainNav()).toBeInTheDocument();
     });
@@ -185,7 +188,10 @@ describe('app shell', () => {
       renderApp(pages, '/members', { user: testUser('ADMIN') });
 
       expect(
-        await within(screen.getByRole('main')).findByText('Access denied'),
+        await within(screen.getByRole('main')).findByRole('heading', {
+          level: 1,
+          name: 'Access denied',
+        }),
       ).toBeInTheDocument();
       expect(mainNav()).toBeInTheDocument();
     });

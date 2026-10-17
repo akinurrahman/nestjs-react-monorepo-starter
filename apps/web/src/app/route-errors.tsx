@@ -37,6 +37,7 @@ export function RouteErrorBoundary() {
         title="A new version is available"
         description="This page could not load, most likely because the app was updated. Reload to get the latest version."
         action={<ReloadButton />}
+        level={1}
       />
     );
   }

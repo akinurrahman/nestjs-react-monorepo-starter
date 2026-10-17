@@ -81,7 +81,8 @@ test('a USER opening an admin page directly is denied', async ({ page }) => {
   await page.goto('/users');
 
   await expect(page).toHaveURL(url('/users'));
-  // The empty state's title is a paragraph, not a heading.
-  await expect(page.getByText('Access denied', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Access denied' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Users' })).toBeHidden();
 });

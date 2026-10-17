@@ -113,7 +113,10 @@ describe('user list', () => {
     const user = userEvent.setup();
     const { router } = renderApp(usersRoutes, '/users');
 
-    expect(await screen.findByText('No users yet')).toBeInTheDocument();
+    // An h2, under the page's h1.
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'No users yet' }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('combobox', { name: 'Status' }));
     await user.click(await screen.findByRole('option', { name: 'Active' }));

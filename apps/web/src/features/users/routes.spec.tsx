@@ -24,7 +24,9 @@ describe('users routes', () => {
     async (url) => {
       renderApp(usersRoutes, url, { user: testUser('USER') });
 
-      expect(await screen.findByText('Access denied')).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Access denied' }),
+      ).toBeInTheDocument();
       expect(
         within(sidebar()).queryByRole('link', { name: 'Users' }),
       ).toBeNull();

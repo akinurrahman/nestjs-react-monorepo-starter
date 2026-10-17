@@ -21,6 +21,26 @@ describe('ErrorState', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('User not found');
   });
 
+  // It replaces the page, so its title is the page's only heading.
+  it('titles the page with an h1', () => {
+    render(<ErrorState />);
+
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: "Couldn't load this data",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('takes the heading level from level', () => {
+    render(<ErrorState title="Failed" level={3} />);
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Failed' }),
+    ).toBeInTheDocument();
+  });
+
   it('falls back to a generic message without an error', () => {
     render(<ErrorState />);
 
