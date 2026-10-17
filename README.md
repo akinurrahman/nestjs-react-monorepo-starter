@@ -1,6 +1,6 @@
 <div align="center">
 
-# starter-react-nest
+# nestjs-react-monorepo-starter
 
 **The boring parts, done once.**
 
@@ -49,8 +49,8 @@ It's also built for AI-driven development. A consistent structure, strict types 
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/akinurrahman/starter-react-nest.git
-cd starter-react-nest
+git clone https://github.com/akinurrahman/nestjs-react-monorepo-starter.git
+cd nestjs-react-monorepo-starter
 pnpm install
 
 # 2. Create your local env file, then set JWT_SECRET in it (the file shows
@@ -123,7 +123,7 @@ Browser tests (`apps/browser-tests`) cover what only a real browser can: the ref
 ## Project structure
 
 ```
-starter-react-nest/
+nestjs-react-monorepo-starter/
 ├── apps/
 │   └── api/                   NestJS API
 │       ├── prisma/
