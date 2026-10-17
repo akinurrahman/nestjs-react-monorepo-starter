@@ -18,8 +18,11 @@ import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 import {
+  choosePort,
   DEFAULT_ADMIN_NAME,
+  DEFAULT_DB_PORT,
   DELETE_FILES,
   DIRTY_TREE_MESSAGE,
   HELP,
@@ -30,6 +33,7 @@ import {
   lineDiff,
   parseCli,
   parseGitHubRemote,
+  parsePort,
   removeInitScript,
   renderApiEnv,
   renderRootEnv,
@@ -209,6 +213,7 @@ type Inputs = {
 async function collectInputs(
   opts: CliOptions,
   name: string | undefined,
+  port: number,
 ): Promise<Inputs> {
   const projectName = await value(
     name,
@@ -233,7 +238,7 @@ async function collectInputs(
       names: deriveNames(projectName, displayName),
       admin: undefined,
       generatedPassword: false,
-      port: opts.dbPort,
+      port,
       repo,
     };
   }
@@ -271,7 +276,7 @@ async function collectInputs(
     names: deriveNames(projectName, displayName),
     admin: { email, name: resolvedAdminName, password },
     generatedPassword,
-    port: opts.dbPort,
+    port,
     repo,
   };
 }
@@ -390,7 +395,11 @@ function preflight(opts: CliOptions): void {
   }
 }
 
-async function checkPort(port: number, resume: boolean): Promise<void> {
+async function checkPort(
+  port: number,
+  resume: boolean,
+  fix: string,
+): Promise<void> {
   if (await portIsFree(port)) return;
   // On a rerun, this project's own Postgres may hold it already.
   if (resume) {
@@ -403,9 +412,43 @@ async function checkPort(port: number, resume: boolean): Promise<void> {
     );
     if (own.ok && own.stdout !== '') return;
   }
-  throw new StepError(
-    `Port ${port} is already in use on this machine. Pass --db-port with a free one (e.g. ${port + 1}).`,
-  );
+  throw new StepError(`Port ${port} is already in use on this machine. ${fix}`);
+}
+
+// The local Postgres port: the kept root .env's, --db-port, DEFAULT_DB_PORT
+// with --yes, or a prompt. Checked before any other prompt.
+async function resolvePort(opts: CliOptions, resume: boolean): Promise<number> {
+  const rootEnv = join(ROOT, '.env');
+  if (existsSync(rootEnv)) {
+    const kept = parseEnv(readFileSync(rootEnv, 'utf8'))['DB_PORT'];
+    const port = kept ? parsePort(kept) : DEFAULT_DB_PORT;
+    if (port === undefined) {
+      throw new StepError(`DB_PORT in .env is not a port number: "${kept}"`);
+    }
+    if (opts.dbPort !== undefined && opts.dbPort !== port) {
+      console.log(`Keeping port ${port} from the existing .env.`);
+    }
+    await checkPort(
+      port,
+      resume,
+      'It comes from the existing .env: change DB_PORT there, or free the port.',
+    );
+    return port;
+  }
+  if (opts.dbPort !== undefined || opts.yes) {
+    const port = opts.dbPort ?? DEFAULT_DB_PORT;
+    await checkPort(
+      port,
+      resume,
+      `Pass --db-port with a free one (e.g. ${port + 1}).`,
+    );
+    return port;
+  }
+  return choosePort({
+    ask,
+    isFree: portIsFree,
+    say: (line) => console.log(line),
+  });
 }
 
 function printPlan(
@@ -477,7 +520,12 @@ async function main(): Promise<void> {
     throw new StepError(DIRTY_TREE_MESSAGE);
   }
 
-  const inputs = await collectInputs(opts, opts.name);
+  // Everything that needs no answers goes before the first prompt, so a
+  // missing Docker or a taken port never throws the answers away.
+  if (!opts.dryRun) preflight(opts);
+  const port = await resolvePort(opts, resume);
+
+  const inputs = await collectInputs(opts, opts.name, port);
   const { names } = inputs;
   const api = `@${names.scope}/api`;
   const commit = `chore: initialize ${names.name}`;
@@ -505,9 +553,6 @@ async function main(): Promise<void> {
     printPlan(rename, env, commands, inputs);
     return;
   }
-
-  preflight(opts);
-  await checkPort(inputs.port, resume);
 
   changing = true;
   console.log(

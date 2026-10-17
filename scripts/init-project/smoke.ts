@@ -166,6 +166,25 @@ async function main(): Promise<void> {
   );
   git(repo, 'restore .');
 
+  // A taken port fails before the first prompt, so no answer is lost. No
+  // --name and no --yes: a prompt would come first if the order were wrong.
+  const blocker = createServer();
+  await new Promise<void>((done) =>
+    blocker.listen(PORT + 1, '127.0.0.1', () => done()),
+  );
+  const taken = run(repo, `pnpm init:project --db-port ${PORT + 1}`, {
+    env,
+    quiet: true,
+  });
+  await new Promise<void>((done) => blocker.close(() => done()));
+  check(
+    'a taken --db-port fails before any prompt',
+    !taken.ok &&
+      taken.stderr.includes(`Port ${PORT + 1} is already in use`) &&
+      !taken.stdout.includes('Project name'),
+    `${taken.stdout}\n${taken.stderr}`,
+  );
+
   const init = run(repo, `pnpm init:project ${flags}`, { env });
   check('init succeeds', init.ok);
   if (!init.ok) return;
