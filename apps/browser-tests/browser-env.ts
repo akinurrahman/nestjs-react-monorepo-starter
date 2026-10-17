@@ -1,3 +1,7 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
+
 // Everything the browser tests run against: ports, the database and the
 // api's environment. All committed: a throwaway database in the docker
 // compose Postgres, with its public local credentials, and fake secrets.
@@ -14,8 +18,29 @@ export const WEB_URL = `http://localhost:${WEB_PORT}`;
 // Dropped and recreated on every run. The name must end in _browser: the
 // api start script refuses anything else. Separate from starter_test, so
 // `pnpm test:e2e` can run alongside.
-export const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/starter_browser';
+export const DATABASE_URL = withLocalDbPort(
+  'postgresql://postgres:postgres@localhost:5432/starter_browser',
+);
+
+// Moves the url to DB_PORT, from the environment or the gitignored root
+// .env (where docker compose reads it), when the local Postgres is not on
+// 5432. CI has neither, so it keeps 5432. Same rule as the e2e tests'
+// apps/api/test/test-db.ts.
+function withLocalDbPort(url: string): string {
+  const rootEnv = fileURLToPath(new URL('../../.env', import.meta.url));
+  const port =
+    process.env['DB_PORT'] ||
+    (existsSync(rootEnv)
+      ? parseEnv(readFileSync(rootEnv, 'utf8'))['DB_PORT']
+      : undefined);
+  if (!port) return url;
+  if (!/^\d{1,5}$/.test(port)) {
+    throw new Error(`DB_PORT must be a port number, got "${port}"`);
+  }
+  const next = new URL(url);
+  next.port = port;
+  return next.toString();
+}
 
 // Short, so a test can outlive an access token in seconds.
 export const ACCESS_TTL_SECONDS = 5;

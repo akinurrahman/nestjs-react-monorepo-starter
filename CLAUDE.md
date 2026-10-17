@@ -39,12 +39,32 @@ Run from the repo root. One package only: `pnpm --filter @starter/api <script>`
 | Build                    | `pnpm build`                                                                               |
 | Regenerate Prisma client | `pnpm --filter @starter/api db:generate`                                                   |
 | Apply migrations         | `pnpm --filter @starter/api db:deploy`                                                     |
+| Seed the first admin     | `pnpm db:seed` (through Turbo, so shared is built first)                                   |
 
 New migration: `pnpm --filter @starter/api exec prisma migrate dev --create-only --name <name>`,
 show the SQL and wait for approval, then `pnpm --filter @starter/api db:migrate`.
 Don't pass `--name` to `db:migrate`: it lands on the chained `prisma generate`.
 
 The dev shell may be PowerShell on Windows. Prefer commands that work in both.
+
+<!-- template:start -->
+
+## Init script (template only)
+
+`pnpm init:project` (`scripts/init-project`, a workspace package so the gate covers it)
+turns a fresh copy of this template into a named project, once, then deletes itself and
+every `<!-- template:start/end -->` block in this file and README.md.
+
+- Pure logic in `init-project.lib.ts`, unit-tested. I/O, prompts and steps in
+  `init-project.ts`. Both run by Node's type stripping before `pnpm install`: `node:`
+  imports only, `.ts` extensions on relative imports.
+- `smoke.ts` (`pnpm --filter @starter/init-project smoke`) clones the repo to a temp
+  folder, initializes it under its own compose name and port, runs the full gate there
+  and checks for leftover "starter". It starts a Postgres container: ask first.
+- A change to a template name, an env key, or a line the script rewrites or fills in
+  (see `rewriteFile`, `renderApiEnv`) updates the script in the same change.
+
+<!-- template:end -->
 
 ## Layout (apps/api)
 
@@ -84,7 +104,7 @@ The dev shell may be PowerShell on Windows. Prefer commands that work in both.
 ## packages/shared (@starter/shared)
 
 Code both api and web import. Consumed as built `dist` through package `exports`, not
-source: Turbo builds it first (`^build` on build, dev, typecheck, test). If an import
+source: Turbo builds it first (`^build` on build, dev, typecheck, test, db:seed). If an import
 fails outside Turbo, run `pnpm --filter @starter/shared build`.
 
 - Goes in: request schemas, response types (`ApiResponse`, `PaginatedResponse`), error
