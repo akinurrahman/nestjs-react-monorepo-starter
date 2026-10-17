@@ -158,24 +158,43 @@ describe('getErrorMessage', () => {
 
   it('hides the message of a 5xx even when the server sends one', () => {
     const error = new ApiError({
-      status: 503,
-      code: 'SERVICE_UNAVAILABLE',
-      message: 'Database unreachable',
+      status: 500,
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Database exploded',
     });
 
     expect(getErrorMessage(error)).toBe(SERVER_MESSAGE);
   });
 
-  it('for an HTML 502', async () => {
-    const error = await failure(
-      () =>
-        new HttpResponse('<html></html>', {
-          status: 502,
-          headers: { 'Content-Type': 'text/html' },
-        }),
-    );
+  // In production a reverse proxy answers 502 while the api is down.
+  describe.each([502, 503, 504])('for a %i', (status) => {
+    it.each([
+      [
+        'an HTML body',
+        () =>
+          new HttpResponse('<html></html>', {
+            status,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ],
+      ['an empty body', () => new HttpResponse(null, { status })],
+      [
+        "the api's own error body",
+        () =>
+          HttpResponse.json(
+            {
+              statusCode: status,
+              code: 'SERVICE_UNAVAILABLE',
+              message: 'Database unreachable',
+            },
+            { status },
+          ),
+      ],
+    ])('with %s says the server is unreachable', async (_, respond) => {
+      const error = await failure(respond);
 
-    expect(getErrorMessage(error)).toBe(SERVER_MESSAGE);
+      expect(getErrorMessage(error)).toBe(NETWORK_MESSAGE);
+    });
   });
 
   it('for a 4xx that is not an error body', async () => {

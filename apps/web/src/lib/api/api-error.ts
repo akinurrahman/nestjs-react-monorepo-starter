@@ -87,9 +87,18 @@ const MESSAGES = {
   unknown: 'Something went wrong. Please try again.',
 };
 
+// In production a reverse proxy answers these while the api is down, and the
+// api's own 503 (database down) leaves the person just as stuck.
+const UNREACHABLE_STATUSES = new Set([502, 503, 504]);
+
 export function getErrorMessage(error: unknown): string {
   if (!isApiError(error)) return MESSAGES.unknown;
-  if (error.code === CLIENT_ERROR_CODES.NETWORK_ERROR) return MESSAGES.network;
+  if (
+    error.code === CLIENT_ERROR_CODES.NETWORK_ERROR ||
+    UNREACHABLE_STATUSES.has(error.status)
+  ) {
+    return MESSAGES.network;
+  }
   if (error.code === CLIENT_ERROR_CODES.BAD_RESPONSE) return MESSAGES.server;
   if (error.status >= 400 && error.status < 500) return error.message;
   return MESSAGES.server;
