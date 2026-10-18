@@ -20,6 +20,7 @@ import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import {
+  adminSummary,
   API_ENV_EXISTS_MESSAGE,
   API_ENV_FILE,
   apiEnvAction,
@@ -610,11 +611,12 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n${names.displayName} is ready.`);
-  if (inputs.admin) console.log(`  Admin: ${inputs.admin.email}`);
-  if (inputs.admin && inputs.generatedPassword) {
-    console.log(
-      `  Generated admin password (shown once, also in ${API_ENV_FILE}): ${inputs.admin.password}`,
-    );
+  for (const line of adminSummary(
+    inputs.admin,
+    inputs.generatedPassword,
+    inputs.admin ? undefined : read(API_ENV_FILE),
+  )) {
+    console.log(line);
   }
   console.log('  Start it: pnpm dev');
   if (!opts.commit) console.log('  The changes are not committed.');

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
+  adminSummary,
   API_ENV_EXISTS_MESSAGE,
   apiEnvAction,
   choosePort,
@@ -331,6 +332,39 @@ describe('stopHint', () => {
     expect(hint).not.toMatch(/run it again/);
     expect(hint).toMatch(/removed itself/);
     expect(hint.split('\n').slice(1)).toEqual(finish.map((c) => `  ${c}`));
+  });
+});
+
+describe('adminSummary', () => {
+  const admin = { email: 'ada@example.com', name: 'Ada', password: 'pw123456' };
+
+  it('shows a generated password once', () => {
+    expect(adminSummary(admin, true, undefined)).toEqual([
+      '  Admin: ada@example.com',
+      '  Generated admin password (shown once, also in apps/api/.env): pw123456',
+    ]);
+  });
+
+  it('never shows a typed password', () => {
+    expect(adminSummary(admin, false, undefined)).toEqual([
+      '  Admin: ada@example.com',
+    ]);
+  });
+
+  it('points a resumed run at the kept apps/api/.env', () => {
+    expect(
+      adminSummary(
+        undefined,
+        false,
+        "SEED_ADMIN_EMAIL='ada@example.com'\nSEED_ADMIN_PASSWORD='pw123456'\n",
+      ),
+    ).toEqual([
+      '  Admin: ada@example.com',
+      '  Admin password: SEED_ADMIN_PASSWORD in apps/api/.env',
+    ]);
+    expect(adminSummary(undefined, false, '')).toEqual([
+      '  Admin: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in apps/api/.env',
+    ]);
   });
 });
 

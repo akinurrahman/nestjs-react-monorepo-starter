@@ -4,7 +4,7 @@
 // Run by Node's type stripping before `pnpm install`, so this file imports
 // only node: modules and uses erasable syntax only.
 
-import { parseArgs } from 'node:util';
+import { parseArgs, parseEnv } from 'node:util';
 
 // What the template calls itself. Every rewrite below starts from these.
 export const TEMPLATE = {
@@ -184,6 +184,32 @@ export function quoteEnvValue(value: string): string {
   throw new Error(
     'An env value cannot hold both a single quote and a double quote or backslash',
   );
+}
+
+// The closing lines about the first admin. A resume keeps the apps/api/.env
+// the first run wrote, so it points there instead.
+export function adminSummary(
+  admin: Admin | undefined,
+  generatedPassword: boolean,
+  keptApiEnv: string | undefined,
+): string[] {
+  if (admin) {
+    return [
+      `  Admin: ${admin.email}`,
+      ...(generatedPassword
+        ? [
+            `  Generated admin password (shown once, also in ${API_ENV_FILE}): ${admin.password}`,
+          ]
+        : []),
+    ];
+  }
+  const email = parseEnv(keptApiEnv ?? '')['SEED_ADMIN_EMAIL'];
+  return email
+    ? [
+        `  Admin: ${email}`,
+        `  Admin password: SEED_ADMIN_PASSWORD in ${API_ENV_FILE}`,
+      ]
+    : [`  Admin: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in ${API_ENV_FILE}`];
 }
 
 export function databaseUrl(db: string, port: number): string {
