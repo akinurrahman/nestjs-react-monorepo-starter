@@ -64,11 +64,13 @@ export function Breadcrumbs({ routes }: { routes: readonly AppRouteObject[] }) {
               ) : (
                 <>
                   {crumb.linkable ? (
+                    // Ancestors only show from sm up, where the touch target
+                    // is 32px: the link is that tall, the text truncates.
                     <Link
                       to={crumb.pathname}
-                      className="truncate transition-colors hover:text-foreground"
+                      className="flex h-8 min-w-0 items-center transition-colors hover:text-foreground"
                     >
-                      {crumb.title}
+                      <span className="truncate">{crumb.title}</span>
                     </Link>
                   ) : (
                     <span className="truncate">{crumb.title}</span>
