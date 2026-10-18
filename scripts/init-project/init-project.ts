@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createServer } from 'node:net';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
@@ -27,7 +27,6 @@ import {
   choosePort,
   DEFAULT_ADMIN_NAME,
   DEFAULT_DB_PORT,
-  DELETE_FILES,
   DIRTY_TREE_MESSAGE,
   HELP,
   INIT_PACKAGE_DIR,
@@ -41,6 +40,7 @@ import {
   parseGitHubRemote,
   parsePort,
   removeInitScript,
+  renameAction,
   renderApiEnv,
   renderRootEnv,
   rewriteFile,
@@ -117,10 +117,6 @@ function trackedFiles(): string[] {
   const result = run('git', ['ls-files', '-z'], { quiet: true });
   if (!result.ok) throw new StepError('`git ls-files` failed');
   return result.stdout.split('\0').filter(Boolean);
-}
-
-function isText(content: Buffer): boolean {
-  return !content.subarray(0, 8000).includes(0);
 }
 
 function portIsFree(port: number): Promise<boolean> {
@@ -307,9 +303,10 @@ function planRename(inputs: Inputs): FileChange[] {
   for (const path of trackedFiles()) {
     if (!existsSync(join(ROOT, path))) continue;
     const raw = readFileSync(join(ROOT, path));
-    if (!isText(raw)) continue;
-    const before = raw.toString('utf8');
-    if ((DELETE_FILES as readonly string[]).includes(path)) {
+    const action = renameAction(path, raw);
+    if (action === 'skip') continue;
+    const before = action === 'delete' ? '' : raw.toString('utf8');
+    if (action === 'delete') {
       changes.push({ path, before, after: null });
       continue;
     }
@@ -365,8 +362,21 @@ function planSelfRemoval(): FileChange[] {
 
 function applyChanges(changes: FileChange[]): void {
   for (const change of changes) {
-    if (change.after === null) rmSync(join(ROOT, change.path), { force: true });
-    else write(change.path, change.after);
+    if (change.after === null) {
+      rmSync(join(ROOT, change.path), { force: true });
+      removeEmptyParents(change.path);
+    } else {
+      write(change.path, change.after);
+    }
+  }
+}
+
+// Git drops a folder whose last file is deleted, but the disk keeps it.
+function removeEmptyParents(path: string): void {
+  let dir = dirname(join(ROOT, path));
+  while (dir !== ROOT && existsSync(dir) && readdirSync(dir).length === 0) {
+    rmdirSync(dir);
+    dir = dirname(dir);
   }
 }
 

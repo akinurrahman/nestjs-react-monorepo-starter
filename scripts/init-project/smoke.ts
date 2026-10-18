@@ -248,8 +248,9 @@ async function main(): Promise<void> {
       ),
   );
   check(
-    'LICENSE, author and license gone',
+    'LICENSE, the README images, author and license gone',
     !existsSync(join(repo, 'LICENSE')) &&
+      !existsSync(join(repo, 'docs/images')) &&
       !('author' in pkg) &&
       !('license' in pkg),
   );

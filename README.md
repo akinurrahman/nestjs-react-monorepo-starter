@@ -2,50 +2,44 @@
 
 <div align="center">
 
-# nestjs-react-monorepo-starter
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
+  <img alt="NestJS + React" src="docs/images/banner-light.svg" width="100%">
+</picture>
 
-**The boring parts, done once.**
+<br>
+<br>
 
-A fullstack monorepo starter with React, NestJS, Prisma and Postgres.<br>
-Built so every project starts from the same solid ground, and ships faster with AI.
+**A NestJS and React monorepo starter with Prisma, Postgres, auth and tests.**<br>
+Create a repo from the template, run one command, and start on features.
 
 <br>
 
-![Node](https://img.shields.io/badge/Node-24-339933?logo=node.js&logoColor=white)
-![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)
-![Turborepo](https://img.shields.io/badge/Turborepo-2-EF4444?logo=turborepo&logoColor=white)
-![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![CI](https://github.com/akinurrahman/nestjs-react-monorepo-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/akinurrahman/nestjs-react-monorepo-starter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Node 24](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](.nvmrc)
 
-[Quick start](#quick-start) · [Commands](#commands) · [Structure](#project-structure) · [Conventions](#conventions) · [Roadmap](#roadmap)
+[Quick start](#quick-start) · [What's inside](#whats-inside) · [Why](#why-this-starter) · [Commands](#commands) · [Structure](#project-structure)
 
 </div>
-
-<br>
-
-> [!NOTE]
-> **Work in progress.** The API, shared package, web app, auth and the users module are in place. Repo-wide tooling, CI and the init script are next. See the [roadmap](#roadmap).
-
-## Why this exists
-
-Every new project used to start the same way: a day or two of wiring up folders, configs, database, testing and linting, slightly differently each time. This starter makes those decisions once, so a new project can go straight to building features.
-
-It's also built for AI-driven development. A consistent structure, strict types and clear conventions give coding agents a pattern to follow instead of one to invent.
 
 <!-- template:end -->
 
 ## What's inside
 
-| Layer          | Choice                                                     |
-| -------------- | ---------------------------------------------------------- |
-| **Monorepo**   | pnpm workspaces + Turborepo, with cached and ordered tasks |
-| **API**        | NestJS 12 on ESM, tested with Vitest                       |
-| **Database**   | Prisma 7 with a multi-file schema, Postgres 18 in Docker   |
-| **Validation** | Zod, for env config today and shared schemas soon          |
-| **Linting**    | Oxlint, type-aware                                         |
-| **Web**        | React + Vite _(coming)_                                    |
+- **Auth.** Email and password sign-in. The access token lives in memory only, and the refresh token in an httpOnly cookie. Refresh tokens rotate on every use, and a reused one revokes the session. Two roles, ADMIN and USER. Routes are denied by default, in the API and in the web app.
+- **Users module.** List with search, filters and pagination, create, edit, disable, set a password, and an account page for your own profile. It is the module every new one copies.
+- **Shared Zod schemas.** `packages/shared` holds the request schemas, response types and error codes. The API validates with them and the web forms use them, so the two can't drift.
+- **Web app.** React 19, Vite, React Router, TanStack Query and Table, react-hook-form, Tailwind 4 and shadcn on Base UI. Light and dark themes, a command palette, URL-driven list filters.
+- **API.** NestJS 12 on ESM, Prisma 7 on Postgres 18, one error format, Swagger docs, structured logs with pino, rate limits on sign-in.
+- **Tests.** Unit tests with Vitest, API e2e tests against a real Postgres, and Playwright browser tests in Chromium and Firefox against production builds.
+- **CI.** GitHub Actions runs format, lint, typecheck, unit and e2e tests, and the browser tests on every pull request.
+
+<!-- template:start -->
+
+- **One-command init.** `pnpm init:project` renames everything, writes the env files, sets up the database and seeds the first admin.
+
+<!-- template:end -->
 
 ## Quick start
 
@@ -55,15 +49,23 @@ On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a
 
 <!-- template:start -->
 
-**Starting a new project?** Create a repo from this template (**Use this template** on GitHub), clone it, and run:
+### New project from the template
+
+Click **Use this template** on GitHub, clone your new repo, then:
 
 ```bash
+pnpm install
 pnpm init:project
+pnpm dev
 ```
 
-It asks for a project name and the first admin, then renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, deletes itself and the template-only parts of this README, and commits the result as `chore: initialize <name>`. It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails before it deletes itself, fix the cause and run it again with the same `--name`: every step is safe to repeat. If one fails after, it prints the commands left to run by hand.
+`pnpm init:project` asks for a project name and the first admin. It renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, and commits the result as `chore: initialize <name>`. Then it deletes itself and the template-only parts of this README.
 
-The steps below are what it automates, and what anyone who clones the new project runs.
+It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails, the script tells you how to finish.
+
+### Without the init script
+
+The steps below are what the script automates, and what anyone who clones the new project runs.
 
 <!-- template:end -->
 
@@ -90,7 +92,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-That's it. The API is running at **http://localhost:8000**.
+The web app runs at **http://localhost:5173** and the API at **http://localhost:8000**, with its docs at **http://localhost:8000/docs**. Sign in with the admin from step 2.
 
 <details>
 <summary><b>Port 5432 already in use?</b></summary>
@@ -107,83 +109,134 @@ The e2e and browser tests read `DB_PORT` from the root `.env` too, so they follo
 
 </details>
 
+<!-- template:start -->
+
+## Why this starter
+
+Each choice below is made once, so a new project doesn't make it again.
+
+- **The access token never touches storage.** A script injected into the page can't read a token that isn't there. A reload gets a new one from the httpOnly refresh cookie.
+- **One schema per request, shared.** The API validates a body with the same Zod schema the web form uses. An unknown field is a 400, never silently dropped.
+- **Real databases in tests.** E2E and browser tests run against Postgres, each in its own database, never your dev data.
+- **Exact versions and a 14-day release age.** Every dependency is pinned, and pnpm refuses any version less than 14 days old, transitive ones included. A compromised release has time to get caught before it lands in an install.
+- **One pattern to copy.** `src/users` in the API and `features/users` in the web app are the reference modules. The rules are written down in `CLAUDE.md` and `.claude/skills/`, so people and coding agents follow the same pattern.
+
+<!-- template:end -->
+
+## Stack
+
+| Layer        | Choice                                                                          |
+| ------------ | ------------------------------------------------------------------------------- |
+| Monorepo     | pnpm 10 workspaces, Turborepo 2, TypeScript 6                                   |
+| API          | NestJS 12 on ESM, Zod 4 with nestjs-zod, nestjs-pino, Swagger                   |
+| Database     | Prisma 7 with a multi-file schema, Postgres 18 in Docker                        |
+| Web          | React 19, Vite 8, React Router 8, TanStack Query 5 and Table 9, react-hook-form |
+| UI           | Tailwind 4, shadcn on Base UI, lucide icons, sonner toasts                      |
+| Client state | zustand                                                                         |
+| Tests        | Vitest 4, Testing Library, msw, Playwright (Chromium and Firefox)               |
+| Tooling      | Oxlint (type-aware), Prettier, GitHub Actions                                   |
+
 ## Commands
 
 Run everything from the repo root. Turbo runs each task in every app that has it, in the right order, and skips work that hasn't changed.
 
-| Command                | What it does                                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`             | Start all apps in watch mode                                                                                    |
-| `pnpm build`           | Build all apps for production                                                                                   |
-| `pnpm typecheck`       | Check types across the repo                                                                                     |
-| `pnpm lint`            | Lint with Oxlint                                                                                                |
-| `pnpm format`          | Format the whole repo with Prettier                                                                             |
-| `pnpm format:check`    | Check formatting without writing                                                                                |
-| `pnpm test`            | Run unit tests                                                                                                  |
-| `pnpm test:e2e`        | Run end-to-end tests against `starter_test` _(needs the database running)_                                      |
-| `pnpm test:browser`    | Run the browser tests in Chromium and Firefox _(needs the database running)_                                    |
-| `pnpm test:browser:ui` | Build, then open the browser tests in Playwright's UI mode to run and debug them _(needs the database running)_ |
+<details>
+<summary><b>All commands</b></summary>
+
+<br>
+
+| Command                | What it does                                                     |
+| ---------------------- | ---------------------------------------------------------------- |
+| `pnpm dev`             | Start all apps in watch mode                                     |
+| `pnpm build`           | Build all apps for production                                    |
+| `pnpm typecheck`       | Check types across the repo                                      |
+| `pnpm lint`            | Lint with Oxlint                                                 |
+| `pnpm format`          | Format the whole repo with Prettier                              |
+| `pnpm format:check`    | Check formatting without writing                                 |
+| `pnpm test`            | Run unit tests                                                   |
+| `pnpm test:e2e`        | Run the API end-to-end tests _(needs the database running)_      |
+| `pnpm test:browser`    | Build, then run the browser tests _(needs the database running)_ |
+| `pnpm test:browser:ui` | Build, then open the browser tests in Playwright's UI mode       |
 
 **Database**
 
-| Command                                      | What it does                                                                                                                                                                                   |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @starter/api db:migrate`      | Create and apply a migration after a schema change                                                                                                                                             |
-| `pnpm --filter @starter/api db:deploy`       | Apply existing migrations, without creating new ones                                                                                                                                           |
-| `pnpm db:seed`                               | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Never changes an existing user with that email; fails if no active admin exists |
-| `pnpm --filter @starter/api db:studio`       | Browse and edit data in your browser                                                                                                                                                           |
-| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it                                                                                                                                  |
+| Command                                      | What it does                                                                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @starter/api db:migrate`      | Create and apply a migration after a schema change                                                                                                  |
+| `pnpm --filter @starter/api db:deploy`       | Apply existing migrations, without creating new ones                                                                                                |
+| `pnpm db:seed`                               | Create the admin from the `SEED_ADMIN_*` values in `apps/api/.env`. Never changes an existing user with that email; fails if no active admin exists |
+| `pnpm --filter @starter/api db:studio`       | Browse and edit data in your browser                                                                                                                |
+| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it                                                                                       |
 
-The seed builds the API and runs `dist/seed.js` through `nest start --entryFile seed`, configured as the seed command in `apps/api/prisma7.config.ts`. Run it from the root with `pnpm db:seed`, which goes through Turbo so the shared package is built first: `pnpm install` does not build it, and the API does not compile without it.
+</details>
 
-E2E tests never touch your dev database. They use a second database, `starter_test`, in the same Postgres container, set in `apps/api/.env.test`. `pnpm test:e2e` creates and migrates it on every run and empties the app tables before each test file. A name that does not end in `_test` stops the run before it connects.
+<details>
+<summary><b>How the tests use the database</b></summary>
 
-Browser tests (`apps/browser-tests`) cover what only a real browser can: the refresh cookie, reloads, several tabs and redirects. They also open every page as an admin to check it renders without errors, and run the main admin flow of creating and disabling a user. Playwright runs them in Chromium and Firefox against production builds of the API and web app, served by `vite preview`. They use a third database, `starter_browser`, dropped and recreated on every run, and an access token that lasts 5 seconds, so a test can see it expire. Install the browsers once with `pnpm --filter @starter/browser-tests exec playwright install chromium firefox`. A failed run keeps a trace and screenshot in `apps/browser-tests/test-results`, and `playwright-report` holds the HTML report.
+<br>
+
+Tests never touch your dev database. Each kind gets its own database in the same Postgres container.
+
+- **E2E** (`pnpm test:e2e`) uses `starter_test`, set in `apps/api/.env.test`. Each run creates and migrates it, and empties the app tables before each test file. A name that does not end in `_test` stops the run before it connects. A drift check fails the run when the Prisma schema and the migrations differ.
+- **Browser** (`pnpm test:browser`, in `apps/browser-tests`) uses `starter_browser`, dropped and recreated on every run. The tests cover what only a real browser can: the refresh cookie, reloads, several tabs and redirects. They also open every page to check it renders, and run the main admin flow. The access token lasts 5 seconds there, so a test can watch it expire.
+
+Install the browsers once with `pnpm --filter @starter/browser-tests exec playwright install chromium firefox`. A failed run keeps a trace and a screenshot in `apps/browser-tests/test-results`.
+
+</details>
 
 ## Project structure
+
+<details>
+<summary><b>Folder layout</b></summary>
+
+<br>
 
 ```
 nestjs-react-monorepo-starter/
 ├── apps/
-│   └── api/                   NestJS API
-│       ├── prisma/
-│       │   ├── schema.prisma      generator and datasource only
-│       │   ├── models/            one .prisma file per domain
-│       │   └── migrations/        committed, applied in order
-│       └── src/
-│           ├── config/            env validation
-│           ├── database/          Prisma service
-│           └── generated/         Prisma client (generated, not committed)
-├── packages/                  shared code (coming)
-├── docker-compose.yml         local Postgres
-└── turbo.json                 task pipeline
+│   ├── api/                  NestJS API
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma     generator and datasource only
+│   │   │   ├── models/           one .prisma file per domain
+│   │   │   └── migrations/       committed, applied in order
+│   │   ├── src/
+│   │   │   ├── auth/             sign-in, refresh, sessions, guards
+│   │   │   ├── users/            the reference module
+│   │   │   ├── health/           liveness and readiness probes
+│   │   │   ├── common/           errors, response envelope, pagination
+│   │   │   ├── config/           env validation, http, logger, swagger
+│   │   │   ├── database/         Prisma service
+│   │   │   └── seed.ts           creates the first admin
+│   │   └── test/                 e2e tests
+│   ├── web/                  React app
+│   │   └── src/
+│   │       ├── app/              router, shell, providers, dev pages
+│   │       ├── features/         one folder per domain (auth, users, ...)
+│   │       ├── systems/          shared React: forms, tables, filters
+│   │       ├── components/ui/    shadcn primitives
+│   │       └── lib/              plain TypeScript helpers
+│   └── browser-tests/        Playwright tests
+├── packages/
+│   └── shared/               Zod schemas and types for api and web
+├── .github/workflows/        CI
+├── docker-compose.yml        local Postgres
+└── turbo.json                task pipeline
 ```
 
-**`apps/`** holds things you run and deploy. **`packages/`** holds code shared between them, like Zod schemas and types.
+</details>
 
 ## Conventions
 
-- **Naming.** Prisma models and fields are camelCase, mapped to snake_case tables and columns in Postgres.
-- **One schema file per domain.** `user.prisma`, `leave.prisma`, `payroll.prisma`, each holding its related models.
-- **Migrations are permanent.** Always committed, never edited once they've run outside your machine. Need a change? Make a new migration.
-- **Config is validated.** The API refuses to start if an env variable is missing or wrong, and tells you exactly which one.
-- **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds nothing but the local Docker credentials for the throwaway test database and a fake JWT secret.
-- **Rate limits are per instance.** The throttler keeps its counts in memory, so with more than one API instance each keeps its own count. Running several instances needs shared storage for the throttler.
+The full rules live in `CLAUDE.md`. The ones you'll meet first:
+
+- **Naming.** Prisma models and fields are camelCase, mapped to snake_case tables and columns.
+- **One schema file per domain.** `user.prisma`, `invoice.prisma`, each holding its related models.
+- **Migrations are permanent.** Committed, never edited once they've run outside your machine. Need a change? Make a new migration.
+- **Config is validated.** The API refuses to start if an env variable is missing or wrong, and says which one.
+- **Secrets stay out of git.** Only `.env.example` files are committed, plus `apps/api/.env.test`, which holds the local Docker credentials for the test database and a fake JWT secret.
+- **Rate limits are per instance.** The throttler keeps its counts in memory. Running several API instances needs shared storage for it.
 
 <!-- template:start -->
-
-## Roadmap
-
-- [x] Monorepo with pnpm and Turborepo
-- [x] NestJS API on ESM with Vitest
-- [x] Prisma 7 and Postgres in Docker
-- [x] Validated environment config
-- [x] Request validation, error handling, logging, Swagger, health check
-- [x] Shared package for schemas and types
-- [x] React web app
-- [x] Auth and the users module
-- [ ] Repo-wide tooling and CI
-- [x] Init script to set up a new project in one command
 
 ## License
 

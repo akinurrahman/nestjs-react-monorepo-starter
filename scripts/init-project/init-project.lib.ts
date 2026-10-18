@@ -28,6 +28,10 @@ export const LEAVE_ALONE = [
 // decision, not the template's.
 export const DELETE_FILES = ['LICENSE', '.git-blame-ignore-revs'] as const;
 
+// Template-only folders, deleted with everything in them: the README's
+// banner and screenshots show the template, not the project.
+export const DELETE_DIRS = ['docs/images/'] as const;
+
 // The init script itself, removed once the project is set up.
 export const INIT_PACKAGE_DIR = 'scripts/init-project';
 
@@ -381,6 +385,27 @@ export function isLeftAlone(path: string): boolean {
   return LEAVE_ALONE.some((entry) =>
     entry.endsWith('/') ? path.startsWith(entry) : path === entry,
   );
+}
+
+export function isDeleted(path: string): boolean {
+  return (
+    (DELETE_FILES as readonly string[]).includes(path) ||
+    DELETE_DIRS.some((dir) => path.startsWith(dir))
+  );
+}
+
+export function isText(content: Uint8Array): boolean {
+  return !content.subarray(0, 8000).includes(0);
+}
+
+// What the rename does with a tracked file. Deletes come before the text
+// check: the deleted folders hold images, which would otherwise be skipped.
+export function renameAction(
+  path: string,
+  content: Uint8Array,
+): 'delete' | 'rewrite' | 'skip' {
+  if (isDeleted(path)) return 'delete';
+  return isText(content) ? 'rewrite' : 'skip';
 }
 
 // The lockfile is left to `pnpm install`, which rewrites the two workspace
