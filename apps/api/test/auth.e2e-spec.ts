@@ -171,11 +171,18 @@ describe('POST /api/auth/login', () => {
       .expect((res) => {
         expect((res.body as { code: string }).code).toBe('TOO_MANY_REQUESTS');
       });
-    // Another spelling of the same address is the same bucket.
-    await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: target.email.toUpperCase(), password: PASSWORD })
-      .expect(429);
+    // Another spelling of the same address is the same bucket: any case,
+    // any surrounding whitespace.
+    for (const email of [
+      target.email.toUpperCase(),
+      ` ${target.email}`,
+      `  ${target.email}\t`,
+    ]) {
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: PASSWORD })
+        .expect(429);
+    }
 
     await login(app, colleague.email).expect(200);
   });
