@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
+  API_ENV_EXISTS_MESSAGE,
+  apiEnvAction,
   choosePort,
   deriveNames,
   DIRTY_TREE_MESSAGE,
@@ -237,6 +239,27 @@ describe('DIRTY_TREE_MESSAGE', () => {
   it('tells how to undo a rename that stopped partway', () => {
     expect(DIRTY_TREE_MESSAGE).toMatch(/^\s+git restore \.$/m);
     expect(DIRTY_TREE_MESSAGE).toMatch(/commit or stash/i);
+  });
+});
+
+describe('apiEnvAction', () => {
+  it('writes apps/api/.env when there is none', () => {
+    expect(apiEnvAction(false, false)).toBe('write');
+    expect(apiEnvAction(true, false)).toBe('write');
+  });
+
+  it('keeps the one an earlier run wrote', () => {
+    expect(apiEnvAction(true, true)).toBe('keep');
+  });
+
+  it('refuses one that a fresh run finds', () => {
+    expect(apiEnvAction(false, true)).toBe('refuse');
+  });
+
+  it('says what to do about it', () => {
+    expect(API_ENV_EXISTS_MESSAGE).toContain('apps/api/.env');
+    expect(API_ENV_EXISTS_MESSAGE).toMatch(/not initialized/);
+    expect(API_ENV_EXISTS_MESSAGE).toMatch(/delete it, then run again/);
   });
 });
 

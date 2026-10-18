@@ -20,6 +20,9 @@ import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import {
+  API_ENV_EXISTS_MESSAGE,
+  API_ENV_FILE,
+  apiEnvAction,
   choosePort,
   DEFAULT_ADMIN_NAME,
   DEFAULT_DB_PORT,
@@ -60,8 +63,6 @@ const SELF_REMOVAL_FILES = [
   'pnpm-workspace.yaml',
   '.oxlintrc.json',
 ];
-
-const API_ENV_FILE = 'apps/api/.env';
 
 class StepError extends Error {}
 
@@ -219,6 +220,7 @@ async function collectInputs(
   opts: CliOptions,
   name: string | undefined,
   port: number,
+  resume: boolean,
 ): Promise<Inputs> {
   const projectName = await value(
     name,
@@ -237,8 +239,9 @@ async function collectInputs(
   );
   const repo = opts.repo ?? githubOrigin();
 
-  // A rerun keeps the apps/api/.env the first run wrote, admin included.
-  if (existsSync(join(ROOT, API_ENV_FILE))) {
+  // A rerun keeps the apps/api/.env the first run wrote, admin included. A
+  // fresh run that finds one has stopped in main already.
+  if (apiEnvAction(resume, existsSync(join(ROOT, API_ENV_FILE))) === 'keep') {
     return {
       names: deriveNames(projectName, displayName),
       admin: undefined,
@@ -524,13 +527,18 @@ async function main(): Promise<void> {
   ) {
     throw new StepError(DIRTY_TREE_MESSAGE);
   }
+  // Gitignored, so the dirty-tree check never sees it. A dry run stops too:
+  // the real run would.
+  if (apiEnvAction(resume, existsSync(join(ROOT, API_ENV_FILE))) === 'refuse') {
+    throw new StepError(API_ENV_EXISTS_MESSAGE);
+  }
 
   // Everything that needs no answers goes before the first prompt, so a
   // missing Docker or a taken port never throws the answers away.
   if (!opts.dryRun) preflight(opts);
   const port = await resolvePort(opts, resume);
 
-  const inputs = await collectInputs(opts, opts.name, port);
+  const inputs = await collectInputs(opts, opts.name, port, resume);
   const { names } = inputs;
   const api = `@${names.scope}/api`;
   const commit = `chore: initialize ${names.name}`;

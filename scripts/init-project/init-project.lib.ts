@@ -31,6 +31,8 @@ export const DELETE_FILES = ['LICENSE', '.git-blame-ignore-revs'] as const;
 // The init script itself, removed once the project is set up.
 export const INIT_PACKAGE_DIR = 'scripts/init-project';
 
+export const API_ENV_FILE = 'apps/api/.env';
+
 // ----------------------------------------------------------------------------
 // Names
 
@@ -236,6 +238,24 @@ export const DIRTY_TREE_MESSAGE = [
   '  Left by an init:project run that stopped during the rename? Undo it and run again:',
   '    git restore .',
   '  (git restore . discards every uncommitted change to tracked files.)',
+].join('\n');
+
+// The init writes apps/api/.env with the new port, a fresh JWT_SECRET and
+// the first admin. Only a resume can find one it wrote itself; on a fresh
+// run it is someone's own copy (say, from the README's manual steps) with
+// the template's values, so it is neither kept nor overwritten.
+export function apiEnvAction(
+  resume: boolean,
+  exists: boolean,
+): 'write' | 'keep' | 'refuse' {
+  if (!exists) return 'write';
+  return resume ? 'keep' : 'refuse';
+}
+
+export const API_ENV_EXISTS_MESSAGE = [
+  `${API_ENV_FILE} exists, but this repo is not initialized yet, so no earlier run wrote it.`,
+  '  The init writes it with the new database port, a fresh JWT_SECRET and the first admin.',
+  `  Move it aside (e.g. to ${API_ENV_FILE}.bak) or delete it, then run again.`,
 ].join('\n');
 
 // What is left once the init script has removed itself: the install that

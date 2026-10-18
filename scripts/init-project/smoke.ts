@@ -186,6 +186,24 @@ async function main(): Promise<void> {
     `${taken.stdout}\n${taken.stderr}`,
   );
 
+  // An apps/api/.env from the README's manual steps, found by a fresh run:
+  // refused before anything changes, not kept with the template's values.
+  const apiEnv = join(repo, 'apps/api/.env');
+  copyFileSync(join(repo, 'apps/api/.env.example'), apiEnv);
+  const ownEnv = run(repo, `pnpm init:project ${flags}`, {
+    env,
+    quiet: true,
+  });
+  check(
+    'a fresh run refuses an existing apps/api/.env and changes nothing',
+    !ownEnv.ok &&
+      ownEnv.stderr.includes('apps/api/.env exists') &&
+      git(repo, 'status --porcelain') === '' &&
+      !existsSync(join(repo, '.env')),
+    `${ownEnv.stdout}\n${ownEnv.stderr}`,
+  );
+  rmSync(apiEnv);
+
   // A failure after the self-removal: a pre-commit hook fails the commit.
   // The script is gone by then, so the hint gives the steps left by hand
   // instead of a rerun, and those steps finish the init.
