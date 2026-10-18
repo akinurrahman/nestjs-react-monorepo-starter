@@ -3,8 +3,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
-  <img alt="NestJS + React" src="docs/images/banner-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+  <img alt="NestJS + React" src=".github/assets/banner-light.svg" width="100%">
 </picture>
 
 <br>
