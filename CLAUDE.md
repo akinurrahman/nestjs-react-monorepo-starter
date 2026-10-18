@@ -164,7 +164,7 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   `barePages` (screens outside the shell) in `src/app/router.ts`. A nav group must
   be in `NAV_GROUPS` (`src/app/config.ts`).
 - Routes are denied by default. `public: true` only for pages that work with no user
-  (login, forgot password, the 404), and never under a parent with `roles`.
+  (login, the 404), and never under a parent with `roles`.
 - Dev-only routes live in `src/app/dev`, added behind `import.meta.env.DEV`.
 - Modals come from `components/ui` (Dialog, Sheet, AlertDialog), which report to the
   modal registry. Never build one straight on `@base-ui/react`.

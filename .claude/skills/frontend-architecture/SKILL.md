@@ -455,7 +455,7 @@ export const academicRoutes: AppRouteObject[] = [
   `React.lazy`.
 - Access is denied by default. A route without `public: true` needs a
   signed-in user. `public` is only for pages that work with no user: login,
-  forgot password, the 404. It is read from the deepest matched route that
+  the 404. It is read from the deepest matched route that
   has a handle, so it covers that route's handle-less children (an index
   route), and a child with its own handle has to say `public` itself. A
   public route takes no `roles`, which the type rejects, and never sits under
