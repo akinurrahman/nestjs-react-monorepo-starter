@@ -20,6 +20,11 @@ const OPTIONS: Option[] = [
 
 const LABEL = 'Value';
 
+// DatePicker loads the calendar lazily, and under a full parallel run its
+// first import can outlast a findBy. Loaded once up front, so the tests
+// measure the field and not the chunk.
+beforeAll(() => import('@/components/ui/calendar'), 30_000);
+
 type FieldCase = {
   title: string;
   value: z.ZodType;

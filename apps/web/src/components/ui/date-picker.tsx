@@ -1,7 +1,6 @@
-import { useState, type Ref } from 'react';
-import { CalendarIcon } from 'lucide-react';
+import { lazy, Suspense, useState, type Ref } from 'react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
@@ -29,6 +28,18 @@ type DatePickerProps = {
   'aria-describedby'?: string;
   className?: string;
 };
+
+// react-day-picker is most of the form code, and every form imports this
+// through the field barrel, the login page included. So the calendar loads
+// on first open, and is fetched early when the trigger is hovered or focused.
+const loadCalendar = () => import('@/components/ui/calendar');
+const Calendar = lazy(() =>
+  loadCalendar().then((module) => ({ default: module.Calendar })),
+);
+
+function preloadCalendar() {
+  void loadCalendar();
+}
 
 // The month a bounded picker opens on, so a range entirely in the past or the
 // future does not open on a month of disabled days.
@@ -69,6 +80,8 @@ function DatePicker({
       <PopoverTrigger
         ref={ref}
         disabled={disabled}
+        onPointerEnter={preloadCalendar}
+        onFocus={preloadCalendar}
         render={
           <Button
             data-slot="date-picker-trigger"
@@ -90,20 +103,31 @@ function DatePicker({
       </PopoverTrigger>
 
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={(next) => {
-            onValueChange?.(next ? calendarDateOf(next) : undefined);
-            setOpen(false);
-          }}
-          disabled={blocked.length ? blocked : undefined}
-          defaultMonth={openingMonth(selected, min, max)}
-          // Focus moves into a popup the user just opened, onto the selected
-          // day, which is what keyboard users expect from a date picker.
-          // oxlint-disable-next-line jsx-a11y/no-autofocus
-          autoFocus
-        />
+        <Suspense
+          fallback={
+            <div className="flex h-72 w-64 items-center justify-center">
+              <Loader2
+                aria-hidden="true"
+                className="size-5 animate-spin text-muted-foreground"
+              />
+            </div>
+          }
+        >
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(next) => {
+              onValueChange?.(next ? calendarDateOf(next) : undefined);
+              setOpen(false);
+            }}
+            disabled={blocked.length ? blocked : undefined}
+            defaultMonth={openingMonth(selected, min, max)}
+            // Focus moves into a popup the user just opened, onto the selected
+            // day, which is what keyboard users expect from a date picker.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+          />
+        </Suspense>
       </PopoverContent>
     </Popover>
   );
