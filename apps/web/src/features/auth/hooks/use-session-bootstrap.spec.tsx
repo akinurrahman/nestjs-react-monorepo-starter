@@ -45,6 +45,8 @@ const pages: AppRouteObject[] = [
 
 const PREVIOUS_KEY = ['previous'];
 
+const SESSION_EXPIRED = 'Your session expired. Sign in again to continue.';
+
 function serveReports() {
   server.use(
     http.get('/api/reports', ({ request }) =>
@@ -97,6 +99,8 @@ describe('session startup', () => {
       user: null,
       endedBy: null,
     });
+    // No session to expire: a first visit is not told it timed out.
+    expect(screen.queryByText(SESSION_EXPIRED)).toBeNull();
   });
 
   it('shows only a loading screen while checking, never the login page', async () => {
@@ -267,6 +271,7 @@ describe('session expiry', () => {
       user: null,
       endedBy: 'expired',
     });
+    expect(screen.getByText(SESSION_EXPIRED)).toBeInTheDocument();
     // The redirect says it all, so no "Authentication required" toast.
     expect(screen.queryByText('Authentication required')).toBeNull();
   });
