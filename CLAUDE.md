@@ -10,6 +10,11 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
 
 - Prisma 7 and Turbo 2 may differ from your training data. Read `.claude/skills/prisma-*`
   or the installed docs before changing Prisma code or config. Don't upgrade Prisma to 8.
+- Where the Prisma skills and this repo differ, the repo wins. The config is
+  `apps/api/prisma7.config.ts`: this Prisma reads it before `prisma.config.ts`, so a new
+  `prisma.config.ts` is silently ignored. The seed runs through the compiled build
+  (`nest start --entryFile seed`), never `tsx`: esbuild drops the decorator metadata
+  Nest's injection needs. The client is generated to `src/generated/prisma`.
 - All deps are pinned exact (`save-exact=true`). New deps: pin exact, check peer ranges
   against Nest 12, ask before adding a `peerDependencyRules` override.
 - pnpm enforces a 14-day minimum release age for every package, transitive deps
