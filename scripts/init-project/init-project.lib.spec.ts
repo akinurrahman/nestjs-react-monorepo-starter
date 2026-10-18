@@ -400,6 +400,8 @@ describe('replaceOnce', () => {
 
   it('throws on neither, or on several matches', () => {
     expect(() => replaceOnce('a b', 'X', 'Y')).toThrow(/Expected to find/);
+    // An empty replacement is in every string: it cannot mark a match done.
+    expect(() => replaceOnce('a b', 'X', '')).toThrow(/Expected to find/);
     expect(() => replaceOnce('X X', 'X', 'Y')).toThrow(/found it 2 times/);
   });
 
@@ -593,6 +595,15 @@ describe('removeInitScript', () => {
     );
     expect(out).not.toContain('scripts/init-project');
     expect(out).toContain('  - packages/*\n');
+  });
+
+  it('fails loudly when the workspace entry is not the line it removes', () => {
+    expect(() =>
+      removeInitScript(
+        'pnpm-workspace.yaml',
+        "packages:\n  - 'scripts/init-project'\n",
+      ),
+    ).toThrow(/Expected to find/);
   });
 
   it('drops the oxlint override and keeps the rest', () => {

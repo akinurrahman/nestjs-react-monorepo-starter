@@ -489,10 +489,11 @@ function rewritePackageJson(source: string, rootName: string | null): string {
 
 // Replaces `from`, which must appear once. Already replaced (`to` present
 // instead) is fine; neither means the template moved on without the script.
+// An empty `to` is in every string, so it never counts as already replaced.
 export function replaceOnce(source: string, from: string, to: string): string {
   const count = source.split(from).length - 1;
   if (count === 1) return source.replace(from, () => to);
-  if (count === 0 && source.includes(to)) return source;
+  if (count === 0 && to !== '' && source.includes(to)) return source;
   throw new Error(
     count === 0
       ? `Expected to find ${JSON.stringify(from)}`
@@ -534,7 +535,9 @@ export function removeInitScript(path: string, source: string): string {
       return `${JSON.stringify(pkg, null, 2)}\n`;
     }
     case 'pnpm-workspace.yaml':
-      return source.replace(`  - ${INIT_PACKAGE_DIR}\n`, '');
+      // Gone already is a rerun. Present in any other form is drift.
+      if (!source.includes(INIT_PACKAGE_DIR)) return source;
+      return replaceOnce(source, `  - ${INIT_PACKAGE_DIR}\n`, '');
     case '.oxlintrc.json': {
       const config = JSON.parse(source) as {
         overrides?: { files: string[] }[];
