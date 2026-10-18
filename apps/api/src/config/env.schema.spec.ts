@@ -190,7 +190,8 @@ describe('auth settings', () => {
 
 describe('SWAGGER_USER / SWAGGER_PASSWORD', () => {
   const PROD = { NODE_ENV: 'production', CORS_ORIGINS: 'https://app.example' };
-  const CREDENTIALS = { SWAGGER_USER: 'docs', SWAGGER_PASSWORD: 'secret' };
+  const PASSWORD = 'p'.repeat(16);
+  const CREDENTIALS = { SWAGGER_USER: 'docs', SWAGGER_PASSWORD: PASSWORD };
 
   function issuePaths(env: Record<string, string>) {
     const result = envSchema.safeParse({ ...base, ...env });
@@ -221,14 +222,28 @@ describe('SWAGGER_USER / SWAGGER_PASSWORD', () => {
 
   it('must be set together', () => {
     expect(issuePaths({ SWAGGER_USER: 'docs' })).toEqual(['SWAGGER_PASSWORD']);
-    expect(issuePaths({ SWAGGER_PASSWORD: 'secret' })).toEqual([
+    expect(issuePaths({ SWAGGER_PASSWORD: PASSWORD })).toEqual([
       'SWAGGER_USER',
     ]);
   });
 
   it('rejects empty values', () => {
     expect(
-      issuePaths({ SWAGGER_USER: '', SWAGGER_PASSWORD: 'secret' }),
+      issuePaths({ SWAGGER_USER: '', SWAGGER_PASSWORD: PASSWORD }),
     ).toContain('SWAGGER_USER');
+  });
+
+  // The docs login has no rate limit, so the password must resist guessing.
+  it('requires a password of at least 16 characters', () => {
+    const result = envSchema.safeParse({
+      ...base,
+      ...CREDENTIALS,
+      SWAGGER_PASSWORD: 'p'.repeat(15),
+    });
+    expect(
+      result.error?.issues.find((i) => i.path[0] === 'SWAGGER_PASSWORD')
+        ?.message,
+    ).toMatch(/at least 16 characters/);
+    expect(issuePaths(CREDENTIALS)).toEqual([]);
   });
 });

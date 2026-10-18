@@ -50,7 +50,12 @@ export const envSchema = z
       .default('info'),
     SWAGGER_ENABLED: z.stringbool().optional(),
     SWAGGER_USER: z.string().min(1).optional(),
-    SWAGGER_PASSWORD: z.string().min(1).optional(),
+    // The docs login has no rate limit, so a short password could be
+    // guessed online.
+    SWAGGER_PASSWORD: z
+      .string()
+      .min(16, { error: 'Must be at least 16 characters' })
+      .optional(),
     CORS_ORIGINS: corsOrigins.optional(),
     // Number of reverse proxies in front of the app; unset trusts none, so
     // X-Forwarded-For is ignored.
