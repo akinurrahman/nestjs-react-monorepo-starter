@@ -36,7 +36,7 @@ export class HealthController {
   // paths stay unprefixed for infra.
   @Get('status')
   @ApiDataResponse(ReadinessDto)
-  @ApiErrorResponses(503)
+  @ApiErrorResponses(429, 503)
   status(): Promise<Readiness> {
     return this.health.readiness();
   }

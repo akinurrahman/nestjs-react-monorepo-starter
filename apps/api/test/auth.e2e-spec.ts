@@ -496,4 +496,28 @@ describe('API docs', () => {
       expect(doc.paths[path]?.[method]?.security).toEqual([{}]);
     }
   });
+
+  // Every /api route is throttled and only the probes are not, so the docs
+  // must list 429 on exactly the /api routes.
+  it('list 429 on every /api route and never on the probes', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+    const doc = res.body as {
+      paths: Record<string, Record<string, { responses: object }>>;
+    };
+
+    const missing: string[] = [];
+    const unexpected: string[] = [];
+    for (const [path, methods] of Object.entries(doc.paths)) {
+      for (const [method, operation] of Object.entries(methods)) {
+        const has429 = '429' in operation.responses;
+        const throttled = path.startsWith('/api/');
+        if (throttled && !has429) missing.push(`${method} ${path}`);
+        if (!throttled && has429) unexpected.push(`${method} ${path}`);
+      }
+    }
+    expect(missing).toEqual([]);
+    expect(unexpected).toEqual([]);
+  });
 });
