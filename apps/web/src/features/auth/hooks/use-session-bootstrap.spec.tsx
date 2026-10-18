@@ -19,8 +19,10 @@ import {
   serveRefresh,
   serviceUnavailable,
   testUser,
+  tooManyRequests,
   unauthorized,
 } from '@/test/auth-fixtures';
+import { internalError } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
 import { renderApp } from '@/test/render-app';
 
@@ -118,17 +120,68 @@ describe('session startup', () => {
     ).toBeNull();
   });
 
-  it.each(REFRESH_UNAVAILABLE)(
-    "shows can't reach the server, not login, when the refresh fails with %s",
-    async (_, respond) => {
+  const UNREACHABLE = "Can't reach the server";
+  const CHECK_CONNECTION = 'Check your connection and try again.';
+
+  // What the screen says depends on why the refresh got no answer: only an
+  // unreachable server is a connection problem.
+  it.each([
+    [
+      'a network error',
+      () => HttpResponse.error(),
+      UNREACHABLE,
+      CHECK_CONNECTION,
+    ],
+    [
+      'a proxy 502',
+      () =>
+        new HttpResponse('<html><body>Bad Gateway</body></html>', {
+          status: 502,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+      UNREACHABLE,
+      CHECK_CONNECTION,
+    ],
+    [
+      'a 503',
+      () => HttpResponse.json(serviceUnavailable, { status: 503 }),
+      UNREACHABLE,
+      CHECK_CONNECTION,
+    ],
+    [
+      'a 429 with Retry-After',
+      () =>
+        HttpResponse.json(tooManyRequests, {
+          status: 429,
+          headers: { 'Retry-After': '30' },
+        }),
+      'Too many requests',
+      'Try again in 30 seconds.',
+    ],
+    [
+      'a 429 without Retry-After',
+      () => HttpResponse.json(tooManyRequests, { status: 429 }),
+      'Too many requests',
+      'Wait a moment, then try again.',
+    ],
+    [
+      'a 500',
+      () => HttpResponse.json(internalError, { status: 500 }),
+      'The server ran into a problem',
+      'Try again in a moment.',
+    ],
+  ])(
+    'explains the failure, not login, when the refresh fails with %s',
+    async (_, respond, heading, description) => {
       serveRefresh(respond);
 
       const { router } = renderApp(pages, '/reports', { restore: true });
       const locations = trackLocations(router);
 
       expect(
-        await screen.findByRole('heading', { name: "Can't reach the server" }),
+        await screen.findByRole('heading', { name: heading }),
       ).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(description);
       expect(screen.queryByRole('heading', { name: 'Sign in' })).toBeNull();
       expect(locations).not.toContain('/login');
       expect(useSessionStore.getState()).toMatchObject({
