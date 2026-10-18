@@ -9,6 +9,8 @@ const envSchema = z.object({
         error: 'Must be empty (same origin) or an http(s) URL',
       }),
     ])
+    // lib/api appends /api, which a trailing slash would turn into //api.
+    .transform((url) => url.replace(/\/+$/, ''))
     .default(''),
 });
 
