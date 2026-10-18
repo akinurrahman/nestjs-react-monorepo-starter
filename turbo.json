@@ -31,12 +31,13 @@
     },
     "test:e2e": {
       "dependsOn": ["^build", "db:generate"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DB_PORT"]
     },
     "test:browser": {
       "dependsOn": ["@starter/api#build", "@starter/web#build"],
       "cache": false,
-      "passThroughEnv": ["CI"]
+      "passThroughEnv": ["CI", "DB_PORT"]
     }
   }
 }
