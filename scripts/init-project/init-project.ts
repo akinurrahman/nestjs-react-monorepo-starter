@@ -20,6 +20,10 @@ import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import {
+  adminSummary,
+  API_ENV_EXISTS_MESSAGE,
+  API_ENV_FILE,
+  apiEnvAction,
   choosePort,
   DEFAULT_ADMIN_NAME,
   DEFAULT_DB_PORT,
@@ -29,6 +33,8 @@ import {
   INIT_PACKAGE_DIR,
   TEMPLATE,
   deriveNames,
+  displayNameGiven,
+  finishCommands,
   initState,
   lineDiff,
   parseCli,
@@ -38,6 +44,7 @@ import {
   renderApiEnv,
   renderRootEnv,
   rewriteFile,
+  stopHint,
   validateAdminEmail,
   validateAdminName,
   validateAdminPassword,
@@ -46,6 +53,7 @@ import {
   type Admin,
   type CliOptions,
   type GitHubRepo,
+  type InitStage,
   type Names,
 } from './init-project.lib.ts';
 
@@ -58,13 +66,13 @@ const SELF_REMOVAL_FILES = [
   '.oxlintrc.json',
 ];
 
-const API_ENV_FILE = 'apps/api/.env';
-
 class StepError extends Error {}
 
-// Set once the first file changes: from then on, a failure leaves a
-// half-initialized repo that a rerun finishes.
-let changing = false;
+// 'changing' once the first file changes: from then on, a failure leaves a
+// half-initialized repo that a rerun finishes. 'removed' once the script
+// has deleted itself: the rest is by hand, from `finish`.
+let stage: InitStage = 'none';
+let finish: string[] = [];
 
 // ----------------------------------------------------------------------------
 // Processes and files
@@ -214,6 +222,7 @@ async function collectInputs(
   opts: CliOptions,
   name: string | undefined,
   port: number,
+  resume: boolean,
 ): Promise<Inputs> {
   const projectName = await value(
     name,
@@ -224,7 +233,7 @@ async function collectInputs(
   );
   const derived = deriveNames(projectName);
   const displayName = await value(
-    opts.displayName,
+    displayNameGiven(opts, resume, derived.displayName),
     opts,
     () => ask('Display name', derived.displayName),
     validateDisplayName,
@@ -232,8 +241,9 @@ async function collectInputs(
   );
   const repo = opts.repo ?? githubOrigin();
 
-  // A rerun keeps the apps/api/.env the first run wrote, admin included.
-  if (existsSync(join(ROOT, API_ENV_FILE))) {
+  // A rerun keeps the apps/api/.env the first run wrote, admin included. A
+  // fresh run that finds one has stopped in main already.
+  if (apiEnvAction(resume, existsSync(join(ROOT, API_ENV_FILE))) === 'keep') {
     return {
       names: deriveNames(projectName, displayName),
       admin: undefined,
@@ -519,16 +529,22 @@ async function main(): Promise<void> {
   ) {
     throw new StepError(DIRTY_TREE_MESSAGE);
   }
+  // Gitignored, so the dirty-tree check never sees it. A dry run stops too:
+  // the real run would.
+  if (apiEnvAction(resume, existsSync(join(ROOT, API_ENV_FILE))) === 'refuse') {
+    throw new StepError(API_ENV_EXISTS_MESSAGE);
+  }
 
   // Everything that needs no answers goes before the first prompt, so a
   // missing Docker or a taken port never throws the answers away.
   if (!opts.dryRun) preflight(opts);
   const port = await resolvePort(opts, resume);
 
-  const inputs = await collectInputs(opts, opts.name, port);
+  const inputs = await collectInputs(opts, opts.name, port, resume);
   const { names } = inputs;
   const api = `@${names.scope}/api`;
   const commit = `chore: initialize ${names.name}`;
+  finish = finishCommands(opts.commit ? commit : undefined);
 
   const rename = resume ? [] : planRename(inputs);
   const renamed = new Map(
@@ -544,9 +560,7 @@ async function main(): Promise<void> {
     `pnpm --filter ${api} db:deploy`,
     'pnpm db:seed',
     `remove ${INIT_PACKAGE_DIR}, its workspace entry, its oxlint override and the init:project script`,
-    'pnpm install --no-frozen-lockfile',
-    'pnpm format',
-    ...(opts.commit ? ['git add -A', `git commit -m "${commit}"`] : []),
+    ...finish,
   ];
 
   if (opts.dryRun) {
@@ -554,7 +568,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  changing = true;
+  stage = 'changing';
   console.log(
     `\nRenaming ${TEMPLATE.rootName} to ${names.name} (${rename.length} files)`,
   );
@@ -576,7 +590,11 @@ async function main(): Promise<void> {
   mustRun('pnpm', ['db:seed']);
 
   console.log(`\nRemoving the init script`);
-  applyChanges(planSelfRemoval());
+  // Planned before the first edit, so a drifted file stops the run while a
+  // rerun still can finish it.
+  const selfRemoval = planSelfRemoval();
+  stage = 'removed';
+  applyChanges(selfRemoval);
   rmSync(join(ROOT, INIT_PACKAGE_DIR), { recursive: true, force: true });
   const scriptsDir = join(ROOT, INIT_PACKAGE_DIR, '..');
   if (existsSync(scriptsDir) && readdirSync(scriptsDir).length === 0) {
@@ -593,11 +611,12 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n${names.displayName} is ready.`);
-  if (inputs.admin) console.log(`  Admin: ${inputs.admin.email}`);
-  if (inputs.admin && inputs.generatedPassword) {
-    console.log(
-      `  Generated admin password (shown once, also in ${API_ENV_FILE}): ${inputs.admin.password}`,
-    );
+  for (const line of adminSummary(
+    inputs.admin,
+    inputs.generatedPassword,
+    inputs.admin ? undefined : read(API_ENV_FILE),
+  )) {
+    console.log(line);
   }
   console.log('  Start it: pnpm dev');
   if (!opts.commit) console.log('  The changes are not committed.');
@@ -608,10 +627,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`\ninit:project stopped: ${message}`);
-  if (changing) {
-    console.error(
-      'Fix the cause and run it again with the same --name: every step is safe to repeat.',
-    );
-  }
+  const hint = stopHint(stage, finish);
+  if (hint) console.error(hint);
   process.exitCode = 1;
 }

@@ -5,9 +5,15 @@ import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
+  adminSummary,
+  API_ENV_EXISTS_MESSAGE,
+  apiEnvAction,
   choosePort,
+  DELETE_FILES,
   deriveNames,
   DIRTY_TREE_MESSAGE,
+  displayNameGiven,
+  finishCommands,
   firstFreePort,
   initState,
   isLeftAlone,
@@ -24,6 +30,7 @@ import {
   replaceOnce,
   rewriteFile,
   shouldRewrite,
+  stopHint,
   TEMPLATE,
   toDisplayName,
   validateAdminEmail,
@@ -70,6 +77,22 @@ describe('validateName', () => {
     'refuses the reserved %j',
     (name) => {
       expect(validateName(name)).toMatch(/reserved/);
+    },
+  );
+
+  // x-test gives the dev database x_test, which the e2e reset guard takes
+  // for a test database; x-browser likewise for the browser tests.
+  it.each(['x-test', 'x-browser', 'acme-crm-test'])(
+    'refuses %j, whose dev database passes a test database guard',
+    (name) => {
+      expect(validateName(name)).toMatch(/-test or -browser/);
+    },
+  );
+
+  it.each(['test', 'browser', 'x-testing', 'test-x', 'x-browsers'])(
+    'accepts %j',
+    (name) => {
+      expect(validateName(name)).toBeUndefined();
     },
   );
 });
@@ -145,6 +168,13 @@ describe('quoteEnvValue', () => {
 
   it('refuses a line break', () => {
     expect(() => quoteEnvValue('a\nb')).toThrow(/line break/);
+    expect(() => quoteEnvValue('a\rb')).toThrow(/line break/);
+  });
+
+  // In double quotes, parseEnv turns \n into a newline, so no quoting
+  // keeps this value intact.
+  it('refuses a single quote together with a backslash', () => {
+    expect(() => quoteEnvValue("a'b\\nc")).toThrow(/both/);
   });
 });
 
@@ -238,6 +268,114 @@ describe('DIRTY_TREE_MESSAGE', () => {
   });
 });
 
+describe('apiEnvAction', () => {
+  it('writes apps/api/.env when there is none', () => {
+    expect(apiEnvAction(false, false)).toBe('write');
+    expect(apiEnvAction(true, false)).toBe('write');
+  });
+
+  it('keeps the one an earlier run wrote', () => {
+    expect(apiEnvAction(true, true)).toBe('keep');
+  });
+
+  it('refuses one that a fresh run finds', () => {
+    expect(apiEnvAction(false, true)).toBe('refuse');
+  });
+
+  it('says what to do about it', () => {
+    expect(API_ENV_EXISTS_MESSAGE).toContain('apps/api/.env');
+    expect(API_ENV_EXISTS_MESSAGE).toMatch(/not initialized/);
+    expect(API_ENV_EXISTS_MESSAGE).toMatch(/delete it, then run again/);
+  });
+});
+
+describe('displayNameGiven', () => {
+  it('takes the flag first', () => {
+    expect(displayNameGiven({ displayName: 'X', yes: true }, true, 'D')).toBe(
+      'X',
+    );
+  });
+
+  it('defaults from the name with --yes and on a resume', () => {
+    expect(displayNameGiven({ yes: true }, false, 'Acme Crm')).toBe('Acme Crm');
+    expect(displayNameGiven({ yes: false }, true, 'Acme Crm')).toBe('Acme Crm');
+  });
+
+  it('leaves a fresh interactive run to the prompt', () => {
+    expect(displayNameGiven({ yes: false }, false, 'Acme Crm')).toBeUndefined();
+  });
+});
+
+describe('stopHint', () => {
+  const finish = [
+    'pnpm install --no-frozen-lockfile',
+    'pnpm format',
+    'git add -A',
+    'git commit -m "chore: initialize acme"',
+  ];
+
+  it('lists the steps left after the self-removal', () => {
+    expect(finishCommands('chore: initialize acme')).toEqual([
+      'pnpm install --no-frozen-lockfile',
+      'pnpm format',
+      'git add -A',
+      'git commit -m "chore: initialize acme"',
+    ]);
+    expect(finishCommands(undefined)).toEqual([
+      'pnpm install --no-frozen-lockfile',
+      'pnpm format',
+    ]);
+  });
+
+  it('says nothing before the first change', () => {
+    expect(stopHint('none', finish)).toBeUndefined();
+  });
+
+  it('says to run again while the script is still there', () => {
+    expect(stopHint('changing', finish)).toMatch(/run it again/);
+  });
+
+  it('gives the steps left once the script removed itself', () => {
+    const hint = stopHint('removed', finish)!;
+    expect(hint).not.toMatch(/run it again/);
+    expect(hint).toMatch(/removed itself/);
+    expect(hint.split('\n').slice(1)).toEqual(finish.map((c) => `  ${c}`));
+  });
+});
+
+describe('adminSummary', () => {
+  const admin = { email: 'ada@example.com', name: 'Ada', password: 'pw123456' };
+
+  it('shows a generated password once', () => {
+    expect(adminSummary(admin, true, undefined)).toEqual([
+      '  Admin: ada@example.com',
+      '  Generated admin password (shown once, also in apps/api/.env): pw123456',
+    ]);
+  });
+
+  it('never shows a typed password', () => {
+    expect(adminSummary(admin, false, undefined)).toEqual([
+      '  Admin: ada@example.com',
+    ]);
+  });
+
+  it('points a resumed run at the kept apps/api/.env', () => {
+    expect(
+      adminSummary(
+        undefined,
+        false,
+        "SEED_ADMIN_EMAIL='ada@example.com'\nSEED_ADMIN_PASSWORD='pw123456'\n",
+      ),
+    ).toEqual([
+      '  Admin: ada@example.com',
+      '  Admin password: SEED_ADMIN_PASSWORD in apps/api/.env',
+    ]);
+    expect(adminSummary(undefined, false, '')).toEqual([
+      '  Admin: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in apps/api/.env',
+    ]);
+  });
+});
+
 describe('parseGitHubRemote', () => {
   it.each([
     'https://github.com/acme/crm.git',
@@ -270,6 +408,8 @@ describe('replaceOnce', () => {
 
   it('throws on neither, or on several matches', () => {
     expect(() => replaceOnce('a b', 'X', 'Y')).toThrow(/Expected to find/);
+    // An empty replacement is in every string: it cannot mark a match done.
+    expect(() => replaceOnce('a b', 'X', '')).toThrow(/Expected to find/);
     expect(() => replaceOnce('X X', 'X', 'Y')).toThrow(/found it 2 times/);
   });
 
@@ -362,14 +502,15 @@ describe('rewriteFile', () => {
     ).toBe("<title>Bob's &lt;Co&gt; &amp; \\</title>");
   });
 
-  it('uses a placeholder repo url without a GitHub remote', () => {
+  it('uses a placeholder owner and the project name without a GitHub remote', () => {
     const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
     const out = rewriteFile('README.md', readme, {
       names: ctx.names,
       repo: undefined,
     });
-    expect(out).toContain('git clone https://github.com/<owner>/<repo>.git');
-    expect(out).toContain('cd acme-crm\n');
+    expect(out).toContain(
+      'git clone https://github.com/<owner>/acme-crm.git\ncd acme-crm\n',
+    );
   });
 
   // Every tracked file, as the script sees it. Catches a template change
@@ -381,7 +522,7 @@ describe('rewriteFile', () => {
     })
       .split('\0')
       .filter((path) => path && existsSync(join(ROOT, path)))
-      .filter((path) => !['LICENSE', '.git-blame-ignore-revs'].includes(path))
+      .filter((path) => !(DELETE_FILES as readonly string[]).includes(path))
       .map((path) => ({ path, raw: readFileSync(join(ROOT, path)) }))
       .filter(({ raw }) => !raw.subarray(0, 8000).includes(0))
       .map(({ path, raw }) => ({ path, source: raw.toString('utf8') }));
@@ -462,6 +603,15 @@ describe('removeInitScript', () => {
     );
     expect(out).not.toContain('scripts/init-project');
     expect(out).toContain('  - packages/*\n');
+  });
+
+  it('fails loudly when the workspace entry is not the line it removes', () => {
+    expect(() =>
+      removeInitScript(
+        'pnpm-workspace.yaml',
+        "packages:\n  - 'scripts/init-project'\n",
+      ),
+    ).toThrow(/Expected to find/);
   });
 
   it('drops the oxlint override and keeps the rest', () => {

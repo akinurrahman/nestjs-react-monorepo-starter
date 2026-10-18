@@ -61,7 +61,7 @@ On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a
 pnpm init:project
 ```
 
-It asks for a project name and the first admin, then renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, deletes itself and the template-only parts of this README, and commits the result as `chore: initialize <name>`. It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails, fix the cause and run it again with the same `--name`: every step is safe to repeat.
+It asks for a project name and the first admin, then renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, deletes itself and the template-only parts of this README, and commits the result as `chore: initialize <name>`. It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails before it deletes itself, fix the cause and run it again with the same `--name`: every step is safe to repeat. If one fails after, it prints the commands left to run by hand.
 
 The steps below are what it automates, and what anyone who clones the new project runs.
 

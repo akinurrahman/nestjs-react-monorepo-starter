@@ -4,7 +4,7 @@
 // Run by Node's type stripping before `pnpm install`, so this file imports
 // only node: modules and uses erasable syntax only.
 
-import { parseArgs } from 'node:util';
+import { parseArgs, parseEnv } from 'node:util';
 
 // What the template calls itself. Every rewrite below starts from these.
 export const TEMPLATE = {
@@ -30,6 +30,8 @@ export const DELETE_FILES = ['LICENSE', '.git-blame-ignore-revs'] as const;
 
 // The init script itself, removed once the project is set up.
 export const INIT_PACKAGE_DIR = 'scripts/init-project';
+
+export const API_ENV_FILE = 'apps/api/.env';
 
 // ----------------------------------------------------------------------------
 // Names
@@ -70,6 +72,11 @@ export function validateName(name: string): string | undefined {
   if (RESERVED_NAMES.has(name.replaceAll('-', '_'))) {
     return `"${name}" is reserved`;
   }
+  // The dev database would end in _test or _browser, which the e2e and
+  // browser test setups take for their own and drop or reset.
+  if (/-(test|browser)$/.test(name)) {
+    return `"${name}" ends in -test or -browser: the test database guards would take the dev database for a test database`;
+  }
   return undefined;
 }
 
@@ -94,6 +101,16 @@ export function toDisplayName(name: string): string {
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+// The --display-name to validate, or undefined to prompt. --yes defaults it
+// like --admin-name; a resume renames nothing, so it never needs one.
+export function displayNameGiven(
+  opts: { displayName?: string; yes: boolean },
+  resume: boolean,
+  derived: string,
+): string | undefined {
+  return opts.displayName ?? (opts.yes || resume ? derived : undefined);
 }
 
 export function deriveNames(name: string, displayName?: string): Names {
@@ -169,6 +186,32 @@ export function quoteEnvValue(value: string): string {
   );
 }
 
+// The closing lines about the first admin. A resume keeps the apps/api/.env
+// the first run wrote, so it points there instead.
+export function adminSummary(
+  admin: Admin | undefined,
+  generatedPassword: boolean,
+  keptApiEnv: string | undefined,
+): string[] {
+  if (admin) {
+    return [
+      `  Admin: ${admin.email}`,
+      ...(generatedPassword
+        ? [
+            `  Generated admin password (shown once, also in ${API_ENV_FILE}): ${admin.password}`,
+          ]
+        : []),
+    ];
+  }
+  const email = parseEnv(keptApiEnv ?? '')['SEED_ADMIN_EMAIL'];
+  return email
+    ? [
+        `  Admin: ${email}`,
+        `  Admin password: SEED_ADMIN_PASSWORD in ${API_ENV_FILE}`,
+      ]
+    : [`  Admin: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in ${API_ENV_FILE}`];
+}
+
 export function databaseUrl(db: string, port: number): string {
   return `postgresql://postgres:postgres@localhost:${port}/${db}`;
 }
@@ -237,6 +280,59 @@ export const DIRTY_TREE_MESSAGE = [
   '    git restore .',
   '  (git restore . discards every uncommitted change to tracked files.)',
 ].join('\n');
+
+// The init writes apps/api/.env with the new port, a fresh JWT_SECRET and
+// the first admin. Only a resume can find one it wrote itself; on a fresh
+// run it is someone's own copy (say, from the README's manual steps) with
+// the template's values, so it is neither kept nor overwritten.
+export function apiEnvAction(
+  resume: boolean,
+  exists: boolean,
+): 'write' | 'keep' | 'refuse' {
+  if (!exists) return 'write';
+  return resume ? 'keep' : 'refuse';
+}
+
+export const API_ENV_EXISTS_MESSAGE = [
+  `${API_ENV_FILE} exists, but this repo is not initialized yet, so no earlier run wrote it.`,
+  '  The init writes it with the new database port, a fresh JWT_SECRET and the first admin.',
+  `  Move it aside (e.g. to ${API_ENV_FILE}.bak) or delete it, then run again.`,
+].join('\n');
+
+// What is left once the init script has removed itself: the install that
+// drops it from the lockfile, the format, and the commit. Each is safe to
+// repeat.
+export function finishCommands(commitMessage: string | undefined): string[] {
+  return [
+    'pnpm install --no-frozen-lockfile',
+    'pnpm format',
+    ...(commitMessage === undefined
+      ? []
+      : ['git add -A', `git commit -m "${commitMessage}"`]),
+  ];
+}
+
+// How far a run got: nothing changed yet, files changed (a rerun with the
+// same --name finishes), or the script removed itself (a rerun is not
+// possible, the rest is by hand).
+export type InitStage = 'none' | 'changing' | 'removed';
+
+export function stopHint(
+  stage: InitStage,
+  finish: string[],
+): string | undefined {
+  switch (stage) {
+    case 'none':
+      return undefined;
+    case 'changing':
+      return 'Fix the cause and run it again with the same --name: every step is safe to repeat.';
+    case 'removed':
+      return [
+        'The init script already removed itself, so it cannot run again. Fix the cause, then finish by hand:',
+        ...finish.map((command) => `  ${command}`),
+      ].join('\n');
+  }
+}
 
 export type InitState =
   | { kind: 'fresh' }
@@ -373,15 +469,12 @@ function rewriteReadme(source: string, ctx: RewriteContext): string {
   const title = `# ${names.displayName}\n`;
   let out = removeTemplateBlocks(source);
   if (!out.startsWith(title)) out = `${title}\n${out.replace(/^\n+/, '')}`;
-  const repoUrl = repo
-    ? `https://github.com/${repo.owner}/${repo.repo}.git`
-    : 'https://github.com/<owner>/<repo>.git';
+  // Without a known repo, the owner is the only placeholder: the repo is
+  // taken to be named like the project, so the clone and the cd agree.
+  const repoName = repo?.repo ?? names.name;
+  const repoUrl = `https://github.com/${repo?.owner ?? '<owner>'}/${repoName}.git`;
   out = replaceOnce(out, TEMPLATE.repoUrl, repoUrl);
-  out = replaceOnce(
-    out,
-    `cd ${TEMPLATE.rootName}\n`,
-    `cd ${repo?.repo ?? names.name}\n`,
-  );
+  out = replaceOnce(out, `cd ${TEMPLATE.rootName}\n`, `cd ${repoName}\n`);
   out = replaceOnce(out, `${TEMPLATE.rootName}/\n`, `${names.name}/\n`);
   return out;
 }
@@ -396,10 +489,11 @@ function rewritePackageJson(source: string, rootName: string | null): string {
 
 // Replaces `from`, which must appear once. Already replaced (`to` present
 // instead) is fine; neither means the template moved on without the script.
+// An empty `to` is in every string, so it never counts as already replaced.
 export function replaceOnce(source: string, from: string, to: string): string {
   const count = source.split(from).length - 1;
   if (count === 1) return source.replace(from, () => to);
-  if (count === 0 && source.includes(to)) return source;
+  if (count === 0 && to !== '' && source.includes(to)) return source;
   throw new Error(
     count === 0
       ? `Expected to find ${JSON.stringify(from)}`
@@ -441,7 +535,9 @@ export function removeInitScript(path: string, source: string): string {
       return `${JSON.stringify(pkg, null, 2)}\n`;
     }
     case 'pnpm-workspace.yaml':
-      return source.replace(`  - ${INIT_PACKAGE_DIR}\n`, '');
+      // Gone already is a rerun. Present in any other form is drift.
+      if (!source.includes(INIT_PACKAGE_DIR)) return source;
+      return replaceOnce(source, `  - ${INIT_PACKAGE_DIR}\n`, '');
     case '.oxlintrc.json': {
       const config = JSON.parse(source) as {
         overrides?: { files: string[] }[];
