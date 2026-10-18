@@ -1,10 +1,21 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { apiCall } from '@/lib/api/api-call';
 import { useConfirm } from '@/systems/confirmation';
 import { useThemeStore } from '@/systems/theme/theme-store';
+import {
+  findLoginHeading,
+  preloadLoginPage,
+  refreshFails,
+  unauthorized,
+} from '@/test/auth-fixtures';
+import { server } from '@/test/msw-server';
 import { renderApp } from '@/test/render-app';
+
+beforeAll(preloadLoginPage, 30_000);
 
 function ProvidersPage() {
   const confirm = useConfirm();
@@ -99,5 +110,61 @@ describe('App providers', () => {
     expect(await screen.findByRole('alertdialog')).toHaveAccessibleName(
       'Delete thing',
     );
+  });
+
+  // The host sits beside the router, so nothing inside a page closes it.
+  it('closes a confirm dialog when the page changes', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp(
+      [
+        { path: 'a', Component: ProvidersPage },
+        { path: 'b', element: <p>page b</p> },
+      ],
+      '/a',
+    );
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await screen.findByRole('alertdialog');
+
+    await act(() => router.navigate('/b'));
+
+    await screen.findByText('page b');
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('closes a confirm dialog when confirming ends the session', async () => {
+    function DeletePage() {
+      const confirm = useConfirm();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            confirm({
+              title: 'Delete thing',
+              confirmText: 'Delete',
+              onConfirm: async () => {
+                await apiCall<null>('/things/1', { method: 'DELETE' });
+              },
+            })
+          }
+        >
+          Confirm
+        </button>
+      );
+    }
+    server.use(
+      http.delete('/api/things/1', () =>
+        HttpResponse.json(unauthorized, { status: 401 }),
+      ),
+    );
+    refreshFails();
+    const user = userEvent.setup();
+    renderApp([{ path: 'a', Component: DeletePage }], '/a');
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await screen.findByRole('alertdialog');
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await findLoginHeading()).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
   });
 });

@@ -4,6 +4,7 @@ import { expectNoUnhandledRejection } from '@/test/unhandled-rejections';
 import { ConfirmationHost } from './confirmation-host';
 import {
   confirm,
+  resetConfirmation,
   useConfirmationStore,
   type ConfirmOptions,
 } from './confirmation-store';
@@ -158,6 +159,49 @@ describe('confirmation', () => {
     expect(screen.getByRole('alertdialog')).toHaveAccessibleName(
       'Archive team',
     );
+  });
+
+  describe('resetConfirmation', () => {
+    it('closes an idle dialog', async () => {
+      const { user } = renderConfirm();
+      await open(user);
+
+      act(() => resetConfirmation());
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    });
+
+    it('closes the dialog while onConfirm is pending', async () => {
+      const pending = deferred();
+      const { user } = renderConfirm({ onConfirm: () => pending.promise });
+      await open(user);
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+      act(() => resetConfirmation());
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      expect(useConfirmationStore.getState().isPending).toBe(false);
+      await act(async () => pending.resolve());
+    });
+
+    it('keeps a newer dialog open when the reset one finishes later', async () => {
+      const pending = deferred();
+      const { user } = renderConfirm({ onConfirm: () => pending.promise });
+      await open(user);
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      act(() => resetConfirmation());
+      act(() => confirm({ title: 'Archive team', onConfirm: vi.fn() }));
+
+      await act(async () => pending.resolve());
+
+      expect(screen.getByRole('alertdialog')).toHaveAccessibleName(
+        'Archive team',
+      );
+      expect(useConfirmationStore.getState()).toMatchObject({
+        open: true,
+        isPending: false,
+      });
+    });
   });
 
   it('stays open and usable when onConfirm rejects', async () => {
