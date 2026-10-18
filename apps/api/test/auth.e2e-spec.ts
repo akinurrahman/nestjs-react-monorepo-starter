@@ -403,6 +403,25 @@ describe('POST /api/auth/logout', () => {
     expect(refreshCookie(res)?.value).toBe('');
   });
 
+  // A tab still holding the cookie from before a rotation, inside the grace
+  // window, still owns the session: its logout must end it.
+  it('revokes the session for the cookie replaced by a rotation', async () => {
+    const user = await createUser(prisma);
+    const { cookie: old } = await loginCookie(app, user.email);
+    const rotated = refreshCookie(await refresh(app, old).expect(200))!.value;
+
+    await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .set('Cookie', cookieHeader(old))
+      .expect(204);
+
+    const session = await prisma.session.findUniqueOrThrow({
+      where: { id: sessionIdOf(old) },
+    });
+    expect(session.revokedAt).not.toBeNull();
+    await refresh(app, rotated).expect(401).expect(INVALID_SESSION);
+  });
+
   it('does not revoke a session for a cookie with the wrong secret', async () => {
     const user = await createUser(prisma);
     const { cookie } = await loginCookie(app, user.email);
