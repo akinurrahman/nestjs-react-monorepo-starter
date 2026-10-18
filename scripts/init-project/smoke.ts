@@ -250,7 +250,8 @@ async function main(): Promise<void> {
   check(
     'LICENSE, the README images, author and license gone',
     !existsSync(join(repo, 'LICENSE')) &&
-      !existsSync(join(repo, 'docs/images')) &&
+      !existsSync(join(repo, '.github/assets')) &&
+      existsSync(join(repo, '.github/workflows/ci.yml')) &&
       !('author' in pkg) &&
       !('license' in pkg),
   );

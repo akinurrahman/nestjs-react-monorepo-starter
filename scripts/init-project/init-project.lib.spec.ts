@@ -441,12 +441,17 @@ describe('renameAction', () => {
 
   it('deletes the template files and folders, binary or not', () => {
     expect(renameAction('LICENSE', text)).toBe('delete');
-    expect(renameAction('docs/images/banner-light.svg', text)).toBe('delete');
-    expect(renameAction('docs/images/login-light.png', binary)).toBe('delete');
+    expect(renameAction('.github/assets/banner-light.svg', text)).toBe(
+      'delete',
+    );
+    expect(renameAction('.github/assets/screenshot.png', binary)).toBe(
+      'delete',
+    );
   });
 
   it('rewrites other text files and skips other binary ones', () => {
-    expect(renameAction('docs/imagesx/a.png', binary)).toBe('skip');
+    expect(renameAction('.github/assetsx/a.png', binary)).toBe('skip');
+    expect(renameAction('.github/workflows/ci.yml', text)).toBe('rewrite');
     expect(renameAction('docs/notes.md', text)).toBe('rewrite');
     expect(renameAction('apps/web/public/icon.png', binary)).toBe('skip');
   });

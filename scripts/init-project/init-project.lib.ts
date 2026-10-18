@@ -29,8 +29,8 @@ export const LEAVE_ALONE = [
 export const DELETE_FILES = ['LICENSE', '.git-blame-ignore-revs'] as const;
 
 // Template-only folders, deleted with everything in them: the README's
-// banner and screenshots show the template, not the project.
-export const DELETE_DIRS = ['docs/images/'] as const;
+// banner shows the template, not the project.
+export const DELETE_DIRS = ['.github/assets/'] as const;
 
 // The init script itself, removed once the project is set up.
 export const INIT_PACKAGE_DIR = 'scripts/init-project';
