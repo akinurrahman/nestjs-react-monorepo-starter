@@ -678,9 +678,18 @@ Detail-shaped pages, in this order, before touching the record:
 
 ```tsx
 if (isLoadingError) return <ErrorState error={error} onRetry={refetch} />;
-if (isLoading) return <Skeleton className="h-64 w-full" />;
+if (isLoading) {
+  return (
+    <output aria-label="Loading class" className="block">
+      <Skeleton className="h-64 w-full" />
+    </output>
+  );
+}
 if (!classItem) return <NotFoundState />;
 ```
+
+A bare skeleton is silent to a screen reader. The `<output>` is a status
+region named for what is loading.
 
 List-shaped pages handle `isLoadingError` at the page level and pass
 `isLoading` and `isFetching` down to `DataTable`, which owns the row skeleton

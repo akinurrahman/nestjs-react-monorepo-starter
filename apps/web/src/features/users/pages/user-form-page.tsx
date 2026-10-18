@@ -34,7 +34,13 @@ function EditUser({ id }: { id: string }) {
     return <NotFoundState />;
   if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (isLoading) return <Skeleton className="h-96 w-full max-w-xl" />;
+  if (isLoading) {
+    return (
+      <output aria-label="Loading user" className="block">
+        <Skeleton className="h-96 w-full max-w-xl" />
+      </output>
+    );
+  }
   if (!user) return <NotFoundState />;
 
   return (
