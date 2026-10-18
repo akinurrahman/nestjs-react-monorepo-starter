@@ -171,11 +171,18 @@ describe('POST /api/auth/login', () => {
       .expect((res) => {
         expect((res.body as { code: string }).code).toBe('TOO_MANY_REQUESTS');
       });
-    // Another spelling of the same address is the same bucket.
-    await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email: target.email.toUpperCase(), password: PASSWORD })
-      .expect(429);
+    // Another spelling of the same address is the same bucket: any case,
+    // any surrounding whitespace.
+    for (const email of [
+      target.email.toUpperCase(),
+      ` ${target.email}`,
+      `  ${target.email}\t`,
+    ]) {
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: PASSWORD })
+        .expect(429);
+    }
 
     await login(app, colleague.email).expect(200);
   });
@@ -403,6 +410,25 @@ describe('POST /api/auth/logout', () => {
     expect(refreshCookie(res)?.value).toBe('');
   });
 
+  // A tab still holding the cookie from before a rotation, inside the grace
+  // window, still owns the session: its logout must end it.
+  it('revokes the session for the cookie replaced by a rotation', async () => {
+    const user = await createUser(prisma);
+    const { cookie: old } = await loginCookie(app, user.email);
+    const rotated = refreshCookie(await refresh(app, old).expect(200))!.value;
+
+    await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .set('Cookie', cookieHeader(old))
+      .expect(204);
+
+    const session = await prisma.session.findUniqueOrThrow({
+      where: { id: sessionIdOf(old) },
+    });
+    expect(session.revokedAt).not.toBeNull();
+    await refresh(app, rotated).expect(401).expect(INVALID_SESSION);
+  });
+
   it('does not revoke a session for a cookie with the wrong secret', async () => {
     const user = await createUser(prisma);
     const { cookie } = await loginCookie(app, user.email);
@@ -413,6 +439,60 @@ describe('POST /api/auth/logout', () => {
       .expect(204);
 
     await refresh(app, cookie).expect(200);
+  });
+});
+
+describe('AUTH_COOKIE_NAME and AUTH_COOKIE_DOMAIN', () => {
+  const NAME = 'sid';
+  const DOMAIN = 'example.test';
+
+  beforeEach(async () => {
+    await app.close();
+    ({ app, prisma } = await createApp({
+      env: { AUTH_COOKIE_NAME: NAME, AUTH_COOKIE_DOMAIN: DOMAIN },
+    }));
+  });
+
+  function post(path: string, cookie: string) {
+    return request(app.getHttpServer()).post(path).set('Cookie', cookie);
+  }
+
+  it('sets, reads and clears the cookie under that name and domain', async () => {
+    const user = await createUser(prisma);
+    const res = await login(app, user.email).expect(200);
+    expect(refreshCookie(res)).toBeUndefined();
+    const cookie = refreshCookie(res, NAME)!;
+    expect(cookie.attributes).toMatchObject({
+      domain: DOMAIN,
+      path: '/api/auth',
+    });
+
+    // The default name is not read.
+    await post('/api/auth/refresh', cookieHeader(cookie.value))
+      .expect(401)
+      .expect(INVALID_SESSION);
+    const refreshed = await post(
+      '/api/auth/refresh',
+      cookieHeader(cookie.value, NAME),
+    ).expect(200);
+    const rotated = refreshCookie(refreshed, NAME)!;
+    expect(rotated.attributes).toMatchObject({ domain: DOMAIN });
+
+    // Clearing needs the same domain, or the browser keeps the cookie.
+    const out = await post(
+      '/api/auth/logout',
+      cookieHeader(rotated.value, NAME),
+    ).expect(204);
+    const cleared = refreshCookie(out, NAME);
+    expect(cleared?.value).toBe('');
+    expect(cleared?.attributes).toMatchObject({
+      domain: DOMAIN,
+      path: '/api/auth',
+    });
+    const session = await prisma.session.findUniqueOrThrow({
+      where: { id: sessionIdOf(rotated.value) },
+    });
+    expect(session.revokedAt).not.toBeNull();
   });
 });
 
@@ -495,5 +575,29 @@ describe('API docs', () => {
     ] as const) {
       expect(doc.paths[path]?.[method]?.security).toEqual([{}]);
     }
+  });
+
+  // Every /api route is throttled and only the probes are not, so the docs
+  // must list 429 on exactly the /api routes.
+  it('list 429 on every /api route and never on the probes', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+    const doc = res.body as {
+      paths: Record<string, Record<string, { responses: object }>>;
+    };
+
+    const missing: string[] = [];
+    const unexpected: string[] = [];
+    for (const [path, methods] of Object.entries(doc.paths)) {
+      for (const [method, operation] of Object.entries(methods)) {
+        const has429 = '429' in operation.responses;
+        const throttled = path.startsWith('/api/');
+        if (throttled && !has429) missing.push(`${method} ${path}`);
+        if (!throttled && has429) unexpected.push(`${method} ${path}`);
+      }
+    }
+    expect(missing).toEqual([]);
+    expect(unexpected).toEqual([]);
   });
 });

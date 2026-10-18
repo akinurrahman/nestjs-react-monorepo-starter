@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node --enable-source-maps dist/main",
-    "lint": "oxlint --type-aware -c ../../.oxlintrc.json src/ test/",
+    "lint": "oxlint --type-aware --deny-warnings -c ../../.oxlintrc.json src/ test/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

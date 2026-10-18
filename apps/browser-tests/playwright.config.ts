@@ -14,7 +14,10 @@ export default defineConfig({
   globalSetup: './tests/global-setup.ts',
   fullyParallel: true,
   forbidOnly: CI,
+  // A test that only passes on its retry still fails the run on CI, so a
+  // timing flake cannot hide behind a green check.
   retries: CI ? 1 : 0,
+  failOnFlakyTests: CI,
   workers: CI ? 2 : undefined,
   reporter: CI
     ? [['github'], ['html', { open: 'never' }]]

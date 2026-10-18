@@ -52,9 +52,10 @@ import { UsersModule } from './users/users.module.js';
     AuthModule,
   ],
   providers: [
-    // Global guards run in this order: rate limit first, so rejected
-    // credentials still count; then authentication (deny by default); then
-    // roles, which needs the user authentication set.
+    // Global guards run in this order: rate limit first (per IP per route,
+    // see RATE_LIMIT), so rejected credentials still count; then
+    // authentication (deny by default); then roles, which needs the user
+    // authentication set.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

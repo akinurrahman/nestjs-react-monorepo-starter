@@ -17,12 +17,19 @@ class ThrottleTestController {
   ping() {
     return { ok: true };
   }
+
+  @Get('other')
+  other() {
+    return { ok: true };
+  }
 }
 
 // AppModule validates env when it is imported, so each app gets a fresh module
-// graph after the env is stubbed. The limit is lowered to keep tests fast.
+// graph after the env is stubbed. The limit is lowered to keep tests fast,
+// unless a test needs the app's real throttler options.
 async function createApp(
   env: Record<string, string | undefined> = {},
+  { realLimit = false }: { realLimit?: boolean } = {},
 ): Promise<NestExpressApplication> {
   vi.resetModules();
   for (const key of ['TRUST_PROXY', 'SWAGGER_USER', 'SWAGGER_PASSWORD']) {
@@ -33,13 +40,17 @@ async function createApp(
   const { AppModule } = await import('./../src/app.module.js');
   const { configureApp } = await import('./../src/config/app.config.js');
 
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
     controllers: [ThrottleTestController],
-  })
-    .overrideProvider(getOptionsToken())
-    .useValue([{ ...RATE_LIMIT, limit: TEST_LIMIT }])
-    .compile();
+  });
+  const moduleRef = await (
+    realLimit
+      ? builder
+      : builder
+          .overrideProvider(getOptionsToken())
+          .useValue([{ ...RATE_LIMIT, limit: TEST_LIMIT }])
+  ).compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();
   await configureApp(app);
@@ -89,6 +100,27 @@ describe('Rate limiting (e2e)', () => {
     expect(Number.isInteger(retryAfter)).toBe(true);
     expect(retryAfter).toBeGreaterThan(0);
     expect(retryAfter).toBeLessThanOrEqual(RATE_LIMIT.ttl / 1000);
+  });
+
+  // Decided: per IP per route, so one busy route behind a shared office IP
+  // does not use up every other route's budget. Built with the app's real
+  // throttler options, so a change to how they key counters shows here.
+  it('gives each route its own budget', async () => {
+    const real = await createApp({}, { realLimit: true });
+    try {
+      for (let i = 0; i < RATE_LIMIT.limit; i++) {
+        await request(real.getHttpServer())
+          .get('/api/throttle-test')
+          .expect(200);
+      }
+      await request(real.getHttpServer()).get('/api/throttle-test').expect(429);
+
+      await request(real.getHttpServer())
+        .get('/api/throttle-test/other')
+        .expect(200);
+    } finally {
+      await real.close();
+    }
   });
 
   it.each(['/health', '/health/ready'])('never throttles %s', async (path) => {

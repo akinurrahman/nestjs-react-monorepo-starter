@@ -20,6 +20,10 @@ import {
   TooManyRequestsError,
   UnauthorizedError,
 } from '../errors/index.js';
+import {
+  type ErrorReportContext,
+  reportError,
+} from '../reporting/report-error.js';
 
 const INTERNAL_ERROR: ErrorResponse = {
   statusCode: 500,
@@ -46,7 +50,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const body = toErrorResponse(exception);
 
     if (body.statusCode >= 500) {
-      this.logError(exception, body, http.getRequest<Request>());
+      const req = http.getRequest<Request>();
+      this.logError(exception, body, req);
+      reportError(exception, reportContext(req));
     }
 
     http.getResponse<Response>().status(body.statusCode).json(body);
@@ -72,6 +78,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error({ err: exception }, body.message);
     }
   }
+}
+
+// Picked field by field, so nothing else from the request (body, query,
+// headers) can reach a reporter. `route` is unset when no route matched.
+function reportContext(req: Request): ErrorReportContext {
+  const route = (req.route as { path?: unknown } | undefined)?.path;
+  return {
+    // genReqId always makes a string; pino-http only types it wider.
+    ...(typeof req.id === 'string' && { requestId: req.id }),
+    ...(typeof req.method === 'string' && { method: req.method }),
+    ...(typeof route === 'string' && { route }),
+  };
 }
 
 export function toErrorResponse(exception: unknown): ErrorResponse {

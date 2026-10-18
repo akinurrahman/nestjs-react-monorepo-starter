@@ -87,10 +87,14 @@ export interface SetCookie {
   attributes: Record<string, string | true>;
 }
 
-// The refresh cookie from a response's Set-Cookie headers, if any.
-export function refreshCookie(res: request.Response): SetCookie | undefined {
+// The refresh cookie from a response's Set-Cookie headers, if any. `name`
+// is for apps started with another AUTH_COOKIE_NAME.
+export function refreshCookie(
+  res: request.Response,
+  name = COOKIE_NAME,
+): SetCookie | undefined {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
-  const header = raw?.find((h) => h.startsWith(`${COOKIE_NAME}=`));
+  const header = raw?.find((h) => h.startsWith(`${name}=`));
   if (!header) return undefined;
   const [pair, ...attrs] = header.split(';').map((part) => part.trim());
   const attributes: Record<string, string | true> = {};
@@ -98,11 +102,11 @@ export function refreshCookie(res: request.Response): SetCookie | undefined {
     const [key, ...rest] = attr.split('=');
     attributes[key!.toLowerCase()] = rest.length ? rest.join('=') : true;
   }
-  return { value: pair!.slice(COOKIE_NAME.length + 1), attributes };
+  return { value: pair!.slice(name.length + 1), attributes };
 }
 
-export function cookieHeader(value: string): string {
-  return `${COOKIE_NAME}=${value}`;
+export function cookieHeader(value: string, name = COOKIE_NAME): string {
+  return `${name}=${value}`;
 }
 
 export function refresh(app: NestExpressApplication, cookie?: string) {
