@@ -98,6 +98,16 @@ export function toDisplayName(name: string): string {
     .join(' ');
 }
 
+// The --display-name to validate, or undefined to prompt. --yes defaults it
+// like --admin-name; a resume renames nothing, so it never needs one.
+export function displayNameGiven(
+  opts: { displayName?: string; yes: boolean },
+  resume: boolean,
+  derived: string,
+): string | undefined {
+  return opts.displayName ?? (opts.yes || resume ? derived : undefined);
+}
+
 export function deriveNames(name: string, displayName?: string): Names {
   return {
     name,

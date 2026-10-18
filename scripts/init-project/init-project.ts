@@ -32,6 +32,7 @@ import {
   INIT_PACKAGE_DIR,
   TEMPLATE,
   deriveNames,
+  displayNameGiven,
   finishCommands,
   initState,
   lineDiff,
@@ -231,7 +232,7 @@ async function collectInputs(
   );
   const derived = deriveNames(projectName);
   const displayName = await value(
-    opts.displayName,
+    displayNameGiven(opts, resume, derived.displayName),
     opts,
     () => ask('Display name', derived.displayName),
     validateDisplayName,

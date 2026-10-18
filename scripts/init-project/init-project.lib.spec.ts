@@ -10,6 +10,7 @@ import {
   choosePort,
   deriveNames,
   DIRTY_TREE_MESSAGE,
+  displayNameGiven,
   finishCommands,
   firstFreePort,
   initState,
@@ -260,6 +261,23 @@ describe('apiEnvAction', () => {
     expect(API_ENV_EXISTS_MESSAGE).toContain('apps/api/.env');
     expect(API_ENV_EXISTS_MESSAGE).toMatch(/not initialized/);
     expect(API_ENV_EXISTS_MESSAGE).toMatch(/delete it, then run again/);
+  });
+});
+
+describe('displayNameGiven', () => {
+  it('takes the flag first', () => {
+    expect(displayNameGiven({ displayName: 'X', yes: true }, true, 'D')).toBe(
+      'X',
+    );
+  });
+
+  it('defaults from the name with --yes and on a resume', () => {
+    expect(displayNameGiven({ yes: true }, false, 'Acme Crm')).toBe('Acme Crm');
+    expect(displayNameGiven({ yes: false }, true, 'Acme Crm')).toBe('Acme Crm');
+  });
+
+  it('leaves a fresh interactive run to the prompt', () => {
+    expect(displayNameGiven({ yes: false }, false, 'Acme Crm')).toBeUndefined();
   });
 });
 

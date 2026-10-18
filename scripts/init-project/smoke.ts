@@ -141,7 +141,8 @@ async function main(): Promise<void> {
   git(repo, 'commit --quiet --allow-empty -m "smoke: working tree"');
   git(repo, `remote set-url origin https://github.com/example/${NAME}.git`);
 
-  const flags = `--name ${NAME} --display-name "Init Smoke" --admin-email admin@smoke.test --admin-name "Smoke Admin" --db-port ${PORT} --yes`;
+  // No --display-name: --yes derives "Init Smoke" from the name.
+  const flags = `--name ${NAME} --admin-email admin@smoke.test --admin-name "Smoke Admin" --db-port ${PORT} --yes`;
   const env = { INIT_ADMIN_PASSWORD: ADMIN_PASSWORD };
 
   const dry = run(repo, `pnpm init:project ${flags} --dry-run`, { env });
