@@ -77,6 +77,22 @@ describe('validateName', () => {
       expect(validateName(name)).toMatch(/reserved/);
     },
   );
+
+  // x-test gives the dev database x_test, which the e2e reset guard takes
+  // for a test database; x-browser likewise for the browser tests.
+  it.each(['x-test', 'x-browser', 'acme-crm-test'])(
+    'refuses %j, whose dev database passes a test database guard',
+    (name) => {
+      expect(validateName(name)).toMatch(/-test or -browser/);
+    },
+  );
+
+  it.each(['test', 'browser', 'x-testing', 'test-x', 'x-browsers'])(
+    'accepts %j',
+    (name) => {
+      expect(validateName(name)).toBeUndefined();
+    },
+  );
 });
 
 describe('deriveNames', () => {

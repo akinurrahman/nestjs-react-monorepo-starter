@@ -72,6 +72,11 @@ export function validateName(name: string): string | undefined {
   if (RESERVED_NAMES.has(name.replaceAll('-', '_'))) {
     return `"${name}" is reserved`;
   }
+  // The dev database would end in _test or _browser, which the e2e and
+  // browser test setups take for their own and drop or reset.
+  if (/-(test|browser)$/.test(name)) {
+    return `"${name}" ends in -test or -browser: the test database guards would take the dev database for a test database`;
+  }
   return undefined;
 }
 
