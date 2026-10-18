@@ -442,6 +442,60 @@ describe('POST /api/auth/logout', () => {
   });
 });
 
+describe('AUTH_COOKIE_NAME and AUTH_COOKIE_DOMAIN', () => {
+  const NAME = 'sid';
+  const DOMAIN = 'example.test';
+
+  beforeEach(async () => {
+    await app.close();
+    ({ app, prisma } = await createApp({
+      env: { AUTH_COOKIE_NAME: NAME, AUTH_COOKIE_DOMAIN: DOMAIN },
+    }));
+  });
+
+  function post(path: string, cookie: string) {
+    return request(app.getHttpServer()).post(path).set('Cookie', cookie);
+  }
+
+  it('sets, reads and clears the cookie under that name and domain', async () => {
+    const user = await createUser(prisma);
+    const res = await login(app, user.email).expect(200);
+    expect(refreshCookie(res)).toBeUndefined();
+    const cookie = refreshCookie(res, NAME)!;
+    expect(cookie.attributes).toMatchObject({
+      domain: DOMAIN,
+      path: '/api/auth',
+    });
+
+    // The default name is not read.
+    await post('/api/auth/refresh', cookieHeader(cookie.value))
+      .expect(401)
+      .expect(INVALID_SESSION);
+    const refreshed = await post(
+      '/api/auth/refresh',
+      cookieHeader(cookie.value, NAME),
+    ).expect(200);
+    const rotated = refreshCookie(refreshed, NAME)!;
+    expect(rotated.attributes).toMatchObject({ domain: DOMAIN });
+
+    // Clearing needs the same domain, or the browser keeps the cookie.
+    const out = await post(
+      '/api/auth/logout',
+      cookieHeader(rotated.value, NAME),
+    ).expect(204);
+    const cleared = refreshCookie(out, NAME);
+    expect(cleared?.value).toBe('');
+    expect(cleared?.attributes).toMatchObject({
+      domain: DOMAIN,
+      path: '/api/auth',
+    });
+    const session = await prisma.session.findUniqueOrThrow({
+      where: { id: sessionIdOf(rotated.value) },
+    });
+    expect(session.revokedAt).not.toBeNull();
+  });
+});
+
 describe('GET /api/auth/me', () => {
   it('answers 401 without a token', async () => {
     await request(app.getHttpServer()).get('/api/auth/me').expect(401).expect({
