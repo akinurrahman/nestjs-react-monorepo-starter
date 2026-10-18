@@ -492,14 +492,15 @@ describe('rewriteFile', () => {
     ).toBe("<title>Bob's &lt;Co&gt; &amp; \\</title>");
   });
 
-  it('uses a placeholder repo url without a GitHub remote', () => {
+  it('uses a placeholder owner and the project name without a GitHub remote', () => {
     const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
     const out = rewriteFile('README.md', readme, {
       names: ctx.names,
       repo: undefined,
     });
-    expect(out).toContain('git clone https://github.com/<owner>/<repo>.git');
-    expect(out).toContain('cd acme-crm\n');
+    expect(out).toContain(
+      'git clone https://github.com/<owner>/acme-crm.git\ncd acme-crm\n',
+    );
   });
 
   // Every tracked file, as the script sees it. Catches a template change

@@ -469,15 +469,12 @@ function rewriteReadme(source: string, ctx: RewriteContext): string {
   const title = `# ${names.displayName}\n`;
   let out = removeTemplateBlocks(source);
   if (!out.startsWith(title)) out = `${title}\n${out.replace(/^\n+/, '')}`;
-  const repoUrl = repo
-    ? `https://github.com/${repo.owner}/${repo.repo}.git`
-    : 'https://github.com/<owner>/<repo>.git';
+  // Without a known repo, the owner is the only placeholder: the repo is
+  // taken to be named like the project, so the clone and the cd agree.
+  const repoName = repo?.repo ?? names.name;
+  const repoUrl = `https://github.com/${repo?.owner ?? '<owner>'}/${repoName}.git`;
   out = replaceOnce(out, TEMPLATE.repoUrl, repoUrl);
-  out = replaceOnce(
-    out,
-    `cd ${TEMPLATE.rootName}\n`,
-    `cd ${repo?.repo ?? names.name}\n`,
-  );
+  out = replaceOnce(out, `cd ${TEMPLATE.rootName}\n`, `cd ${repoName}\n`);
   out = replaceOnce(out, `${TEMPLATE.rootName}/\n`, `${names.name}/\n`);
   return out;
 }
