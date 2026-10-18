@@ -10,14 +10,20 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
 
 - Prisma 7 and Turbo 2 may differ from your training data. Read `.claude/skills/prisma-*`
   or the installed docs before changing Prisma code or config. Don't upgrade Prisma to 8.
+- Where the Prisma skills and this repo differ, the repo wins. The config is
+  `apps/api/prisma7.config.ts`: this Prisma reads it before `prisma.config.ts`, so a new
+  `prisma.config.ts` is silently ignored. The seed runs through the compiled build
+  (`nest start --entryFile seed`), never `tsx`: esbuild drops the decorator metadata
+  Nest's injection needs. The client is generated to `src/generated/prisma`.
 - All deps are pinned exact (`save-exact=true`). New deps: pin exact, check peer ranges
-  against Nest 12, ask before adding a `peerDependencyRules` override.
+  against Nest 12, ask before adding a `peerDependencyRules` entry.
 - pnpm enforces a 14-day minimum release age for every package, transitive deps
   included (`minimumReleaseAge` in `pnpm-workspace.yaml`). If an install fails
   because a version is too new, pick an older version. Never add
   `minimumReleaseAgeExclude` entries or lower the setting without asking.
-- Temporary: the nestjs-zod overrides (`@nestjs/common`, `@nestjs/swagger`) in the root
-  package.json go once nestjs-zod declares Nest 12.
+- Temporary: the nestjs-zod peer rules (`pnpm.peerDependencyRules.allowedVersions` for
+  `@nestjs/common` and `@nestjs/swagger`) in the root package.json go once nestjs-zod
+  declares Nest 12.
 
 ## Commands
 
@@ -72,7 +78,11 @@ every `<!-- template:start/end -->` block in this file and README.md.
 - `src/common/`: errors, filter, interceptor, pagination, swagger decorators, middleware,
   `reporting/report-error.ts` (the one hook for error monitoring, a no-op by default)
 - `src/database/`: PrismaService
-- `src/health/`: reference module layout (dto, repository, service, controller, module)
+- `src/auth/`: login, refresh, sessions, the JWT, roles and throttler guards, the cookie
+  and passwords
+- `src/users/`: the golden module (controller, dto, mapper, repository, service, module)
+- `src/health/`: minimal module layout (dto, repository, service, controller, module)
+- `src/seed.ts`: seeds the first admin (`pnpm db:seed`), outcome logic in `seed-outcome.ts`
 - `src/generated/`: Prisma client, gitignored, never edit
 - `prisma/schema.prisma`: generator and datasource only. Models in `prisma/models/<domain>.prisma`
 - `test/`: e2e specs
@@ -154,7 +164,7 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   `barePages` (screens outside the shell) in `src/app/router.ts`. A nav group must
   be in `NAV_GROUPS` (`src/app/config.ts`).
 - Routes are denied by default. `public: true` only for pages that work with no user
-  (login, forgot password, the 404), and never under a parent with `roles`.
+  (login, the 404), and never under a parent with `roles`.
 - Dev-only routes live in `src/app/dev`, added behind `import.meta.env.DEV`.
 - Modals come from `components/ui` (Dialog, Sheet, AlertDialog), which report to the
   modal registry. Never build one straight on `@base-ui/react`.
@@ -184,6 +194,9 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   for anything not yet in the app.
 - Migration drift: `test/migrations.e2e-spec.ts` fails `test:e2e` when the schema and the
   migrations differ. A model change always lands with its migration.
+- Local port: e2e and browser tests move their database URLs to `DB_PORT`, from the shell
+  or the root `.env` (Turbo passes it through). The drift check also creates a shadow
+  database named after the test one, with `_shadow` before `_test`.
 - Browser: `apps/browser-tests`, Playwright in Chromium and Firefox against production
   builds. What needs a real browser (cookies, reloads, tabs, redirects), a render check of
   every page and the main admin flow. Pages without a nav entry are listed by hand in

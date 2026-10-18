@@ -136,8 +136,11 @@ not `list-page.tsx`, or your editor tabs are six files called `list-page`.
 
 Not every entity needs every file. No enums means no `lookup.ts`, no form
 means no `schema.ts`. Never create an empty file or an empty folder.
-`features/home` is the smallest real example: `routes.tsx`, `index.ts` and one
-page.
+`features/home` is the smallest real example: one `health` entity
+(`health.api.ts`, `health.queries.ts`, `health.constants.ts`,
+`health.lookup.ts`, `health.types.ts`), one page with its spec, `routes.tsx`
+and `index.ts`. It has no form, so no `schema.ts`, and no writes, so no
+`mutations.ts`.
 
 ### Query keys are per entity
 
@@ -175,11 +178,20 @@ lib/                          no react
 │                             401 refresh and retry, ApiError interceptor
 ├── api/api-call.ts           apiCall, apiCallPaginated. The HTTP entry point
 ├── api/api-error.ts          ApiError, isApiError, getErrorMessage
+├── api/access-token.ts       the access token, held in memory only
+├── api/auth-refresh.ts       single-flight refresh, handlers registered by auth
 ├── lookup/create-lookup.ts   createLookup, BadgeVariant
+├── reporting/report-error.ts reportError, isUnexpectedError. The one hook for
+│                             error monitoring
 ├── format.ts                 formatMoney (minor units), formatNumber, getInitials
 ├── date.ts                   formatDate, formatDateTime, calendar-date helpers
 ├── env.ts                    the Zod-checked VITE_* env
-└── chunk-error.ts, platform.ts, locale.ts, utils.ts (cn)
+├── safe-redirect.ts          safeRedirect for an untrusted ?redirect= path
+├── is-empty-value.ts         what a cleared control holds
+├── chunk-error.ts            isChunkLoadError, a stale chunk after a deploy
+├── platform.ts               isMacPlatform, pageLocation
+├── locale.ts                 APP_LOCALE, APP_CURRENCY
+└── utils.ts                  cn
 components/ui/                shadcn primitives. Dialog, Sheet, AlertDialog,
                               modal-registry, sidebar, table, select, combobox...
 systems/                      react-aware, shared, zero domain knowledge
@@ -216,9 +228,10 @@ is the `.dark` class on `<html>`, and the tokens switch with it.
 Touch targets are 40px below `sm` and 32 to 36px from `sm` up. Form controls
 and the default `Button` are `h-10 sm:h-9`, so a button beside an input lines
 up: `Input`, select and combobox triggers, `DatePicker`, the filter controls,
-and the `default` `Button` (there is no `lg`). Compact controls are 32px from `sm`:
-`Button` sizes `xs` and `sm`, the icon sizes (`size-10 sm:size-8`), and menu,
-select and combobox items. All of them carry this already, so pick a `size`
+and the `default` `Button` (there is no text `lg`), plus `icon-lg`
+(`size-10 sm:size-9`) for an icon button beside them. Compact controls are 32px
+from `sm`: `Button` sizes `xs` and `sm`, the icon sizes `icon`, `icon-xs` and
+`icon-sm` (`size-10 sm:size-8`), and menu, select and combobox items. All of them carry this already, so pick a `size`
 and add no height of your own. A control that has to look smaller than 32px, like a
 chip's remove mark, keeps its look and grows its hit area with an `after:`
 box (`components/ui/combobox.tsx`, `systems/form/fields/tags-field.tsx`).
@@ -305,6 +318,12 @@ page cursor inside the hook.
 
 Define the spec at module scope. An inline object is a new identity every
 render, and it flows into the query key.
+
+A search the api caps takes the cap from `@starter/shared` twice: as
+`maxLength` on the spec field, which cuts a longer value from a hand-edited
+URL, and as `maxLength` on `SearchInput`, which stops typing and pasting
+there. Either way the request is never a 400
+(`search: { maxLength: USER_SEARCH_MAX_LENGTH }` in `features/users`).
 
 The controls: `FilterBar` (row layout, "Clear filters", page actions),
 `SearchInput` (debounced), `FilterSelect`, `FilterAsyncSelect`, and
@@ -436,7 +455,7 @@ export const academicRoutes: AppRouteObject[] = [
   `React.lazy`.
 - Access is denied by default. A route without `public: true` needs a
   signed-in user. `public` is only for pages that work with no user: login,
-  forgot password, the 404. It is read from the deepest matched route that
+  the 404. It is read from the deepest matched route that
   has a handle, so it covers that route's handle-less children (an index
   route), and a child with its own handle has to say `public` itself. A
   public route takes no `roles`, which the type rejects, and never sits under
