@@ -5,6 +5,7 @@ import {
   assertTestDatabaseUrl,
   localDbPort,
   readTestEnv,
+  shadowDatabaseUrl,
   truncateAppTables,
   withDbPort,
 } from './test-db.js';
@@ -92,6 +93,20 @@ describe('assertTestDatabaseUrl', () => {
       );
     },
   );
+});
+
+describe('shadowDatabaseUrl', () => {
+  it('puts _shadow before _test and keeps the rest', () => {
+    expect(
+      shadowDatabaseUrl('postgresql://postgres:postgres@localhost:5433/x_test'),
+    ).toBe('postgresql://postgres:postgres@localhost:5433/x_shadow_test');
+  });
+
+  it('refuses a non _test database', () => {
+    expect(() =>
+      shadowDatabaseUrl('postgresql://postgres:postgres@localhost:5432/x'),
+    ).toThrow(/must end in "_test"/);
+  });
 });
 
 describe('truncateAppTables', () => {

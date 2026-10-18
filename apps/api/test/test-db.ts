@@ -96,7 +96,17 @@ async function withConnection<T>(
   }
 }
 
-export async function prepareTestDatabase(url: string): Promise<void> {
+// The throwaway database the migration drift check replays the migrations
+// into: the test database's name with _shadow before _test, so it passes the
+// same guard. Prisma resets it on every diff.
+export function shadowDatabaseUrl(testUrl: string): string {
+  const name = assertTestDatabaseUrl(testUrl);
+  const next = new URL(testUrl);
+  next.pathname = `/${name.replace(/_test$/, '_shadow_test')}`;
+  return next.toString();
+}
+
+export async function ensureDatabase(url: string): Promise<void> {
   const name = assertTestDatabaseUrl(url);
   const adminUrl = new URL(url);
   adminUrl.pathname = '/postgres';
@@ -115,15 +125,34 @@ export async function prepareTestDatabase(url: string): Promise<void> {
       });
     }
   });
+}
 
-  const prisma = createRequire(import.meta.url).resolve(
-    'prisma/build/index.js',
-  );
-  const result = spawnSync(process.execPath, [prisma, 'migrate', 'deploy'], {
+function prismaCli(): string {
+  return createRequire(import.meta.url).resolve('prisma/build/index.js');
+}
+
+// Runs the Prisma CLI from the api folder, so it loads prisma7.config.ts,
+// and returns its output instead of printing it.
+export function runPrisma(args: string[], env: NodeJS.ProcessEnv = {}) {
+  return spawnSync(process.execPath, [prismaCli(), ...args], {
     cwd: API_ROOT,
-    env: { ...process.env, DATABASE_URL: url },
-    stdio: 'inherit',
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
   });
+}
+
+export async function prepareTestDatabase(url: string): Promise<void> {
+  await ensureDatabase(url);
+
+  const result = spawnSync(
+    process.execPath,
+    [prismaCli(), 'migrate', 'deploy'],
+    {
+      cwd: API_ROOT,
+      env: { ...process.env, DATABASE_URL: url },
+      stdio: 'inherit',
+    },
+  );
   if (result.status !== 0) {
     throw new Error('prisma migrate deploy failed on the test database');
   }

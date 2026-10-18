@@ -11,5 +11,11 @@ export default defineConfig({
   },
   datasource: {
     url: process.env['DATABASE_URL'],
+    // Only the e2e migration drift check sets this. Left out otherwise, so
+    // `migrate dev` keeps creating and dropping its own temporary shadow
+    // database.
+    ...(process.env['SHADOW_DATABASE_URL'] && {
+      shadowDatabaseUrl: process.env['SHADOW_DATABASE_URL'],
+    }),
   },
 });

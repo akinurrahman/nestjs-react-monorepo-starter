@@ -179,6 +179,8 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
 - Unit: `*.spec.ts` next to the code, never touch the DB (override PrismaService or the repository).
 - E2E: `test/*.e2e-spec.ts`, real AppModule through `configureApp`, test-only controllers
   for anything not yet in the app.
+- Migration drift: `test/migrations.e2e-spec.ts` fails `test:e2e` when the schema and the
+  migrations differ. A model change always lands with its migration.
 - Browser: `apps/browser-tests`, Playwright in Chromium and Firefox against production
   builds. What needs a real browser (cookies, reloads, tabs, redirects), a render check of
   every page and the main admin flow. Pages without a nav entry are listed by hand in
