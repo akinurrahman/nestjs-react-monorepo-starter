@@ -126,13 +126,13 @@ Run everything from the repo root. Turbo runs each task in every app that has it
 
 **Database**
 
-| Command                                      | What it does                                                                                                                                             |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @starter/api db:migrate`      | Create and apply a migration after a schema change                                                                                                       |
-| `pnpm --filter @starter/api db:deploy`       | Apply existing migrations, without creating new ones                                                                                                     |
-| `pnpm db:seed`                               | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Does nothing if that email already exists |
-| `pnpm --filter @starter/api db:studio`       | Browse and edit data in your browser                                                                                                                     |
-| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it                                                                                            |
+| Command                                      | What it does                                                                                                                                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @starter/api db:migrate`      | Create and apply a migration after a schema change                                                                                                                                             |
+| `pnpm --filter @starter/api db:deploy`       | Apply existing migrations, without creating new ones                                                                                                                                           |
+| `pnpm db:seed`                               | Create the admin user from `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` and `SEED_ADMIN_NAME` in `apps/api/.env`. Never changes an existing user with that email; fails if no active admin exists |
+| `pnpm --filter @starter/api db:studio`       | Browse and edit data in your browser                                                                                                                                                           |
+| `pnpm --filter @starter/api db:test:prepare` | Create the e2e database if missing and apply migrations to it                                                                                                                                  |
 
 The seed builds the API and runs `dist/seed.js` through `nest start --entryFile seed`, configured as the seed command in `apps/api/prisma7.config.ts`. Run it from the root with `pnpm db:seed`, which goes through Turbo so the shared package is built first: `pnpm install` does not build it, and the API does not compile without it.
 

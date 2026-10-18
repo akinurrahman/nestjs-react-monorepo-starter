@@ -11,11 +11,13 @@ import { PasswordModule } from './auth/password.module.js';
 import { PasswordService } from './auth/password.service.js';
 import { validateEnv, type Env } from './config/env.schema.js';
 import { PrismaModule } from './database/prisma.module.js';
+import { existingUserOutcome } from './seed-outcome.js';
 import { UsersModule } from './users/users.module.js';
 import { UsersRepository } from './users/users.repository.js';
 
-// Creates the first admin from SEED_ADMIN_*. Idempotent: does nothing when a
-// user with that email exists. Run with `pnpm db:seed` from the repo root:
+// Creates the first admin from SEED_ADMIN_*. Idempotent: never changes a user
+// that already has that email, and fails only when that leaves no active
+// admin (see existingUserOutcome). Run with `pnpm db:seed` from the repo root:
 // Turbo builds the shared package, then prisma db seed builds and runs this
 // file through `nest start`.
 
@@ -58,8 +60,17 @@ async function seed(): Promise<void> {
     }
 
     const users = app.get(UsersRepository);
-    if (await users.findByEmail(credentials.data.email)) {
-      logger.log('Admin user already exists, nothing to do');
+    const existing = await users.findByEmail(credentials.data.email);
+    if (existing) {
+      const { total: activeAdmins } = await users.list({
+        page: 1,
+        limit: 1,
+        role: ['ADMIN'],
+        isActive: true,
+      });
+      const outcome = existingUserOutcome(existing, activeAdmins > 0);
+      if (outcome.level === 'error') throw new Error(outcome.message);
+      logger[outcome.level](outcome.message);
       return;
     }
 
