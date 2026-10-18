@@ -37,7 +37,7 @@
     "test:browser": {
       "dependsOn": ["@starter/api#build", "@starter/web#build"],
       "cache": false,
-      "passThroughEnv": ["CI", "DB_PORT"]
+      "passThroughEnv": ["DB_PORT"]
     }
   }
 }
