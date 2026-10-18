@@ -923,27 +923,33 @@ export type { ClassListItem, ClassStatus } from './definitions/class.types';
 
 ### `app/router.ts`
 
-Composition only. Every feature contributes an array to `pages`; `buildRoutes`
-wraps them in the root, layout and page levels.
+Composition only. Every feature contributes an array to `pages`, or to
+`barePages` for a screen outside the shell (login); `buildRoutes` wraps them
+in the root, layout and page levels.
 
 ```ts
 import { createBrowserRouter } from 'react-router';
 import { academicRoutes } from '@/features/academic';
+import { authRoutes } from '@/features/auth';
 import { homeRoutes } from '@/features/home';
 import type { AppRouteObject } from '@/systems/router';
 import { devRoutes } from './dev/dev-routes';
 import { buildRoutes } from './routes';
 
 const pages: AppRouteObject[] = [...homeRoutes, ...academicRoutes];
+const barePages: AppRouteObject[] = [...authRoutes];
 
 export function createAppRouter() {
   return createBrowserRouter(
-    buildRoutes(import.meta.env.DEV ? [...pages, ...devRoutes] : pages),
+    buildRoutes(
+      import.meta.env.DEV ? [...pages, ...devRoutes] : pages,
+      barePages,
+    ),
   );
 }
 ```
 
-Adding a feature is one import and one spread in `pages`.
+Adding a feature is one import and one spread in `pages` or `barePages`.
 
 ---
 
