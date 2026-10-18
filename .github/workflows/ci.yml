@@ -5,7 +5,9 @@ on:
   push:
     branches: [main]
 
-# A new push to a PR cancels its superseded run. Pushes to main always finish.
+# A new push to a PR cancels its superseded run. On main a running run is
+# never cancelled, but only the newest push waits: a push while one is
+# queued replaces the queued run.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

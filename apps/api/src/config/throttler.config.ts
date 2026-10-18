@@ -6,7 +6,11 @@ import type { Request } from 'express';
 // number of instances times the limit set here; use shared storage for the
 // throttler (for example Redis) to get one count.
 //
-// Per client IP (`req.ip`, so behind a proxy it depends on TRUST_PROXY).
+// Per client IP (`req.ip`, so behind a proxy it depends on TRUST_PROXY) and
+// per route: the guard's default key includes the handler, so each route has
+// its own budget of `limit` per `ttl`. Kept on purpose: an office behind one
+// IP would otherwise share a single budget for the whole app, and one busy
+// page could lock all of them out of every other route.
 // Named `default` so the guard sends plain Retry-After / X-RateLimit-*
 // headers; any other name is appended to each header.
 export const RATE_LIMIT = {
