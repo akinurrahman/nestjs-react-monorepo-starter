@@ -1,7 +1,9 @@
 import { House, RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { isChunkLoadError } from '@/lib/chunk-error';
+import { isUnexpectedError, reportError } from '@/lib/reporting/report-error';
 import { EmptyState, ErrorState, NotFoundState } from '@/systems/ui';
 
 function describeError(error: unknown): string {
@@ -29,6 +31,14 @@ function ReloadButton() {
 // replaced and the shell around it stays usable.
 export function RouteErrorBoundary() {
   const error = useRouteError();
+
+  // A thrown response (the 404s) is routing, and a stale chunk is a deploy,
+  // not a bug. RootErrorBoundary renders this one, so each error is reported
+  // once whichever boundary caught it.
+  useEffect(() => {
+    if (isRouteErrorResponse(error) || isChunkLoadError(error)) return;
+    if (isUnexpectedError(error)) reportError(error, { source: 'render' });
+  }, [error]);
 
   if (isChunkLoadError(error)) {
     return (
