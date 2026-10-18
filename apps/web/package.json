@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "oxlint --type-aware -c ../../.oxlintrc.json src/ vite.config.ts",
+    "lint": "oxlint --type-aware --deny-warnings -c ../../.oxlintrc.json src/ vite.config.ts",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest"

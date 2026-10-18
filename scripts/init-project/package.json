@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "oxlint --type-aware -c ../../.oxlintrc.json init-project.ts init-project.lib.ts init-project.lib.spec.ts smoke.ts",
+    "lint": "oxlint --type-aware --deny-warnings -c ../../.oxlintrc.json init-project.ts init-project.lib.ts init-project.lib.spec.ts smoke.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node smoke.ts"

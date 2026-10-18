@@ -5,7 +5,7 @@
   "scripts": {
     "test:browser": "playwright test",
     "test:browser:ui": "playwright test --ui",
-    "lint": "oxlint --type-aware -c ../../.oxlintrc.json tests/ server/ playwright.config.ts browser-env.ts",
+    "lint": "oxlint --type-aware --deny-warnings -c ../../.oxlintrc.json tests/ server/ playwright.config.ts browser-env.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

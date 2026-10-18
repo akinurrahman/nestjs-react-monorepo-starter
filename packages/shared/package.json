@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-    "lint": "oxlint --type-aware -c ../../.oxlintrc.json src/",
+    "lint": "oxlint --type-aware --deny-warnings -c ../../.oxlintrc.json src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
