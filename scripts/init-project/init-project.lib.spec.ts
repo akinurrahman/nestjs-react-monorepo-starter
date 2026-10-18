@@ -9,6 +9,7 @@ import {
   API_ENV_EXISTS_MESSAGE,
   apiEnvAction,
   choosePort,
+  DELETE_FILES,
   deriveNames,
   DIRTY_TREE_MESSAGE,
   displayNameGiven,
@@ -167,6 +168,13 @@ describe('quoteEnvValue', () => {
 
   it('refuses a line break', () => {
     expect(() => quoteEnvValue('a\nb')).toThrow(/line break/);
+    expect(() => quoteEnvValue('a\rb')).toThrow(/line break/);
+  });
+
+  // In double quotes, parseEnv turns \n into a newline, so no quoting
+  // keeps this value intact.
+  it('refuses a single quote together with a backslash', () => {
+    expect(() => quoteEnvValue("a'b\\nc")).toThrow(/both/);
   });
 });
 
@@ -514,7 +522,7 @@ describe('rewriteFile', () => {
     })
       .split('\0')
       .filter((path) => path && existsSync(join(ROOT, path)))
-      .filter((path) => !['LICENSE', '.git-blame-ignore-revs'].includes(path))
+      .filter((path) => !(DELETE_FILES as readonly string[]).includes(path))
       .map((path) => ({ path, raw: readFileSync(join(ROOT, path)) }))
       .filter(({ raw }) => !raw.subarray(0, 8000).includes(0))
       .map(({ path, raw }) => ({ path, source: raw.toString('utf8') }));
