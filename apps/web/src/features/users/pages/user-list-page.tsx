@@ -1,3 +1,4 @@
+import { USER_SEARCH_MAX_LENGTH } from '@starter/shared';
 import { Plus, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -98,6 +99,7 @@ export default function UserListPage() {
           value={filters.search}
           onChange={(value) => setFilter('search', value)}
           placeholder="Search name or email"
+          maxLength={USER_SEARCH_MAX_LENGTH}
         />
         <FilterSelect
           value={filters.status}

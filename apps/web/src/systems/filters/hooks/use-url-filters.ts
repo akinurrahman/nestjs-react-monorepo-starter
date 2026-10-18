@@ -46,6 +46,9 @@ type StringFieldInput<V extends string> = UrlFilterFieldBase & {
   // Anything else falls back to the default, so a hand-edited ?status=BANANA
   // never reaches the API typed as an enum member. Pass a lookup's .values.
   values?: readonly V[];
+  // A longer value, as from a hand-edited URL, is cut to this. Pass the
+  // api's limit, so the request is never a 400.
+  maxLength?: number;
 };
 
 // The tuples stop the conditional distributing over a union, which would turn
@@ -67,6 +70,7 @@ export type UrlFilterField = UrlFilterFieldBase & {
   values?: readonly string[];
   min?: number;
   max?: number;
+  maxLength?: number;
 };
 
 // Every key of the filter type needs an entry, so adding a filter fails to
@@ -244,7 +248,10 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
         return;
       }
 
-      parsed[key] = raw ?? (fallback as string | undefined);
+      parsed[key] =
+        raw === null
+          ? (fallback as string | undefined)
+          : raw.slice(0, field.maxLength);
     });
 
     return parsed as T;

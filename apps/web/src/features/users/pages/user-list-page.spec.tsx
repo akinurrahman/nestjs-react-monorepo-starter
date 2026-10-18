@@ -1,3 +1,4 @@
+import { USER_SEARCH_MAX_LENGTH } from '@starter/shared';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -50,6 +51,22 @@ describe('user list', () => {
       'href',
       `/users/${makeUser(2).id}/edit`,
     );
+  });
+
+  // The api refuses a longer search with a 400, which would leave the list
+  // on an error state.
+  it('caps the search at USER_SEARCH_MAX_LENGTH, from the URL and the box', async () => {
+    const api = serveUsers();
+    renderApp(usersRoutes, `/users?search=${'a'.repeat(150)}`);
+
+    await waitFor(() =>
+      expect(api.listQueries().at(-1)?.get('search')).toBe(
+        'a'.repeat(USER_SEARCH_MAX_LENGTH),
+      ),
+    );
+    expect(
+      screen.getByRole('searchbox', { name: 'Search name or email' }),
+    ).toHaveAttribute('maxlength', String(USER_SEARCH_MAX_LENGTH));
   });
 
   it('writes the search and status filters to the URL and refetches', async () => {

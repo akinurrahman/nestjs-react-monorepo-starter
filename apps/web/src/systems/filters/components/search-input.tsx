@@ -14,6 +14,8 @@ type SearchInputProps = {
   // The accessible name. Defaults to the placeholder.
   label?: string;
   debounceMs?: number;
+  // The api's limit for this search, so typing or pasting stops there.
+  maxLength?: number;
   disabled?: boolean;
   className?: string;
 };
@@ -37,6 +39,7 @@ export function SearchInput({
   placeholder = 'Search',
   label,
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  maxLength,
   disabled,
   className,
 }: SearchInputProps) {
@@ -94,6 +97,7 @@ export function SearchInput({
         aria-label={label ?? placeholder}
         autoComplete="off"
         enterKeyHint="search"
+        maxLength={maxLength}
         disabled={disabled}
         className={cn(
           'pl-9',
