@@ -4,8 +4,9 @@
 //
 // Clones this repo, with the working tree's uncommitted changes, into a temp
 // folder, as a repo made from the template would be. There it runs a dry
-// run, then the real init as init-smoke on port 5439, then the full gate,
-// and checks what is left of the template.
+// run, then the real init as init-smoke on port 5439 with its commit made
+// to fail and finished by hand, then the full gate, and checks what is left
+// of the template.
 //
 // The init starts its own Postgres container, init-smoke-postgres-1, with
 // its own volume and port, so it never touches the dev database. It stays
@@ -27,7 +28,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { isLeftAlone } from './init-project.lib.ts';
+import { INIT_PACKAGE_DIR, isLeftAlone } from './init-project.lib.ts';
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const NAME = 'init-smoke';
@@ -185,9 +186,33 @@ async function main(): Promise<void> {
     `${taken.stdout}\n${taken.stderr}`,
   );
 
-  const init = run(repo, `pnpm init:project ${flags}`, { env });
-  check('init succeeds', init.ok);
-  if (!init.ok) return;
+  // A failure after the self-removal: a pre-commit hook fails the commit.
+  // The script is gone by then, so the hint gives the steps left by hand
+  // instead of a rerun, and those steps finish the init.
+  const hook = join(repo, '.git/hooks/pre-commit');
+  writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  const init = run(repo, `pnpm init:project ${flags}`, { env, quiet: true });
+  rmSync(hook);
+  console.log(init.stdout);
+  console.error(init.stderr);
+  const lines = init.stderr.split('\n');
+  const from = lines.findIndex((line) => line.includes('finish by hand:'));
+  const left: string[] = [];
+  for (const line of from === -1 ? [] : lines.slice(from + 1)) {
+    if (!line.startsWith('  ')) break;
+    left.push(line.trim());
+  }
+  check(
+    'a failed commit after the self-removal gives the steps left',
+    !init.ok &&
+      !/run it again/.test(init.stderr) &&
+      !existsSync(join(repo, INIT_PACKAGE_DIR)) &&
+      left.at(-1) === `git commit -m "chore: initialize ${NAME}"`,
+    left.join('\n'),
+  );
+  const finished = left.length > 0 && left.every((line) => run(repo, line).ok);
+  check('the steps left finish the init', finished);
+  if (!finished) return;
 
   check('tree is clean after init', git(repo, 'status --porcelain') === '');
   check(

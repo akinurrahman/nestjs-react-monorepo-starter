@@ -8,6 +8,7 @@ import {
   choosePort,
   deriveNames,
   DIRTY_TREE_MESSAGE,
+  finishCommands,
   firstFreePort,
   initState,
   isLeftAlone,
@@ -24,6 +25,7 @@ import {
   replaceOnce,
   rewriteFile,
   shouldRewrite,
+  stopHint,
   TEMPLATE,
   toDisplayName,
   validateAdminEmail,
@@ -235,6 +237,43 @@ describe('DIRTY_TREE_MESSAGE', () => {
   it('tells how to undo a rename that stopped partway', () => {
     expect(DIRTY_TREE_MESSAGE).toMatch(/^\s+git restore \.$/m);
     expect(DIRTY_TREE_MESSAGE).toMatch(/commit or stash/i);
+  });
+});
+
+describe('stopHint', () => {
+  const finish = [
+    'pnpm install --no-frozen-lockfile',
+    'pnpm format',
+    'git add -A',
+    'git commit -m "chore: initialize acme"',
+  ];
+
+  it('lists the steps left after the self-removal', () => {
+    expect(finishCommands('chore: initialize acme')).toEqual([
+      'pnpm install --no-frozen-lockfile',
+      'pnpm format',
+      'git add -A',
+      'git commit -m "chore: initialize acme"',
+    ]);
+    expect(finishCommands(undefined)).toEqual([
+      'pnpm install --no-frozen-lockfile',
+      'pnpm format',
+    ]);
+  });
+
+  it('says nothing before the first change', () => {
+    expect(stopHint('none', finish)).toBeUndefined();
+  });
+
+  it('says to run again while the script is still there', () => {
+    expect(stopHint('changing', finish)).toMatch(/run it again/);
+  });
+
+  it('gives the steps left once the script removed itself', () => {
+    const hint = stopHint('removed', finish)!;
+    expect(hint).not.toMatch(/run it again/);
+    expect(hint).toMatch(/removed itself/);
+    expect(hint.split('\n').slice(1)).toEqual(finish.map((c) => `  ${c}`));
   });
 });
 

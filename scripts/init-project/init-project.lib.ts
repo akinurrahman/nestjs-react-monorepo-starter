@@ -238,6 +238,41 @@ export const DIRTY_TREE_MESSAGE = [
   '  (git restore . discards every uncommitted change to tracked files.)',
 ].join('\n');
 
+// What is left once the init script has removed itself: the install that
+// drops it from the lockfile, the format, and the commit. Each is safe to
+// repeat.
+export function finishCommands(commitMessage: string | undefined): string[] {
+  return [
+    'pnpm install --no-frozen-lockfile',
+    'pnpm format',
+    ...(commitMessage === undefined
+      ? []
+      : ['git add -A', `git commit -m "${commitMessage}"`]),
+  ];
+}
+
+// How far a run got: nothing changed yet, files changed (a rerun with the
+// same --name finishes), or the script removed itself (a rerun is not
+// possible, the rest is by hand).
+export type InitStage = 'none' | 'changing' | 'removed';
+
+export function stopHint(
+  stage: InitStage,
+  finish: string[],
+): string | undefined {
+  switch (stage) {
+    case 'none':
+      return undefined;
+    case 'changing':
+      return 'Fix the cause and run it again with the same --name: every step is safe to repeat.';
+    case 'removed':
+      return [
+        'The init script already removed itself, so it cannot run again. Fix the cause, then finish by hand:',
+        ...finish.map((command) => `  ${command}`),
+      ].join('\n');
+  }
+}
+
 export type InitState =
   | { kind: 'fresh' }
   | { kind: 'resume' }

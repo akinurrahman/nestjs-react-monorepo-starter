@@ -29,6 +29,7 @@ import {
   INIT_PACKAGE_DIR,
   TEMPLATE,
   deriveNames,
+  finishCommands,
   initState,
   lineDiff,
   parseCli,
@@ -38,6 +39,7 @@ import {
   renderApiEnv,
   renderRootEnv,
   rewriteFile,
+  stopHint,
   validateAdminEmail,
   validateAdminName,
   validateAdminPassword,
@@ -46,6 +48,7 @@ import {
   type Admin,
   type CliOptions,
   type GitHubRepo,
+  type InitStage,
   type Names,
 } from './init-project.lib.ts';
 
@@ -62,9 +65,11 @@ const API_ENV_FILE = 'apps/api/.env';
 
 class StepError extends Error {}
 
-// Set once the first file changes: from then on, a failure leaves a
-// half-initialized repo that a rerun finishes.
-let changing = false;
+// 'changing' once the first file changes: from then on, a failure leaves a
+// half-initialized repo that a rerun finishes. 'removed' once the script
+// has deleted itself: the rest is by hand, from `finish`.
+let stage: InitStage = 'none';
+let finish: string[] = [];
 
 // ----------------------------------------------------------------------------
 // Processes and files
@@ -529,6 +534,7 @@ async function main(): Promise<void> {
   const { names } = inputs;
   const api = `@${names.scope}/api`;
   const commit = `chore: initialize ${names.name}`;
+  finish = finishCommands(opts.commit ? commit : undefined);
 
   const rename = resume ? [] : planRename(inputs);
   const renamed = new Map(
@@ -544,9 +550,7 @@ async function main(): Promise<void> {
     `pnpm --filter ${api} db:deploy`,
     'pnpm db:seed',
     `remove ${INIT_PACKAGE_DIR}, its workspace entry, its oxlint override and the init:project script`,
-    'pnpm install --no-frozen-lockfile',
-    'pnpm format',
-    ...(opts.commit ? ['git add -A', `git commit -m "${commit}"`] : []),
+    ...finish,
   ];
 
   if (opts.dryRun) {
@@ -554,7 +558,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  changing = true;
+  stage = 'changing';
   console.log(
     `\nRenaming ${TEMPLATE.rootName} to ${names.name} (${rename.length} files)`,
   );
@@ -576,7 +580,11 @@ async function main(): Promise<void> {
   mustRun('pnpm', ['db:seed']);
 
   console.log(`\nRemoving the init script`);
-  applyChanges(planSelfRemoval());
+  // Planned before the first edit, so a drifted file stops the run while a
+  // rerun still can finish it.
+  const selfRemoval = planSelfRemoval();
+  stage = 'removed';
+  applyChanges(selfRemoval);
   rmSync(join(ROOT, INIT_PACKAGE_DIR), { recursive: true, force: true });
   const scriptsDir = join(ROOT, INIT_PACKAGE_DIR, '..');
   if (existsSync(scriptsDir) && readdirSync(scriptsDir).length === 0) {
@@ -608,10 +616,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`\ninit:project stopped: ${message}`);
-  if (changing) {
-    console.error(
-      'Fix the cause and run it again with the same --name: every step is safe to repeat.',
-    );
-  }
+  const hint = stopHint(stage, finish);
+  if (hint) console.error(hint);
   process.exitCode = 1;
 }
