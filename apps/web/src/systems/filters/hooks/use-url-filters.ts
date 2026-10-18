@@ -34,7 +34,8 @@ type ListFieldInput<V extends readonly unknown[]> = UrlFilterFieldBase & {
 type NumberFieldInput = UrlFilterFieldBase & {
   kind: 'number';
   defaultValue?: Defaultable<number>;
-  // Clamped, not rejected, so ?page=-4 reads as page 1.
+  // Read as an integer, then clamped, not rejected, so ?page=-4 reads as
+  // page 1 and ?page=2.5 as page 2.
   min?: number;
   max?: number;
 };
@@ -221,8 +222,11 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
       const raw = params.get(field.param);
 
       if (field.kind === 'number') {
+        // Integers only: the api's pagination schema refuses a fraction.
         const value =
-          raw === null || raw.trim() === '' ? Number.NaN : Number(raw);
+          raw === null || raw.trim() === ''
+            ? Number.NaN
+            : Math.trunc(Number(raw));
         if (!Number.isFinite(value)) {
           parsed[key] = fallback as number | undefined;
           return;
