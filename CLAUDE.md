@@ -16,13 +16,14 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
   (`nest start --entryFile seed`), never `tsx`: esbuild drops the decorator metadata
   Nest's injection needs. The client is generated to `src/generated/prisma`.
 - All deps are pinned exact (`save-exact=true`). New deps: pin exact, check peer ranges
-  against Nest 12, ask before adding a `peerDependencyRules` override.
+  against Nest 12, ask before adding a `peerDependencyRules` entry.
 - pnpm enforces a 14-day minimum release age for every package, transitive deps
   included (`minimumReleaseAge` in `pnpm-workspace.yaml`). If an install fails
   because a version is too new, pick an older version. Never add
   `minimumReleaseAgeExclude` entries or lower the setting without asking.
-- Temporary: the nestjs-zod overrides (`@nestjs/common`, `@nestjs/swagger`) in the root
-  package.json go once nestjs-zod declares Nest 12.
+- Temporary: the nestjs-zod peer rules (`pnpm.peerDependencyRules.allowedVersions` for
+  `@nestjs/common` and `@nestjs/swagger`) in the root package.json go once nestjs-zod
+  declares Nest 12.
 
 ## Commands
 
