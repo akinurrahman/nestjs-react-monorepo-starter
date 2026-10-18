@@ -39,18 +39,28 @@ export function cancelConfirmation(): void {
   setState({ open: false });
 }
 
+// Closes the dialog even while onConfirm runs: the page or the session it
+// was asked for is gone. The app calls it on a page change and when the
+// session ends, since the host sits outside the router.
+export function resetConfirmation(): void {
+  setState({ open: false, isPending: false });
+}
+
 export async function runConfirmation(): Promise<void> {
   const { options, isPending } = getState();
   if (!options || isPending) return;
 
   setState({ isPending: true });
+  // After a reset, a newer dialog may be open by the time this settles, and
+  // it is not this run's to close.
+  const isCurrent = () => getState().options === options;
   try {
     await options.onConfirm();
   } catch {
     // The mutation's error toast reports it. Staying open lets the user
     // retry or cancel, and swallowing it keeps the rejection handled.
-    setState({ isPending: false });
+    if (isCurrent()) setState({ isPending: false });
     return;
   }
-  setState({ open: false, isPending: false });
+  if (isCurrent()) setState({ open: false, isPending: false });
 }

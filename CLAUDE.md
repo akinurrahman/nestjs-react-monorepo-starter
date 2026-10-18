@@ -138,6 +138,9 @@ shadcn on Base UI, react-hook-form, zustand, sonner, msw. The details live in th
   `*.api.ts`. The `{ data }` envelope is unwrapped there and never leaves that file.
 - Every request failure is an `ApiError`. Show it with `getErrorMessage`. Thread React
   Query's `signal` into every GET.
+- Unexpected errors (a bug, a response that breaks the api contract) go through
+  `reportError` in `src/lib/reporting/report-error.ts`, the one hook for error monitoring.
+  The route error boundaries and the query and mutation caches call it.
 - Server state lives in React Query, client state in zustand. Neither copies the other.
   Mutations own invalidation and the success toast; the global MutationCache shows errors.
 - `ColumnDef` and `createColumnHelper` come from `@/systems/table` only.

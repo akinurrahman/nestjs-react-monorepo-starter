@@ -34,7 +34,8 @@ type ListFieldInput<V extends readonly unknown[]> = UrlFilterFieldBase & {
 type NumberFieldInput = UrlFilterFieldBase & {
   kind: 'number';
   defaultValue?: Defaultable<number>;
-  // Clamped, not rejected, so ?page=-4 reads as page 1.
+  // Read as an integer, then clamped, not rejected, so ?page=-4 reads as
+  // page 1 and ?page=2.5 as page 2.
   min?: number;
   max?: number;
 };
@@ -45,6 +46,9 @@ type StringFieldInput<V extends string> = UrlFilterFieldBase & {
   // Anything else falls back to the default, so a hand-edited ?status=BANANA
   // never reaches the API typed as an enum member. Pass a lookup's .values.
   values?: readonly V[];
+  // A longer value, as from a hand-edited URL, is cut to this. Pass the
+  // api's limit, so the request is never a 400.
+  maxLength?: number;
 };
 
 // The tuples stop the conditional distributing over a union, which would turn
@@ -66,6 +70,7 @@ export type UrlFilterField = UrlFilterFieldBase & {
   values?: readonly string[];
   min?: number;
   max?: number;
+  maxLength?: number;
 };
 
 // Every key of the filter type needs an entry, so adding a filter fails to
@@ -221,8 +226,11 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
       const raw = params.get(field.param);
 
       if (field.kind === 'number') {
+        // Integers only: the api's pagination schema refuses a fraction.
         const value =
-          raw === null || raw.trim() === '' ? Number.NaN : Number(raw);
+          raw === null || raw.trim() === ''
+            ? Number.NaN
+            : Math.trunc(Number(raw));
         if (!Number.isFinite(value)) {
           parsed[key] = fallback as number | undefined;
           return;
@@ -240,7 +248,10 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
         return;
       }
 
-      parsed[key] = raw ?? (fallback as string | undefined);
+      parsed[key] =
+        raw === null
+          ? (fallback as string | undefined)
+          : raw.slice(0, field.maxLength);
     });
 
     return parsed as T;

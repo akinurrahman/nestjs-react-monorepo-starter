@@ -179,6 +179,16 @@ describe('SearchInput', () => {
     expect(navigations()).toBe(1);
   });
 
+  it('stops at maxLength', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<SearchInput onChange={onChange} maxLength={5} />);
+
+    await user.type(screen.getByRole('searchbox'), 'printers');
+
+    expect(screen.getByRole('searchbox')).toHaveValue('print');
+  });
+
   it('starts a new search on page 1', async () => {
     const { user, searchParams } = renderToolbar('/?page=4&status=open');
 

@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@starter/shared';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getErrorMessage, isApiError } from '@/lib/api/api-error';
+import { isUnexpectedError, reportError } from '@/lib/reporting/report-error';
 import { isErrorHandled } from './handled-errors';
 
 declare module '@tanstack/react-query' {
@@ -42,6 +43,8 @@ export function createQueryClient(): QueryClient {
       // folds identical messages, as when every open query fails at once on
       // a window focus while offline.
       onError: (error, query) => {
+        // Before any opt-out: a bug is reported however the page shows it.
+        if (isUnexpectedError(error)) reportError(error, { source: 'query' });
         if (query.meta?.handledError || isSessionEnd(error)) return;
         if (query.state.data === undefined || !isApiError(error)) return;
         const message = getErrorMessage(error);
@@ -50,6 +53,9 @@ export function createQueryClient(): QueryClient {
     }),
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
+        if (isUnexpectedError(error)) {
+          reportError(error, { source: 'mutation' });
+        }
         // Only the mutation's own options count. An onError passed to
         // mutate(vars, { onError }) never reaches the cache, so that caller
         // opts out with meta instead.

@@ -2,10 +2,18 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, data } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import { reportError } from '@/lib/reporting/report-error';
 import type { AppRouteObject } from '@/systems/router';
 import { renderApp } from '@/test/render-app';
 import { APP_NAME } from './config';
 import { RootErrorBoundary } from './route-errors';
+
+// The real isUnexpectedError, so the boundary's choice of what to report is
+// what these tests check.
+vi.mock('@/lib/reporting/report-error', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/reporting/report-error')>()),
+  reportError: vi.fn(),
+}));
 
 function Throws(): never {
   throw new Error('kaboom');
@@ -143,5 +151,55 @@ describe('RootErrorBoundary', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This page could not be shown',
     );
+  });
+
+  it('reports the error once', async () => {
+    vi.mocked(reportError).mockClear();
+    const router = createMemoryRouter([
+      { path: '/', Component: Throws, ErrorBoundary: RootErrorBoundary },
+    ]);
+    render(<RouterProvider router={router} />);
+
+    await screen.findByRole('alert');
+    expect(reportError).toHaveBeenCalledTimes(1);
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+      source: 'render',
+    });
+  });
+});
+
+describe('route error reporting', () => {
+  beforeEach(() => {
+    silenceConsoleErrors();
+    vi.mocked(reportError).mockClear();
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reports a page that throws, once', async () => {
+    renderApp(pages, '/throws');
+
+    await screen.findByRole('alert');
+    expect(reportError).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(reportError).mock.calls[0]).toEqual([
+      expect.objectContaining({ message: 'kaboom' }),
+      { source: 'render' },
+    ]);
+  });
+
+  it('does not report a thrown 404', async () => {
+    renderApp(pages, '/missing');
+
+    await screen.findByText(/This record does not exist/);
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it('does not report a chunk from an older deploy', async () => {
+    const { router } = renderApp(pages, '/');
+    await screen.findByText('home page');
+
+    await act(() => router.navigate('/stale'));
+
+    await screen.findByRole('heading', { name: 'A new version is available' });
+    expect(reportError).not.toHaveBeenCalled();
   });
 });

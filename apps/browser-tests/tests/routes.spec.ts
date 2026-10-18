@@ -19,6 +19,21 @@ const PAGES_WITHOUT_NAV: PageCase[] = [
 const EXPECTED_401 =
   'Failed to load resource: the server responded with a status of 401 (Unauthorized)';
 
+// Layout, so it needs a real browser. The default viewport is desktop, where
+// ancestor crumbs show and the 32px touch target rule applies.
+test('breadcrumb links are at least 32px tall', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, ADMIN);
+  await page.goto('/users/new');
+
+  const crumb = page
+    .getByRole('navigation', { name: 'Breadcrumb' })
+    .getByRole('link', { name: 'Users' });
+  await expect(crumb).toBeVisible();
+  const box = await crumb.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(32);
+});
+
 test('every page renders for an admin without errors', async ({ page }) => {
   let current = 'sign-in';
   const errors: string[] = [];

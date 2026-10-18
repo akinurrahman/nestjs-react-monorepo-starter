@@ -103,7 +103,7 @@ const MESSAGES = {
   unknown: 'Something went wrong. Please try again.',
 };
 
-function formatWait(seconds: number): string {
+export function formatWait(seconds: number): string {
   if (seconds < 60) return seconds === 1 ? '1 second' : `${seconds} seconds`;
   const minutes = Math.ceil(seconds / 60);
   return minutes === 1 ? '1 minute' : `${minutes} minutes`;
@@ -113,14 +113,17 @@ function formatWait(seconds: number): string {
 // api's own 503 (database down) leaves the person just as stuck.
 const UNREACHABLE_STATUSES = new Set([502, 503, 504]);
 
-export function getErrorMessage(error: unknown): string {
-  if (!isApiError(error)) return MESSAGES.unknown;
-  if (
+// No answer at all, or one that means the api is not there to give one.
+export function isUnreachable(error: ApiError): boolean {
+  return (
     error.code === CLIENT_ERROR_CODES.NETWORK_ERROR ||
     UNREACHABLE_STATUSES.has(error.status)
-  ) {
-    return MESSAGES.network;
-  }
+  );
+}
+
+export function getErrorMessage(error: unknown): string {
+  if (!isApiError(error)) return MESSAGES.unknown;
+  if (isUnreachable(error)) return MESSAGES.network;
   if (error.code === CLIENT_ERROR_CODES.BAD_RESPONSE) return MESSAGES.server;
   if (error.status === 429 && error.retryAfter !== undefined) {
     return `Too many requests. Try again in ${formatWait(error.retryAfter)}.`;

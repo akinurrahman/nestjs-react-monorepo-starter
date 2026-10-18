@@ -14,8 +14,8 @@ export type RefreshHandlers = {
   // Runs once per refresh the api refused with a 401: the session is gone.
   onFailed: () => void;
   // Runs once per refresh that failed any other way: offline, 429, 5xx. That
-  // says nothing about the session, so nothing is cleared.
-  onUnavailable: () => void;
+  // says nothing about the session, so nothing is cleared. `error` says how.
+  onUnavailable: (error: unknown) => void;
 };
 
 // 'ended': the api refused the refresh with a 401, the session is gone.
@@ -82,7 +82,7 @@ async function runRefresh(): Promise<RefreshResult> {
       handlers?.onFailed();
       return { status: 'ended' };
     }
-    handlers?.onUnavailable();
+    handlers?.onUnavailable(error);
     return { status: 'unavailable', error };
   }
 }

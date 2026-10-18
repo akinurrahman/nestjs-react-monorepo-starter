@@ -1,7 +1,8 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import type { DataRouter } from 'react-router';
 import { Toaster } from '@/components/ui/sonner';
-import { ConfirmationHost } from '@/systems/confirmation';
+import { ConfirmationHost, resetConfirmation } from '@/systems/confirmation';
 import { ThemeSync, useResolvedTheme } from '@/systems/theme';
 import { SessionGate } from './session-gate';
 
@@ -14,6 +15,21 @@ type AppProps = {
 // router.
 function ThemedToaster() {
   return <Toaster theme={useResolvedTheme()} />;
+}
+
+// A question asked on one page means nothing on the next. The router's own
+// subscription, not a hook inside a route, so it still runs when a route
+// error boundary has replaced the page. Search-only changes, like a filter,
+// keep the dialog.
+function useResetConfirmationOnPageChange(router: DataRouter) {
+  useEffect(() => {
+    let pathname = router.state.location.pathname;
+    return router.subscribe((state) => {
+      if (state.location.pathname === pathname) return;
+      pathname = state.location.pathname;
+      resetConfirmation();
+    });
+  }, [router]);
 }
 
 /**
@@ -33,6 +49,8 @@ function ThemedToaster() {
  * sits inside the client because a failed refresh clears its cache.
  */
 export function App({ router, queryClient }: AppProps) {
+  useResetConfirmationOnPageChange(router);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeSync />

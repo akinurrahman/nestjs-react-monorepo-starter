@@ -18,7 +18,7 @@ function redirectTarget(value: string | null): string {
 }
 
 export default function LoginPage() {
-  const { user } = useSession();
+  const { user, endedBy } = useSession();
   const [searchParams] = useSearchParams();
   const login = useLogin();
 
@@ -37,6 +37,13 @@ export default function LoginPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Use the email and password for your account.
         </p>
+        {/* Only when the app sent them here: not after signing out, and not
+            on a first visit, where there was no session to end. */}
+        {endedBy === 'expired' ? (
+          <output className="mt-4 block rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-foreground">
+            Your session expired. Sign in again to continue.
+          </output>
+        ) : null}
         <Form
           schema={loginSchema}
           defaultValues={DEFAULT_VALUES}

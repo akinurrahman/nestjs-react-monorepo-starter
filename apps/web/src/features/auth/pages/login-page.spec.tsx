@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FileText, House } from 'lucide-react';
 import { http, HttpResponse } from 'msw';
 import { getAccessToken } from '@/lib/api/access-token';
 import type { AppRouteObject } from '@/systems/router';
+import { endSession } from '@/systems/session';
 import { useSessionStore } from '@/systems/session/session-store';
 import {
   authResponse,
@@ -96,6 +97,27 @@ describe('login page', () => {
     expect(await screen.findByText('home page')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
   });
+
+  // The person was sent here, so they should know why. After signing out,
+  // or on a first visit, there is nothing to explain.
+  it.each([
+    ['expired', true],
+    ['logout', false],
+    [null, false],
+  ] as const)(
+    'says the session expired only when it did (endedBy %s)',
+    async (endedBy, shown) => {
+      renderApp(pages, '/login', { user: null });
+      act(() => endSession(endedBy));
+
+      await findLoginHeading();
+      const notice = screen.queryByText(
+        'Your session expired. Sign in again to continue.',
+      );
+      if (shown) expect(notice).toBeInTheDocument();
+      else expect(notice).toBeNull();
+    },
+  );
 
   it('shows INVALID_CREDENTIALS as one form message, not on the fields', async () => {
     const refresh = refreshSucceeds();

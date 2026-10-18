@@ -633,7 +633,13 @@ function EditClass({ id }: { id: string }) {
 
   if (isLoadingError)
     return <ErrorState error={error} onRetry={() => void refetch()} />;
-  if (isLoading) return <Skeleton className="h-96 w-full max-w-2xl" />;
+  if (isLoading) {
+    return (
+      <output aria-label="Loading class" className="block">
+        <Skeleton className="h-96 w-full max-w-2xl" />
+      </output>
+    );
+  }
   if (!classItem) return <NotFoundState />;
 
   return (

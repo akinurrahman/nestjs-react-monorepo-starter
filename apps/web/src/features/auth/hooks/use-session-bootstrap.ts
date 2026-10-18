@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { refreshAccessToken, setRefreshHandlers } from '@/lib/api/auth-refresh';
 import { pageLocation } from '@/lib/platform';
 import {
@@ -15,8 +15,8 @@ import { endLocalSession, startSession } from '../api/auth.session';
 /**
  * Wires the 401 refresh in lib/api to this feature, then restores the session
  * from the refresh cookie once. Returns the session status, 'checking' until
- * that first refresh has answered, and `retry` for when it could not reach
- * the server ('unreachable').
+ * that first refresh has answered, and for when it got no answer
+ * ('unreachable') the `error` it failed with and `retry`.
  *
  * The startup refresh goes through the same single flight as the 401 path,
  * so StrictMode's second mount joins the first request rather than sending
@@ -24,10 +24,12 @@ import { endLocalSession, startSession } from '../api/auth.session';
  */
 export function useSessionBootstrap(): {
   status: Session['status'];
+  error: unknown;
   retry: () => void;
 } {
   const queryClient = useQueryClient();
   const { status } = useSession();
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     setRefreshHandlers({
@@ -47,8 +49,10 @@ export function useSessionBootstrap(): {
         endLocalSession(queryClient, getSession().user ? 'expired' : null),
       // Mid-session the request that needed the refresh fails on its own and
       // the session stays. At startup nothing can render without an answer.
-      onUnavailable: () => {
-        if (getSession().status === 'checking') setSessionUnreachable();
+      onUnavailable: (failure) => {
+        if (getSession().status !== 'checking') return;
+        setError(failure);
+        setSessionUnreachable();
       },
     });
     if (getSession().status === 'checking') void refreshAccessToken();
@@ -60,5 +64,5 @@ export function useSessionBootstrap(): {
     void refreshAccessToken();
   }, []);
 
-  return { status, retry };
+  return { status, error, retry };
 }

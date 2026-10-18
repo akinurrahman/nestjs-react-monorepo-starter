@@ -10,6 +10,14 @@ import { renderWithQuery } from '@/test/render-with-query';
 import { Form, FormError, formFields } from '@/systems/form';
 import { createColumnHelper, DataTable } from '@/systems/table';
 import { ErrorState } from '@/systems/ui';
+import { reportError } from '@/lib/reporting/report-error';
+
+// The real isUnexpectedError, so the caches' choice of what to report is
+// what these tests check.
+vi.mock('@/lib/reporting/report-error', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/reporting/report-error')>()),
+  reportError: vi.fn(),
+}));
 
 function countRequests(status: number, body: object) {
   const count = { value: 0 };
@@ -339,5 +347,63 @@ describe('mutation error toast', () => {
     );
     await afterDeferredToast();
     expect(toasts()).toHaveLength(0);
+  });
+});
+
+describe('error reporting', () => {
+  beforeEach(() => vi.mocked(reportError).mockClear());
+
+  function Broken({ fail }: { fail: () => Promise<string> }) {
+    const query = useQuery({ queryKey: ['broken'], queryFn: fail });
+    return <p>{query.isError ? 'failed' : 'loading'}</p>;
+  }
+
+  function BrokenSave({ fail }: { fail: () => Promise<string> }) {
+    const save = useMutation({ mutationFn: fail });
+    return (
+      <button type="button" onClick={() => save.mutate()}>
+        {save.isError ? 'save failed' : 'Save'}
+      </button>
+    );
+  }
+
+  it('reports a query that fails with a bug', async () => {
+    const bug = new TypeError('undefined is not a function');
+    renderWithQuery(<Broken fail={() => Promise.reject(bug)} />);
+
+    expect(await screen.findByText('failed')).toBeInTheDocument();
+    expect(reportError).toHaveBeenCalledTimes(1);
+    expect(reportError).toHaveBeenCalledWith(bug, { source: 'query' });
+  });
+
+  it('does not report a query the api answered with an error', async () => {
+    countRequests(409, conflict);
+    renderWithQuery(<Thing />);
+
+    expect(await screen.findByText('failed')).toBeInTheDocument();
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it('reports a mutation that fails with a bug', async () => {
+    const user = userEvent.setup();
+    const bug = new TypeError('undefined is not a function');
+    renderWithQuery(<BrokenSave fail={() => Promise.reject(bug)} />);
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('save failed')).toBeInTheDocument();
+    expect(reportError).toHaveBeenCalledTimes(1);
+    expect(reportError).toHaveBeenCalledWith(bug, { source: 'mutation' });
+  });
+
+  it('does not report a mutation the api answered with an error', async () => {
+    const user = userEvent.setup();
+    countRequests(409, conflict);
+    renderWithQuery(<SaveButton />);
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('save failed')).toBeInTheDocument();
+    expect(reportError).not.toHaveBeenCalled();
   });
 });

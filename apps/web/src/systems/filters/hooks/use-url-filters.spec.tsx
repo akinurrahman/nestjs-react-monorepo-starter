@@ -80,6 +80,24 @@ describe('validation', () => {
     expect(result.current.filters.limit).toBe(100);
   });
 
+  // The api's pagination schema takes integers only, so ?page=1.5 would be a
+  // 400 that a retry resends forever.
+  it('drops the fraction of a number', () => {
+    const { result } = setup('/?page=2.7&limit=10.2');
+    expect(result.current.filters.page).toBe(2);
+    expect(result.current.filters.limit).toBe(10);
+  });
+
+  it('cuts a string to its maxLength', () => {
+    const spec = defineUrlFilters<{ search?: string }>({
+      search: { maxLength: 10 },
+    });
+    const { result } = renderHookWithRouter(() => useUrlFilters(spec), {
+      url: `/?search=${'x'.repeat(15)}`,
+    });
+    expect(result.current.filters.search).toBe('x'.repeat(10));
+  });
+
   it('falls back when a number does not parse', () => {
     const { result } = setup('/?page=abc');
     expect(result.current.filters.page).toBe(1);

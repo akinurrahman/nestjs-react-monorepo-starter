@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { delay, http } from 'msw';
 import { testUser } from '@/test/auth-fixtures';
+import { server } from '@/test/msw-server';
 import { renderApp } from '@/test/render-app';
 import {
   emailTaken,
@@ -144,6 +146,16 @@ describe('edit user', () => {
         screen.getByRole('button', { name: 'User menu' }),
       ).toHaveTextContent('Ada Lovelace'),
     );
+  });
+
+  it('announces that the user is loading', async () => {
+    serveUsers();
+    server.use(http.get(`${USERS_PATH}/:id`, () => delay('infinite')));
+    renderApp(usersRoutes, `/users/${LINUS.id}/edit`);
+
+    expect(
+      await screen.findByRole('status', { name: 'Loading user' }),
+    ).toBeInTheDocument();
   });
 
   it('shows not found for an unknown user', async () => {
