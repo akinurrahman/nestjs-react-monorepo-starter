@@ -69,7 +69,8 @@ every `<!-- template:start/end -->` block in this file and README.md.
 ## Layout (apps/api)
 
 - `src/config/`: env schema, `configureApp`, http, swagger, logger, throttler
-- `src/common/`: errors, filter, interceptor, pagination, swagger decorators, middleware
+- `src/common/`: errors, filter, interceptor, pagination, swagger decorators, middleware,
+  `reporting/report-error.ts` (the one hook for error monitoring, a no-op by default)
 - `src/database/`: PrismaService
 - `src/health/`: reference module layout (dto, repository, service, controller, module)
 - `src/generated/`: Prisma client, gitignored, never edit

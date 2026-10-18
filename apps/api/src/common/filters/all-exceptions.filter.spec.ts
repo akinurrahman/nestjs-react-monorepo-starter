@@ -4,10 +4,13 @@ import { ThrottlerException } from '@nestjs/throttler';
 import { createHttpLogger } from '../../config/logger.config.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ConflictError, ServiceUnavailableError } from '../errors/index.js';
+import { reportError } from '../reporting/report-error.js';
 import {
   AllExceptionsFilter,
   toErrorResponse,
 } from './all-exceptions.filter.js';
+
+vi.mock('../reporting/report-error.js', () => ({ reportError: vi.fn() }));
 
 const INTERNAL_ERROR = {
   statusCode: 500,
@@ -215,6 +218,42 @@ describe('AllExceptionsFilter (logging)', () => {
       err: { type: 'PrismaClientValidationError' },
     });
     expect(lines[0]).not.toContain('ada@example.com');
+  });
+});
+
+describe('AllExceptionsFilter (reporting)', () => {
+  beforeEach(() => {
+    vi.mocked(reportError).mockClear();
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reports an unexpected error once, with the request context only', () => {
+    const error = new Error('boom');
+    const request = {
+      id: 'req-1',
+      method: 'GET',
+      route: { path: '/api/users/:id' },
+      body: { password: 'secret' },
+    };
+
+    new AllExceptionsFilter().catch(error, httpHost(request).host);
+
+    expect(reportError).toHaveBeenCalledTimes(1);
+    expect(reportError).toHaveBeenCalledWith(error, {
+      requestId: 'req-1',
+      method: 'GET',
+      route: '/api/users/:id',
+    });
+  });
+
+  it('does not report a client error', () => {
+    new AllExceptionsFilter().catch(new ConflictError(), httpHost({}).host);
+
+    expect(reportError).not.toHaveBeenCalled();
   });
 });
 
