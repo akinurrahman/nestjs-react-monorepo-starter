@@ -9,7 +9,6 @@ import {
   API_ENV_EXISTS_MESSAGE,
   apiEnvAction,
   choosePort,
-  DELETE_FILES,
   deriveNames,
   DIRTY_TREE_MESSAGE,
   displayNameGiven,
@@ -25,6 +24,7 @@ import {
   quoteEnvValue,
   removeInitScript,
   removeTemplateBlocks,
+  renameAction,
   renderApiEnv,
   renderRootEnv,
   replaceOnce,
@@ -435,6 +435,23 @@ describe('removeTemplateBlocks', () => {
   });
 });
 
+describe('renameAction', () => {
+  const text = new TextEncoder().encode('text');
+  const binary = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0]);
+
+  it('deletes the template files and folders, binary or not', () => {
+    expect(renameAction('LICENSE', text)).toBe('delete');
+    expect(renameAction('docs/images/banner-light.svg', text)).toBe('delete');
+    expect(renameAction('docs/images/login-light.png', binary)).toBe('delete');
+  });
+
+  it('rewrites other text files and skips other binary ones', () => {
+    expect(renameAction('docs/imagesx/a.png', binary)).toBe('skip');
+    expect(renameAction('docs/notes.md', text)).toBe('rewrite');
+    expect(renameAction('apps/web/public/icon.png', binary)).toBe('skip');
+  });
+});
+
 describe('rewriteFile', () => {
   it('renames scopes and test databases in any file', () => {
     expect(
@@ -522,9 +539,8 @@ describe('rewriteFile', () => {
     })
       .split('\0')
       .filter((path) => path && existsSync(join(ROOT, path)))
-      .filter((path) => !(DELETE_FILES as readonly string[]).includes(path))
       .map((path) => ({ path, raw: readFileSync(join(ROOT, path)) }))
-      .filter(({ raw }) => !raw.subarray(0, 8000).includes(0))
+      .filter(({ path, raw }) => renameAction(path, raw) === 'rewrite')
       .map(({ path, raw }) => ({ path, source: raw.toString('utf8') }));
 
     const rewritten = files.map(({ path, source }) => ({
