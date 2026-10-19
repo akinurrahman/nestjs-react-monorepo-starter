@@ -53,6 +53,8 @@ It's also built for AI-driven development. A consistent structure, strict types 
 
 On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a tool from deep inside `node_modules`, and it fails to start past Windows' 260-character path limit.
 
+**Claude Code plugin:** install the `kit` plugin once per machine with `claude plugin marketplace add akinurrahman/node-fullstack-workflow` then `claude plugin install kit@node-fullstack-workflow`. The project's `.claude/settings.json` enables it; the install fetches it.
+
 <!-- template:start -->
 
 **Starting a new project?** Create a repo from this template (**Use this template** on GitHub), clone it, and run:

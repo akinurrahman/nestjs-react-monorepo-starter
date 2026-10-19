@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "node-fullstack-workflow": {
+      "source": {
+        "source": "github",
+        "repo": "akinurrahman/node-fullstack-workflow"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "kit@node-fullstack-workflow": true
+  }
+}
