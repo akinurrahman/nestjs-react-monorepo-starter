@@ -1,8 +1,9 @@
 import { USER_SEARCH_MAX_LENGTH } from '@starter/shared';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { testUser } from '@/test/auth-fixtures';
+import { internalError } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
 import { renderApp } from '@/test/render-app';
 import {
@@ -29,6 +30,22 @@ async function openActions(name: string) {
 }
 
 const menuItem = (name: string) => screen.queryByRole('menuitem', { name });
+
+const usersTable = () => screen.getByRole('table', { name: 'Users' });
+
+const people = (count: number) =>
+  Array.from({ length: count }, (_, index) =>
+    makeUser(index + 10, { name: `Person ${index + 1}` }),
+  );
+
+async function openRoleFilter() {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: /^Filters/ }));
+  return {
+    user,
+    popup: within(await screen.findByRole('dialog', { name: 'Filters' })),
+  };
+}
 
 beforeAll(() => preloadRoutes(usersRoutes), 30_000);
 
@@ -106,12 +123,45 @@ describe('user list', () => {
     expect(api.listQueries().at(-1)?.getAll('role')).toEqual(['ADMIN', 'USER']);
   });
 
-  it('pages through the api', async () => {
-    const api = serveUsers(
-      Array.from({ length: 25 }, (_, index) =>
-        makeUser(index + 10, { name: `Person ${index + 1}` }),
+  it('shows skeleton rows while the first page loads', async () => {
+    serveUsers();
+    server.use(http.get(USERS_PATH, () => delay('infinite')));
+    renderApp(usersRoutes, '/users');
+
+    // A header row and the skeleton rows, no empty state.
+    await waitFor(() =>
+      expect(within(usersTable()).getAllByRole('row').length).toBeGreaterThan(
+        2,
       ),
     );
+    expect(usersTable()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No users yet')).toBeNull();
+    expect(screen.queryByText('Linus User')).toBeNull();
+  });
+
+  it('shows the error state when the list fails, and retry loads it', async () => {
+    const api = serveUsers();
+    // Fails until the retry click: the query client retries a 500 itself.
+    let failing = true;
+    server.use(
+      http.get(USERS_PATH, () =>
+        failing ? HttpResponse.json(internalError, { status: 500 }) : undefined,
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp(usersRoutes, '/users');
+
+    const alert = await screen.findByRole('alert');
+    expect(screen.queryByRole('table', { name: 'Users' })).toBeNull();
+    failing = false;
+    await user.click(within(alert).getByRole('button', { name: 'Retry' }));
+
+    expect(await findUserRow('Linus User')).toBeInTheDocument();
+    expect(api.listQueries()).toHaveLength(1);
+  });
+
+  it('pages through the api', async () => {
+    const api = serveUsers(people(25));
     const user = userEvent.setup();
     const { router } = renderApp(usersRoutes, '/users');
     await findUserRow('Person 20');
@@ -123,6 +173,91 @@ describe('user list', () => {
     expect(screen.queryByText('Person 1')).toBeNull();
     expect(router.state.location.search).toBe('?page=2');
     expect(api.listQueries().at(-1)?.get('page')).toBe('2');
+  });
+
+  it('disables next page on the last page', async () => {
+    serveUsers(people(25));
+    renderApp(usersRoutes, '/users?page=2');
+
+    await findUserRow('Person 25');
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+  });
+
+  it('goes back to page 1 when a filter changes', async () => {
+    const api = serveUsers(people(25));
+    const user = userEvent.setup();
+    const { router } = renderApp(usersRoutes, '/users?page=2');
+    await findUserRow('Person 25');
+
+    await user.click(screen.getByRole('combobox', { name: 'Status' }));
+    await user.click(await screen.findByRole('option', { name: 'Active' }));
+
+    await waitFor(() =>
+      expect(router.state.location.search).toBe('?status=active'),
+    );
+    await waitFor(() =>
+      expect(api.listQueries().at(-1)?.get('isActive')).toBe('true'),
+    );
+    expect(api.listQueries().at(-1)?.get('page')).toBe('1');
+  });
+
+  it('sends the whole search term once, not one request per key', async () => {
+    const api = serveUsers();
+    const user = userEvent.setup();
+    renderApp(usersRoutes, '/users');
+    await findUserRow('Linus User');
+    const before = api.listQueries().length;
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search name or email' }),
+      'linus',
+    );
+    await waitFor(() => expect(screen.queryByText('Grace Admin')).toBeNull());
+
+    expect(
+      api
+        .listQueries()
+        .slice(before)
+        .map((query) => query.get('search')),
+    ).toEqual(['linus']);
+  });
+
+  it('writes the role filter from the popover to the URL and the request', async () => {
+    const api = serveUsers();
+    const { router } = renderApp(usersRoutes, '/users');
+    await findUserRow('Linus User');
+    const { user, popup } = await openRoleFilter();
+
+    await user.click(popup.getByRole('combobox', { name: 'Role' }));
+    await user.click(await screen.findByRole('option', { name: 'Admin' }));
+    // The first Escape closes the option list, not the popover.
+    await user.keyboard('{Escape}');
+    await user.click(popup.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(router.state.location.search).toBe('?role=ADMIN'),
+    );
+    await waitFor(() =>
+      expect(api.listQueries().at(-1)?.getAll('role')).toEqual(['ADMIN']),
+    );
+    await waitFor(() => expect(screen.queryByText('Linus User')).toBeNull());
+    expect(await findUserRow('Grace Admin')).toBeInTheDocument();
+  });
+
+  it('shows the roles from the URL in the popover, without an unknown one', async () => {
+    serveUsers();
+    // Held, so the control is checked on its own; the request is covered above.
+    server.use(http.get(USERS_PATH, () => delay('infinite')));
+    renderApp(usersRoutes, '/users?role=ADMIN&role=OWNER');
+
+    expect(
+      await screen.findByRole('button', { name: 'Filters, 1 applied' }),
+    ).toBeInTheDocument();
+    const { popup } = await openRoleFilter();
+    expect(popup.getByText('Admin')).toBeVisible();
+    expect(popup.queryByText('User')).toBeNull();
+    expect(popup.queryByText('OWNER')).toBeNull();
   });
 
   it('shows the empty state with no users, and a clear action when filtered', async () => {
@@ -181,6 +316,53 @@ describe('user list', () => {
         await screen.findByText('Linus User disabled'),
       ).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    });
+
+    it('sends nothing when the dialog is cancelled', async () => {
+      const api = serveUsers();
+      renderApp(usersRoutes, '/users');
+      const user = await openActions('Linus User');
+
+      await user.click(
+        await screen.findByRole('menuitem', { name: 'Disable' }),
+      );
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      expect(
+        api.bodiesOf('POST', `${USERS_PATH}/${makeUser(2).id}/disable`),
+      ).toEqual([]);
+      expect(within(rowOf('Linus User')).getByText('Active')).toBeVisible();
+    });
+
+    it('disables both dialog buttons while the request is pending', async () => {
+      serveUsers();
+      let sent = 0;
+      server.use(
+        http.post(`${USERS_PATH}/:id/disable`, async () => {
+          sent += 1;
+          await delay('infinite');
+        }),
+      );
+      renderApp(usersRoutes, '/users');
+      const user = await openActions('Linus User');
+
+      await user.click(
+        await screen.findByRole('menuitem', { name: 'Disable' }),
+      );
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: 'Disable' }));
+
+      const pending = await within(dialog).findByRole('button', {
+        name: 'Disabling',
+      });
+      expect(pending).toBeDisabled();
+      expect(
+        within(dialog).getByRole('button', { name: 'Cancel' }),
+      ).toBeDisabled();
+      await user.click(pending);
+      expect(sent).toBe(1);
     });
 
     it('enables a disabled user after confirmation', async () => {
