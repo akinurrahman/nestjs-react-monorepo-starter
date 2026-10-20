@@ -94,9 +94,15 @@ export class UsersService {
         await assertNotLastAdmin(tx, user);
       }
 
-      const updated = await tx.update(id, input, {
-        ...(roleChanges && { revokeSessions: {} }),
-      });
+      const updated = await tx.update(
+        id,
+        {
+          ...(input.email !== undefined && { email: input.email }),
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.role !== undefined && { role: input.role }),
+        },
+        { ...(roleChanges && { revokeSessions: {} }) },
+      );
       return toPublicUser(updated);
     });
   }

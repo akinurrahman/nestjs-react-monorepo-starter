@@ -1,3 +1,4 @@
+import type { UpdateUserInput } from '@starter/shared';
 import type { AuthUser } from '../auth/auth.types.js';
 import type { PasswordService } from '../auth/password.service.js';
 import type { User } from '../generated/prisma/client.js';
@@ -171,6 +172,16 @@ describe('UsersService.update', () => {
       { role: 'ADMIN', name: 'New' },
       {},
     );
+  });
+
+  it('writes only the fields it knows', async () => {
+    const { service, tx } = setup([ADMIN, USER], [ADMIN.id]);
+
+    await service.update(ACTOR, USER.id, {
+      name: 'New',
+      isActive: false,
+    } as UpdateUserInput);
+    expect(tx.update).toHaveBeenCalledWith(USER.id, { name: 'New' }, {});
   });
 
   it('refuses to demote the last active admin', async () => {
