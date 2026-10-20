@@ -36,13 +36,15 @@ const userNameSchema = z
 // equal to the same id from a token or a row.
 export const userIdParamSchema = z.object({ id: z.uuid().toLowerCase() });
 
-// `search` matches name or email, case-insensitive. An empty one is no filter.
+// `search` matches name or email, case-insensitive. An empty or blank one
+// parses to undefined: no filter.
 export const listUsersQuerySchema = paginationQuerySchema.extend({
   search: z
     .string()
     .trim()
     .max(USER_SEARCH_MAX_LENGTH)
     .refine(hasNoNullChar, 'Search contains a character that is not allowed')
+    .transform((value) => value || undefined)
     .optional(),
   role: queryArray(roleSchema).optional(),
   isActive: queryBoolean().optional(),

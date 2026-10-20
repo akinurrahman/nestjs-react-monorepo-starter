@@ -56,6 +56,10 @@ describe('listUsersQuerySchema', () => {
     });
   });
 
+  it.each(['', '   '])('parses the search %j as no filter', (search) => {
+    expect(listUsersQuerySchema.parse({ search }).search).toBeUndefined();
+  });
+
   it('wraps a single role', () => {
     expect(listUsersQuerySchema.parse({ role: 'ADMIN' }).role).toEqual([
       'ADMIN',
