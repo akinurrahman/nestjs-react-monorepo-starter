@@ -56,6 +56,11 @@ describe('listUsersQuerySchema', () => {
     });
   });
 
+  it('accepts a search of exactly the maximum length', () => {
+    const search = 'x'.repeat(100);
+    expect(listUsersQuerySchema.parse({ search }).search).toBe(search);
+  });
+
   it.each(['', '   '])('parses the search %j as no filter', (search) => {
     expect(listUsersQuerySchema.parse({ search }).search).toBeUndefined();
   });
