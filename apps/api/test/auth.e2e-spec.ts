@@ -241,7 +241,9 @@ describe('POST /api/auth/refresh', () => {
       where: { id: sessionIdOf(first.cookie) },
     });
 
-    // Tokens issued in the same second are identical, so wait one out.
+    // Tokens issued in the same second are identical, so wait one out. The
+    // one allowed fixed wait: the token's iat is a real clock with one-second
+    // resolution, so no condition can be awaited instead.
     await new Promise((resolve) => setTimeout(resolve, 1100));
     const res = await refresh(app, first.cookie).expect(200);
 
