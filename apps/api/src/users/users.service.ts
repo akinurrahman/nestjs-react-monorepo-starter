@@ -35,9 +35,7 @@ const emailTaken = () =>
   });
 
 // Admin management of users, plus a user's own profile. Every rule lives
-// here; the repository only reads and writes. Self rules compare the stored
-// user's id, never the id from the URL: Postgres matches a uuid in any case,
-// so an uppercase spelling of your own id finds your row.
+// here; the repository only reads and writes.
 @Injectable()
 export class UsersService {
   constructor(

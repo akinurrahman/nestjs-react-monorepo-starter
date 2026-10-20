@@ -89,30 +89,27 @@ every `<!-- template:start/end -->` block in this file and README.md.
 - `prisma/schema.prisma`: generator and datasource only. Models in `prisma/models/<domain>.prisma`
 - `test/`: e2e specs
 
-## Backend rules
+## Backend (apps/api)
 
-- ESM: `.js` extension on every relative import.
-- New modules follow `src/users/`, the golden module. `src/health/` is the minimal layout.
-- Only repositories inject PrismaService.
-- Services throw AppError subclasses from `src/common/errors`, never HttpException.
-  Use specific codes (`new NotFoundError('USER_NOT_FOUND', 'User not found')`). Check
-  conflicts yourself, don't rely on the P2002/P2025 safety net. Attach a cause with the
-  options argument when there is one.
-- `src/common/errors` imports nothing from Nest.
-- Controllers return plain values. Never write `{ data }` by hand, the interceptor wraps.
-  Paginated lists return `paginate(items, total, query, summary?)` and take `PaginationQueryDto`.
-- DTOs: a Zod schema from `@starter/shared` plus `class XDto extends createZodDto(XSchema) {}`
-  in the api.
-- Request body schemas use `z.strictObject`: an unknown field is a 400, never silently
-  dropped.
-- Document every endpoint: `ApiDataResponse`, `ApiPaginatedResponse`, `ApiErrorResponses`.
-- New routes land under `/api` automatically. Only probes are unprefixed and unthrottled.
+The full spec lives in the `kit:backend-architecture-nestjs` skill
+(`node-fullstack-workflow` marketplace, `kit` plugin). Load it before adding or
+changing a module, endpoint, service method, repository query, DTO, Prisma model,
+role check or env var, including small-sounding asks.
+
+Headlines:
+
+- `src/users/` is the golden module, `src/health/` the minimal one. `.js` on every
+  relative import.
+- Only repositories inject PrismaService. Services own the rules, throw AppError
+  subclasses (never HttpException) and hand repositories data built field by field.
+- Controllers return plain values, the interceptor wraps. Lists take a query DTO whose
+  schema extends `paginationQuerySchema` and return `paginate(items, total, query, summary?)`.
+- Request body schemas use `z.strictObject`.
 - `configureApp` is the only app setup. `main.ts` and every e2e spec use it. Nothing
   registers routes or middleware after it.
-- Env: add new vars to `env.schema.ts` and `.env.example`. Read config through
-  ConfigService, not `process.env`.
-- Never log request bodies or user data. Redaction is a safety net, not permission.
-  Prisma error messages are only logged in development.
+- Probes (`/health`) stay unprefixed, public and unthrottled.
+- Env through `env.schema.ts`, `.env.example` and ConfigService, never `process.env`.
+- Never log request bodies or user data. Prisma error messages only in development.
 
 ## packages/shared (@starter/shared)
 
@@ -134,7 +131,7 @@ fails outside Turbo, run `pnpm --filter @starter/shared build`.
 
 React 19, Vite 8, React Router 8 (data mode), TanStack Query 5 and Table 9,
 Tailwind 4, shadcn on Base UI, react-hook-form, zustand, sonner, msw. The
-full spec lives in the `kit:frontend-architecture-react` skill
+full spec lives in the `kit:frontend-architecture` skill
 (`node-fullstack-workflow` marketplace, `kit` plugin). Load it before
 touching `src/app`, `src/features`, `src/systems` or `src/lib`, including
 small-sounding asks ("add a filter", "wire this to the API").

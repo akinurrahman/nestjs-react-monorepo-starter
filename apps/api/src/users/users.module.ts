@@ -10,7 +10,8 @@ import { UsersService } from './users.service.js';
   // Order matters: /users/me before /users/:id.
   controllers: [UsersMeController, UsersController],
   providers: [UsersRepository, UsersService],
-  // For AuthService (login, me, change password) and the seed.
+  // AuthService reads passwordHash, which UsersService never returns, and the
+  // seed writes the first admin through it.
   exports: [UsersRepository],
 })
 export class UsersModule {}
