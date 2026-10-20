@@ -74,6 +74,25 @@ async function disableAfterRoleCheck(callerId: string) {
   });
 }
 
+// Holds the next two requests after the role check until both have passed
+// it, so they reach the service together. For the race tests.
+async function holdUntilBothPassRoleCheck() {
+  const { SessionsRepository } =
+    await import('./../src/auth/sessions.repository.js');
+  const sessions = app.get(SessionsRepository);
+  const findAccess = sessions.findAccess.bind(sessions);
+  let passed = 0;
+  let release!: () => void;
+  const bothPassed = new Promise<void>((resolve) => (release = resolve));
+  vi.spyOn(sessions, 'findAccess').mockImplementation(async (id) => {
+    const access = await findAccess(id);
+    passed += 1;
+    if (passed === 2) release();
+    await bothPassed;
+    return access;
+  });
+}
+
 function expectNoSecrets(res: request.Response) {
   expect(res.text).not.toContain('passwordHash');
   expect(res.text).not.toContain('$argon2');
@@ -278,23 +297,6 @@ describe('Admin routes with a stale access token', () => {
 // test. That hold is why it failed 20 of 20 runs with the transaction removed
 // on the machine that wrote it, but that is not a guarantee elsewhere.
 describe('Two admins demoting each other at once', () => {
-  async function holdUntilBothPassRoleCheck() {
-    const { SessionsRepository } =
-      await import('./../src/auth/sessions.repository.js');
-    const sessions = app.get(SessionsRepository);
-    const findAccess = sessions.findAccess.bind(sessions);
-    let passed = 0;
-    let release!: () => void;
-    const bothPassed = new Promise<void>((resolve) => (release = resolve));
-    vi.spyOn(sessions, 'findAccess').mockImplementation(async (id) => {
-      const access = await findAccess(id);
-      passed += 1;
-      if (passed === 2) release();
-      await bothPassed;
-      return access;
-    });
-  }
-
   it('lets exactly one demotion through and answers LAST_ADMIN to the other', async () => {
     const a = await signInAdmin();
     const b = await signInAdmin();
@@ -341,6 +343,38 @@ describe('Two creates with one email at once', () => {
     const [a, b] = await Promise.all([create(), create()]);
 
     expect([a.status, b.status].sort((x, y) => x - y)).toEqual([201, 409]);
+    const loser = a.status === 409 ? a : b;
+    expect(['EMAIL_TAKEN', 'CONFLICT']).toContain(
+      (loser.body as { code: string }).code,
+    );
+    expect(await prisma.user.count({ where: { email } })).toBe(1);
+  });
+});
+
+// This guards the outcome: of two updates giving two users one email, one is
+// stored and the other answers 409, never 500. As with the creates, the
+// service check reads, then writes; the unique index is the real guard,
+// answered with CONFLICT, and either code is right. Unlike the creates there
+// is no slow hash between the check and the write, so two requests sent at
+// once ran one after the other: both are held after the role check until
+// both passed it. It guards the outcome and only sometimes catches a missing
+// guard. With the unique violation no longer mapped to 409 it failed
+// 20 of 20 runs on the machine that wrote it, against 0 of 20 without the
+// hold, which is not a guarantee
+// elsewhere.
+describe('Two updates to one email at once', () => {
+  it('stores the email on one user and answers 409 to the other', async () => {
+    const { headers } = await signInAdmin();
+    const first = await createUser(prisma);
+    const second = await createUser(prisma);
+    const email = uniqueEmail();
+    await holdUntilBothPassRoleCheck();
+    const update = (id: string) =>
+      api().patch(`/api/users/${id}`).set(headers).send({ email });
+
+    const [a, b] = await Promise.all([update(first.id), update(second.id)]);
+
+    expect([a.status, b.status].sort((x, y) => x - y)).toEqual([200, 409]);
     const loser = a.status === 409 ? a : b;
     expect(['EMAIL_TAKEN', 'CONFLICT']).toContain(
       (loser.body as { code: string }).code,
