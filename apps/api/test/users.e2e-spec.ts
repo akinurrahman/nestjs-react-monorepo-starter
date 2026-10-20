@@ -80,6 +80,8 @@ function expectNoSecrets(res: request.Response) {
 }
 
 // The checks every admin route shares: no token, a USER token, a bad id.
+// Users has no hidden rows: every admin sees every user, so there is no
+// ownership matrix.
 describe.each([
   ['GET', '/api/users'],
   ['GET', `/api/users/${UNKNOWN_ID}`],
@@ -318,6 +320,35 @@ describe('Two admins demoting each other at once', () => {
   });
 });
 
+// This guards the outcome: of two creates with one email, one is stored and
+// the other answers 409, never 500. The service check reads, then writes, so
+// it is a race by itself; the unique index is the real guard, answered with
+// CONFLICT, and either code is right. The requests are sent at once with no
+// hold: the password hash between the check and the write makes them overlap.
+// It guards the outcome and only sometimes catches a missing guard. With the
+// unique violation no longer mapped to 409 it failed 20 of 20 runs on the
+// machine that wrote it, which is not a guarantee elsewhere.
+describe('Two creates with one email at once', () => {
+  it('stores one user and answers 409 to the other', async () => {
+    const { headers } = await signInAdmin();
+    const email = uniqueEmail();
+    const create = () =>
+      api()
+        .post('/api/users')
+        .set(headers)
+        .send({ email, name: 'Twin', role: 'USER', password: NEW_PASSWORD });
+
+    const [a, b] = await Promise.all([create(), create()]);
+
+    expect([a.status, b.status].sort((x, y) => x - y)).toEqual([201, 409]);
+    const loser = a.status === 409 ? a : b;
+    expect(['EMAIL_TAKEN', 'CONFLICT']).toContain(
+      (loser.body as { code: string }).code,
+    );
+    expect(await prisma.user.count({ where: { email } })).toBe(1);
+  });
+});
+
 // Postgres rejects a NUL byte in text, so without the schema check each of
 // these was a 500.
 describe('NUL byte in user text', () => {
@@ -513,6 +544,43 @@ describe('GET /api/users', () => {
     ).toEqual([inactive.id]);
   });
 
+  it('answers past the last page with no rows and the real totals', async () => {
+    const { headers } = await signInAdmin();
+    await createUser(prisma);
+    await createUser(prisma);
+
+    const res = await api()
+      .get('/api/users?page=3&limit=2')
+      .set(headers)
+      .expect(200);
+
+    expect(res.body).toEqual({
+      data: [],
+      pagination: {
+        page: 3,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+        hasPrevious: true,
+        hasNext: false,
+      },
+    });
+  });
+
+  it.each([
+    ['an empty search', 'search='],
+    ['an unknown param', '_=123'],
+  ])('answers %s with the same rows as no query', async (_, query) => {
+    const { headers } = await signInAdmin();
+    await createUser(prisma);
+
+    const all = await api().get('/api/users').set(headers).expect(200);
+    const res = await api().get(`/api/users?${query}`).set(headers).expect(200);
+
+    expect(res.body).toEqual(all.body);
+    expect((res.body as { data: unknown[] }).data).toHaveLength(2);
+  });
+
   it.each([
     ['isActive=yes', 'isActive'],
     ['role=OWNER', 'role.0'],
@@ -561,6 +629,18 @@ describe('GET /api/users/:id', () => {
     });
     expectNoSecrets(res);
   });
+
+  it('answers an uppercase id with the user and the id in lowercase', async () => {
+    const { headers } = await signInAdmin();
+    const user = await createUser(prisma);
+
+    const res = await api()
+      .get(`/api/users/${user.id.toUpperCase()}`)
+      .set(headers)
+      .expect(200);
+
+    expect(res.body).toMatchObject({ data: { id: user.id } });
+  });
 });
 
 describe('POST /api/users', () => {
@@ -600,9 +680,10 @@ describe('POST /api/users', () => {
       .expect(200);
   });
 
-  it('answers 409 EMAIL_TAKEN with a field error, whatever the case', async () => {
+  it('answers 409 EMAIL_TAKEN with a field error, whatever the case, creating nothing', async () => {
     const { headers } = await signInAdmin();
     const existing = await createUser(prisma);
+    const before = await prisma.user.count();
 
     await api()
       .post('/api/users')
@@ -621,6 +702,7 @@ describe('POST /api/users', () => {
           },
         ],
       });
+    expect(await prisma.user.count()).toBe(before);
   });
 
   it.each([
@@ -628,8 +710,9 @@ describe('POST /api/users', () => {
     ['an invalid email', { email: 'nope' }, 'email'],
     ['an unknown role', { role: 'OWNER' }, 'role'],
     ['an unknown field', { isActive: false }, ''],
-  ])('answers 400 for %s', async (_, patch, path) => {
+  ])('answers 400 for %s, creating nothing', async (_, patch, path) => {
     const { headers } = await signInAdmin();
+    const before = await prisma.user.count();
 
     const res = await api()
       .post('/api/users')
@@ -640,6 +723,7 @@ describe('POST /api/users', () => {
       code: 'VALIDATION_FAILED',
       errors: [expect.objectContaining({ path })],
     });
+    expect(await prisma.user.count()).toBe(before);
   });
 });
 
@@ -688,26 +772,34 @@ describe('PATCH /api/users/:id', () => {
     await refresh(app, target.cookie).expect(401);
   });
 
-  it('answers 409 EMAIL_TAKEN for another user email', async () => {
+  it('answers 409 EMAIL_TAKEN for another user email, changing nothing', async () => {
     const { headers, user: admin } = await signInAdmin();
-    const user = await createUser(prisma);
+    const target = await signInUser();
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: target.user.id },
+    });
 
     const res = await api()
-      .patch(`/api/users/${user.id}`)
+      .patch(`/api/users/${target.user.id}`)
       .set(headers)
-      .send({ email: admin.email })
+      .send({ email: admin.email, name: 'Renamed' })
       .expect(409);
     expect(res.body).toMatchObject({
       code: 'EMAIL_TAKEN',
       errors: [{ path: 'email', code: 'EMAIL_TAKEN' }],
     });
+
+    expect(
+      await prisma.user.findUniqueOrThrow({ where: { id: target.user.id } }),
+    ).toEqual(before);
+    expect(await isRevoked(target.cookie)).toBe(false);
   });
 
   it.each([
     ['an empty body', {}],
     ['an unknown field', { isActive: false }],
     ['a password', { password: NEW_PASSWORD }],
-  ])('answers 400 for %s', async (_, body) => {
+  ])('answers 400 for %s, changing nothing', async (_, body) => {
     const { headers } = await signInAdmin();
     const user = await createUser(prisma);
 
@@ -719,6 +811,10 @@ describe('PATCH /api/users/:id', () => {
       .expect((res) =>
         expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' }),
       );
+
+    expect(
+      await prisma.user.findUniqueOrThrow({ where: { id: user.id } }),
+    ).toEqual(user);
   });
 
   it.each([
@@ -817,6 +913,31 @@ describe('POST /api/users/:id/disable', () => {
     },
   );
 
+  it('answers an already disabled user with 200, changing nothing', async () => {
+    const { headers } = await signInAdmin();
+    const target = await signInUser();
+    await prisma.user.update({
+      where: { id: target.user.id },
+      data: { isActive: false },
+    });
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: target.user.id },
+    });
+
+    const res = await api()
+      .post(`/api/users/${target.user.id}/disable`)
+      .set(headers)
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      data: { isActive: false, updatedAt: before.updatedAt.toISOString() },
+    });
+    expect(
+      await prisma.user.findUniqueOrThrow({ where: { id: target.user.id } }),
+    ).toEqual(before);
+    expect(await isRevoked(target.cookie)).toBe(false);
+  });
+
   it('disables another admin while one stays active', async () => {
     const { headers } = await signInAdmin();
     const other = await createUser(prisma, { role: 'ADMIN' });
@@ -855,6 +976,23 @@ describe('POST /api/users/:id/enable', () => {
 
     expect(res.body).toMatchObject({ data: { isActive: true } });
     await login(app, user.email).expect(200);
+  });
+
+  it('answers an already active user with 200, changing nothing', async () => {
+    const { headers } = await signInAdmin();
+    const user = await createUser(prisma);
+
+    const res = await api()
+      .post(`/api/users/${user.id}/enable`)
+      .set(headers)
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      data: { isActive: true, updatedAt: user.updatedAt.toISOString() },
+    });
+    expect(
+      await prisma.user.findUniqueOrThrow({ where: { id: user.id } }),
+    ).toEqual(user);
   });
 });
 
