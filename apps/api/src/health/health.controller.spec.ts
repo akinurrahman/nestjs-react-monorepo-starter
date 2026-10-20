@@ -12,6 +12,8 @@ const CAUSE = 'connect ECONNREFUSED 10.0.0.5:5432 user=postgres';
 
 // AppModule validates env when it is imported, so it is loaded after the env
 // is stubbed. PrismaService and HealthRepository are replaced: no database.
+// An HTTP test with no database, so it runs on the unit runner: an allowed
+// exception to backend rule 13.
 describe('Health endpoints', () => {
   const ping = vi.fn<() => Promise<void>>();
   let app: NestExpressApplication;

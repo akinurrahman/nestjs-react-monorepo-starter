@@ -1,29 +1,31 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
-import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
-import { ConflictError, NotFoundError } from './../src/common/errors/index.js';
-import { configureApp } from './../src/config/app.config.js';
-import { PrismaService } from './../src/database/prisma.service.js';
+import type { PrismaService } from './../src/database/prisma.service.js';
+import { createApp } from './auth-helpers.js';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
+// createApp loads a fresh module graph per app. The filter matches AppError
+// with instanceof, so the errors thrown here are imported from that graph
+// after each app starts, and the database is reached through its
+// PrismaService rather than injected.
+let errors: typeof import('./../src/common/errors/index.js');
+let prisma: PrismaService;
+
 @Public()
 @Controller('errors-test')
 class ErrorsTestController {
-  constructor(private readonly prisma: PrismaService) {}
-
   @Get('not-found')
   notFound() {
-    throw new NotFoundError('USER_NOT_FOUND', 'User not found');
+    throw new errors.NotFoundError('USER_NOT_FOUND', 'User not found');
   }
 
   @Get('conflict')
   conflict() {
-    throw new ConflictError();
+    throw new errors.ConflictError();
   }
 
   @Get('crash')
@@ -39,7 +41,7 @@ class ErrorsTestController {
   // Straight to the database, past every request schema.
   @Get('nul')
   nul() {
-    return this.prisma.user.findMany({
+    return prisma.user.findMany({
       where: { name: { contains: 'a\0b' } },
     });
   }
@@ -55,19 +57,15 @@ describe('Global exception filter (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+    ({ app, prisma } = await createApp({
       controllers: [ErrorsTestController],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>({
-      logger: false,
-    });
-    await configureApp(app);
+    }));
+    errors = await import('./../src/common/errors/index.js');
   });
 
   afterEach(async () => {
     await app.close();
+    vi.unstubAllEnvs();
   });
 
   it('maps NotFoundError with a custom code', () => {

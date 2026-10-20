@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   Controller,
   Delete,
@@ -9,13 +8,14 @@ import {
 } from '@nestjs/common';
 import request from 'supertest';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
-import { configureApp } from './../src/config/app.config.js';
-import {
-  paginate,
-  PaginationQueryDto,
-} from './../src/common/pagination/index.js';
+import { PaginationQueryDto } from './../src/common/pagination/index.js';
+import { createApp } from './auth-helpers.js';
+
+// createApp loads a fresh module graph per app. The interceptor matches
+// PaginatedResult with instanceof, so paginate is imported from that graph
+// after each app starts.
+let paginate: (typeof import('./../src/common/pagination/index.js'))['paginate'];
 
 const TOTAL = 57;
 const ALL_ITEMS = Array.from({ length: TOTAL }, (_, i) => ({ id: i + 1 }));
@@ -72,13 +72,8 @@ describe('Response envelope (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [ResponseTestController],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>();
-    await configureApp(app);
+    ({ app } = await createApp({ controllers: [ResponseTestController] }));
+    ({ paginate } = await import('./../src/common/pagination/index.js'));
   });
 
   it('wraps a single object in data', () => {
@@ -235,5 +230,6 @@ describe('Response envelope (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+    vi.unstubAllEnvs();
   });
 });

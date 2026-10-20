@@ -1,12 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { Body, Controller, Post } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 import request from 'supertest';
 import { z } from 'zod';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
-import { configureApp } from './../src/config/app.config.js';
+import { createApp } from './auth-helpers.js';
 
 class CreateThingDto extends createZodDto(
   z.strictObject({
@@ -28,13 +26,7 @@ describe('Global validation (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [ValidationTestController],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>();
-    await configureApp(app);
+    ({ app } = await createApp({ controllers: [ValidationTestController] }));
   });
 
   it('accepts valid input', () => {
@@ -90,5 +82,6 @@ describe('Global validation (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+    vi.unstubAllEnvs();
   });
 });

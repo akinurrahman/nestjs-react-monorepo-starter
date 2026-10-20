@@ -1,15 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { Controller, Get } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
-import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
 import { DEFAULT_CORS_ORIGINS } from './../src/config/env.schema.js';
-import { configureApp } from './../src/config/app.config.js';
 import {
   SWAGGER_JSON_PATH,
   SWAGGER_PATH,
 } from './../src/config/swagger.config.js';
+import { createApp } from './auth-helpers.js';
 
 const ALLOWED_ORIGIN = DEFAULT_CORS_ORIGINS[0];
 const DISALLOWED_ORIGIN = 'https://evil.example';
@@ -27,17 +25,12 @@ describe('HTTP setup (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [PrefixTestController],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>();
-    await configureApp(app);
+    ({ app } = await createApp({ controllers: [PrefixTestController] }));
   });
 
   afterAll(async () => {
     await app.close();
+    vi.unstubAllEnvs();
   });
 
   describe('global prefix', () => {

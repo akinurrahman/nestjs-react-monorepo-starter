@@ -1,15 +1,13 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test, TestingModule } from '@nestjs/testing';
 import { queryArray } from '@starter/shared';
 import { createZodDto } from 'nestjs-zod';
 import request from 'supertest';
 import { z } from 'zod';
-import { AppModule } from './../src/app.module.js';
 import { Public } from './../src/auth/auth.decorators.js';
 import { ApiErrorResponses } from './../src/common/swagger/index.js';
-import { configureApp } from './../src/config/app.config.js';
 import { createSwaggerDocument } from './../src/config/swagger.config.js';
+import { createApp } from './auth-helpers.js';
 
 class StatusFilterDto extends createZodDto(
   z.object({
@@ -31,17 +29,12 @@ describe('Array query params (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-      controllers: [QueryArrayTestController],
-    }).compile();
-
-    app = moduleFixture.createNestApplication<NestExpressApplication>();
-    await configureApp(app);
+    ({ app } = await createApp({ controllers: [QueryArrayTestController] }));
   });
 
   afterEach(async () => {
     await app.close();
+    vi.unstubAllEnvs();
   });
 
   it('accepts a single value as a one-item array', () => {
