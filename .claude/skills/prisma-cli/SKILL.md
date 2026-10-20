@@ -17,6 +17,8 @@ metadata:
   decorator metadata Nest's injection needs.
 - Seed code reads config through ConfigService like the app, never `process.env`.
 - `shadowDatabaseUrl` is set only when `SHADOW_DATABASE_URL` exists (the e2e drift check).
+- prisma-orm-setup is not installed here. This repo stays on Prisma 7 (see CLAUDE.md).
+  Ignore links to it below.
 
 This skill is vendored from Prisma. If it is updated, re-add this section.
 
