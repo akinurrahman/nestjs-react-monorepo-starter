@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Logger,
@@ -30,6 +31,18 @@ const INTERNAL_ERROR: ErrorResponse = {
   code: ERROR_CODES.INTERNAL_ERROR,
   message: 'Internal server error',
 };
+
+const CSRF_REJECTED: ErrorResponse = {
+  statusCode: 403,
+  code: ERROR_CODES.CSRF_REJECTED,
+  message: 'Cross-site request blocked',
+};
+
+// app.enableCsrfProtection() rejects with a plain ForbiddenException and takes
+// no option for our own error, so its rejections are told apart by message:
+// every one Nest sends starts with this. csrf.e2e-spec pins it against the
+// installed Nest, so a reworded message fails there rather than going generic.
+const CSRF_MESSAGE_PREFIX = 'Cross-origin request detected';
 
 const DEFAULT_ERRORS: Record<number, () => AppError> = {
   400: () => new BadRequestError(),
@@ -148,6 +161,8 @@ export function toErrorResponse(exception: unknown): ErrorResponse {
     }
   }
 
+  if (isCsrfRejection(exception)) return CSRF_REJECTED;
+
   // Raw HttpExceptions come from the framework or a library, never our code,
   // so their messages are never passed through.
   if (exception instanceof HttpException) {
@@ -162,6 +177,13 @@ export function toErrorResponse(exception: unknown): ErrorResponse {
   if (clientStatus !== undefined) return genericResponse(clientStatus);
 
   return INTERNAL_ERROR;
+}
+
+function isCsrfRejection(exception: unknown): boolean {
+  return (
+    exception instanceof ForbiddenException &&
+    exception.message.startsWith(CSRF_MESSAGE_PREFIX)
+  );
 }
 
 // The pg driver adapter reports the database's own SQLSTATE in meta.

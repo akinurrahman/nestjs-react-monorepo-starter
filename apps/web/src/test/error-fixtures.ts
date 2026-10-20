@@ -22,6 +22,12 @@ export const userNotFound = {
   message: 'User not found',
 } satisfies ErrorResponse;
 
+export const csrfRejected = {
+  statusCode: 403,
+  code: ERROR_CODES.CSRF_REJECTED,
+  message: 'Cross-site request blocked',
+} satisfies ErrorResponse;
+
 export const conflict = {
   statusCode: 409,
   code: ERROR_CODES.CONFLICT,

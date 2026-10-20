@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream';
-import { type ArgumentsHost, Logger } from '@nestjs/common';
+import { type ArgumentsHost, ForbiddenException, Logger } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import { createHttpLogger } from '../../config/logger.config.js';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -112,6 +112,28 @@ describe('toErrorResponse (ThrottlerException)', () => {
       statusCode: 429,
       code: 'TOO_MANY_REQUESTS',
       message: 'Too many requests, try again later',
+    });
+  });
+});
+
+describe('toErrorResponse (CSRF)', () => {
+  // The two messages Nest 12's enableCsrfProtection rejects with.
+  it.each([
+    'Cross-origin request detected from Sec-Fetch-Site header',
+    'Cross-origin request detected, and/or browser is out of date: Sec-Fetch-Site is missing, and Origin does not match Host',
+  ])('maps "%s" to 403 CSRF_REJECTED', (message) => {
+    expect(toErrorResponse(new ForbiddenException(message))).toEqual({
+      statusCode: 403,
+      code: 'CSRF_REJECTED',
+      message: 'Cross-site request blocked',
+    });
+  });
+
+  it('keeps any other ForbiddenException generic', () => {
+    expect(toErrorResponse(new ForbiddenException('library detail'))).toEqual({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+      message: 'Access denied',
     });
   });
 });

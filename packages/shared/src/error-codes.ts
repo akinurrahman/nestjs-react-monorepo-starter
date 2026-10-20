@@ -15,6 +15,9 @@ export const ERROR_CODES = {
   // currentPassword, not a 401: the caller is authenticated.
   INVALID_CURRENT_PASSWORD: 'INVALID_CURRENT_PASSWORD',
   FORBIDDEN: 'FORBIDDEN',
+  // A state-changing request the browser marked as cross-site. Not FORBIDDEN,
+  // so a blocked request is never mistaken for a missing permission.
+  CSRF_REJECTED: 'CSRF_REJECTED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',

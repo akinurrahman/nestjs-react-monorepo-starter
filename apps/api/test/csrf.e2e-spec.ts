@@ -24,7 +24,11 @@ describe('CSRF protection (e2e)', () => {
       .set('Sec-Fetch-Site', 'cross-site')
       .set('Origin', 'https://evil.example')
       .expect(403)
-      .expect({ statusCode: 403, code: 'FORBIDDEN', message: 'Access denied' });
+      .expect({
+        statusCode: 403,
+        code: 'CSRF_REJECTED',
+        message: 'Cross-site request blocked',
+      });
   });
 
   it('rejects a same-site (sibling subdomain) POST too', async () => {
