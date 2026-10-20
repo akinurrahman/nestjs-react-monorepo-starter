@@ -7,7 +7,7 @@ export const DATABASE_PING_TIMEOUT_MS = 2000;
 
 @Injectable()
 export class HealthService {
-  constructor(private readonly repository: HealthRepository) {}
+  constructor(private readonly health: HealthRepository) {}
 
   // Liveness: the process is up and serving requests. Touches no dependency,
   // so a database outage never gets the app restarted.
@@ -17,7 +17,7 @@ export class HealthService {
 
   async readiness(): Promise<Readiness> {
     try {
-      await withTimeout(this.repository.ping(), DATABASE_PING_TIMEOUT_MS);
+      await withTimeout(this.health.ping(), DATABASE_PING_TIMEOUT_MS);
     } catch (cause) {
       throw new ServiceUnavailableError(undefined, undefined, { cause });
     }

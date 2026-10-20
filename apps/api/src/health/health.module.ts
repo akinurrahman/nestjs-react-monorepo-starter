@@ -5,6 +5,6 @@ import { HealthService } from './health.service.js';
 
 @Module({
   controllers: [HealthController],
-  providers: [HealthService, HealthRepository],
+  providers: [HealthRepository, HealthService],
 })
 export class HealthModule {}
