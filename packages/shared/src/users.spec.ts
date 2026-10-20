@@ -26,8 +26,10 @@ describe('userIdParamSchema', () => {
     ).toEqual({ id: '019a0000-0000-7000-8000-00000000abcd' });
   });
 
-  it.each(['me', '123', ''])('rejects %j', (id) => {
-    expect(userIdParamSchema.safeParse({ id }).success).toBe(false);
+  it.each(['me', '123', ''])('rejects %j on the id', (id) => {
+    expect(userIdParamSchema.safeParse({ id }).error?.issues).toEqual([
+      expect.objectContaining({ path: ['id'], message: 'Invalid UUID' }),
+    ]);
   });
 });
 
@@ -61,11 +63,23 @@ describe('listUsersQuerySchema', () => {
   });
 
   it.each([
-    ['an unknown role', { role: 'OWNER' }],
-    ['a loose boolean', { isActive: 'yes' }],
-    ['a search over the cap', { search: 'x'.repeat(101) }],
-  ])('rejects %s', (_, value) => {
-    expect(listUsersQuerySchema.safeParse(value).success).toBe(false);
+    ['an unknown role', { role: 'OWNER' }, ['role', 0], 'Pick a role'],
+    [
+      'a loose boolean',
+      { isActive: 'yes' },
+      ['isActive'],
+      'Invalid option: expected one of "true"|"false"',
+    ],
+    [
+      'a search over the cap',
+      { search: 'x'.repeat(101) },
+      ['search'],
+      'Too big: expected string to have <=100 characters',
+    ],
+  ])('rejects %s', (_, value, path, message) => {
+    expect(listUsersQuerySchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path, message }),
+    ]);
   });
 
   it('says one plain thing for a NUL in the search', () => {
@@ -91,14 +105,39 @@ describe('createUserSchema', () => {
     ).toEqual(NEW_USER);
   });
 
+  // A short password and a blank name are in the table below.
   it.each([
-    ['a short password', { ...NEW_USER, password: 'x'.repeat(7) }],
-    ['a password over the cap', { ...NEW_USER, password: 'x'.repeat(257) }],
-    ['a blank name', { ...NEW_USER, name: '   ' }],
-    ['an unknown role', { ...NEW_USER, role: 'OWNER' }],
-    ['an unknown field', { ...NEW_USER, isActive: false }],
-  ])('rejects %s', (_, value) => {
-    expect(createUserSchema.safeParse(value).success).toBe(false);
+    [
+      'a password over the cap',
+      { ...NEW_USER, password: 'x'.repeat(257) },
+      ['password'],
+      'Password must be at most 256 characters',
+    ],
+    [
+      'an unknown role',
+      { ...NEW_USER, role: 'OWNER' },
+      ['role'],
+      'Pick a role',
+    ],
+    [
+      'an unknown field',
+      { ...NEW_USER, isActive: false },
+      [],
+      'Unrecognized key: "isActive"',
+    ],
+  ])('rejects %s', (_, value, path, message) => {
+    expect(createUserSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path, message }),
+    ]);
+  });
+
+  it.each([
+    ['a name of exactly the maximum length', { name: 'x'.repeat(100) }],
+    ['a password of exactly the maximum length', { password: 'x'.repeat(256) }],
+  ])('accepts %s', (_, patch) => {
+    expect(createUserSchema.safeParse({ ...NEW_USER, ...patch }).success).toBe(
+      true,
+    );
   });
 
   it.each([
@@ -164,12 +203,29 @@ describe('updateUserSchema', () => {
   });
 
   it.each([
-    ['an empty body', {}],
-    ['an unknown field', { name: 'Ada', password: 'long enough' }],
-    ['a NUL in the name', { name: 'A\0da' }],
-    ['a NUL in the email', { email: 'a\0da@example.com' }],
-  ])('rejects %s', (_, value) => {
-    expect(updateUserSchema.safeParse(value).success).toBe(false);
+    ['an empty body', {}, [], 'Provide at least one field to update'],
+    [
+      'an unknown field',
+      { name: 'Ada', password: 'long enough' },
+      [],
+      'Unrecognized key: "password"',
+    ],
+    [
+      'a NUL in the name',
+      { name: 'A\0da' },
+      ['name'],
+      'Name contains a character that is not allowed',
+    ],
+    [
+      'a NUL in the email',
+      { email: 'a\0da@example.com' },
+      ['email'],
+      'Enter a valid email',
+    ],
+  ])('rejects %s', (_, value, path, message) => {
+    expect(updateUserSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path, message }),
+    ]);
   });
 });
 
@@ -188,17 +244,36 @@ describe('updateMeSchema', () => {
   });
 
   it.each([
-    ['a role', { name: 'Ada', role: 'ADMIN' }],
-    ['an email', { name: 'Ada', email: 'other@example.com' }],
-  ])('rejects %s', (_, value) => {
-    expect(updateMeSchema.safeParse(value).success).toBe(false);
+    ['a role', { name: 'Ada', role: 'ADMIN' }, 'Unrecognized key: "role"'],
+    [
+      'an email',
+      { name: 'Ada', email: 'other@example.com' },
+      'Unrecognized key: "email"',
+    ],
+  ])('rejects %s', (_, value, message) => {
+    expect(updateMeSchema.safeParse(value).error?.issues).toEqual([
+      expect.objectContaining({ path: [], message }),
+    ]);
   });
 });
 
 describe('setPasswordSchema', () => {
-  it('applies the password policy', () => {
-    expect(setPasswordSchema.safeParse({ password: 'short' }).success).toBe(
-      false,
-    );
+  it.each([
+    ['a short password', 'short', 'Password must be at least 8 characters'],
+    [
+      'a password over the cap',
+      'x'.repeat(257),
+      'Password must be at most 256 characters',
+    ],
+  ])('rejects %s', (_, password, message) => {
+    expect(setPasswordSchema.safeParse({ password }).error?.issues).toEqual([
+      expect.objectContaining({ path: ['password'], message }),
+    ]);
+  });
+
+  it('accepts a password of exactly the maximum length', () => {
+    expect(
+      setPasswordSchema.safeParse({ password: 'x'.repeat(256) }).success,
+    ).toBe(true);
   });
 });
