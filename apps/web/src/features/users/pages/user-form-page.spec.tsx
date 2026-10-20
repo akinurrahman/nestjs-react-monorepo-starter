@@ -193,6 +193,35 @@ describe('create user', () => {
     await user.click(pending);
     expect(sent).toBe(1);
   });
+
+  // The second submit is held, so the page stays and only the submit could
+  // have cleared the message. react-hook-form's handleSubmit clears it.
+  it('clears the form message on the next submit', async () => {
+    serveUsers();
+    let attempts = 0;
+    server.use(
+      http.post(USERS_PATH, async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return HttpResponse.json(conflict, { status: 409 });
+        }
+        await delay('infinite');
+      }),
+    );
+    renderApp(usersRoutes, '/users/new');
+
+    const user = await fillAndCreate();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      conflict.message,
+    );
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Creating' }),
+    ).toBeDisabled();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(attempts).toBe(2);
+  });
 });
 
 describe('edit user', () => {

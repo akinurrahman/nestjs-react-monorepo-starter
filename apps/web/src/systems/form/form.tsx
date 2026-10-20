@@ -66,7 +66,6 @@ export function Form<S extends FormSchema>({
   });
 
   const submit = form.handleSubmit(async (values) => {
-    form.clearErrors(ROOT_ERROR);
     try {
       await onSubmit(values, form);
     } catch (error) {
