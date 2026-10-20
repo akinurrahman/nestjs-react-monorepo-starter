@@ -160,6 +160,27 @@ describe.each([
   });
 });
 
+// The web's msw fake answers in the same order, so its specs see what the
+// api would send.
+describe.each([
+  ['PATCH', '/api/users/not-a-uuid'],
+  ['POST', '/api/users/not-a-uuid/password'],
+] as const)('%s %s (bad id and bad body)', (method, path) => {
+  it('answers 400 on the body, before the id', async () => {
+    const { headers } = await signInAdmin();
+    const req = method === 'POST' ? api().post(path) : api().patch(path);
+
+    const res = await req.set(headers).send({ bogus: 1 }).expect(400);
+    expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+    expect(res.body.errors).toContainEqual(
+      expect.objectContaining({ code: 'unrecognized_keys' }),
+    );
+    expect(res.body.errors).not.toContainEqual(
+      expect.objectContaining({ path: 'id' }),
+    );
+  });
+});
+
 describe.each([
   ['GET', ''],
   ['PATCH', ''],
