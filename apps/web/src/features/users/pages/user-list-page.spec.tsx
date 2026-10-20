@@ -38,6 +38,30 @@ const people = (count: number) =>
     makeUser(index + 10, { name: `Person ${index + 1}` }),
   );
 
+async function openSetPassword() {
+  const user = await openActions('Linus User');
+  await user.click(
+    await screen.findByRole('menuitem', { name: 'Set password' }),
+  );
+  return screen.findByRole('dialog', { name: 'Set password for Linus User' });
+}
+
+async function submitPassword(dialog: HTMLElement) {
+  const user = userEvent.setup();
+  await user.type(
+    within(dialog).getByLabelText(/^New password/),
+    'brand new secret',
+  );
+  await user.type(
+    within(dialog).getByLabelText(/^Confirm new password/),
+    'brand new secret',
+  );
+  await user.click(
+    within(dialog).getByRole('button', { name: 'Set password' }),
+  );
+  return user;
+}
+
 async function openRoleFilter() {
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: /^Filters/ }));
@@ -464,6 +488,52 @@ describe('user list', () => {
       expect(
         api.bodiesOf('POST', `${USERS_PATH}/${makeUser(2).id}/password`),
       ).toEqual([{ password: 'brand new secret' }]);
+    });
+
+    it('shows safe copy for a 500 and keeps the dialog open', async () => {
+      serveUsers();
+      server.use(
+        http.post(`${USERS_PATH}/:id/password`, () =>
+          HttpResponse.json(internalError, { status: 500 }),
+        ),
+      );
+      renderApp(usersRoutes, '/users');
+      const dialog = await openSetPassword();
+
+      await submitPassword(dialog);
+
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        'Something went wrong on our side. Please try again.',
+      );
+      expect(screen.queryByText(internalError.message)).toBeNull();
+      expect(
+        screen.getByRole('dialog', { name: 'Set password for Linus User' }),
+      ).toBeInTheDocument();
+    });
+
+    it('disables submit while the password is being set', async () => {
+      serveUsers();
+      let sent = 0;
+      server.use(
+        http.post(`${USERS_PATH}/:id/password`, async () => {
+          sent += 1;
+          await delay('infinite');
+        }),
+      );
+      renderApp(usersRoutes, '/users');
+      const dialog = await openSetPassword();
+
+      const user = await submitPassword(dialog);
+
+      const pending = await within(dialog).findByRole('button', {
+        name: 'Saving',
+      });
+      expect(pending).toBeDisabled();
+      expect(
+        within(dialog).getByRole('button', { name: 'Cancel' }),
+      ).toBeDisabled();
+      await user.click(pending);
+      expect(sent).toBe(1);
     });
 
     it('blocks a confirmation that does not match', async () => {
