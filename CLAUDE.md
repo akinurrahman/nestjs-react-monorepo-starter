@@ -126,7 +126,7 @@ fails outside Turbo, run `pnpm --filter @starter/shared build`.
   install so `instanceof ZodError` holds). No Nest, Prisma, React or Node APIs.
 - ESM, `.js` on relative imports. Everything public goes through `src/index.ts`.
   Consumers import `@starter/shared`, never deep paths.
-- Schema tests live here as `*.spec.ts` next to the schema.
+- Schema tests live here as `*.spec.ts` next to the schema. Cases: kit:testing-standards.
 
 ## Web (apps/web)
 
@@ -164,14 +164,11 @@ Headlines:
 - Local port: e2e and browser tests move their database URLs to `DB_PORT`, from the shell
   or the root `.env` (Turbo passes it through). The drift check also creates a shadow
   database named after the test one, with `_shadow` before `_test`.
-- Browser: `apps/browser-tests`, Playwright in Chromium and Firefox against production
-  builds. What needs a real browser (cookies, reloads, tabs, redirects), a render check of
-  every page and the main admin flow. Pages without a nav entry are listed by hand in
-  `tests/routes.spec.ts`. Not part of the per-commit gate: CI runs it on every PR. Run it
-  locally before committing any change to auth, the session or the token refresh, in the
-  api or the web app.
-- Tests go in the same commit as the code they cover.
-- Mutation-check new tests: break the code, confirm a test fails, restore.
+- Browser: `apps/browser-tests`, Playwright in Chromium and Firefox, CI runs it on every
+  PR. Pages without a nav entry are listed by hand in `tests/routes.spec.ts`. When a
+  browser test is needed and when to run it locally: kit:testing-standards.
+- What to test, how much and mutation checks: the kit:testing-standards skill. Load it
+  before writing or reviewing a test.
 
 ## Git
 
