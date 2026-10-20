@@ -2,11 +2,11 @@ import { isCancel } from 'axios';
 import { delay, http, HttpResponse } from 'msw';
 import {
   conflict,
+  domainNotFound,
   internalError,
   notFound,
   payloadTooLarge,
   tooManyRequests,
-  userNotFound,
   validationFailed,
 } from '@/test/error-fixtures';
 import { server } from '@/test/msw-server';
@@ -35,7 +35,7 @@ async function failure(respond: () => Response | Promise<Response>) {
 describe('ApiError from a response', () => {
   it.each([
     ['404', notFound],
-    ['a domain 404 code', userNotFound],
+    ['a domain 404 code', domainNotFound],
     ['409', conflict],
     ['413', payloadTooLarge],
     ['429', tooManyRequests],

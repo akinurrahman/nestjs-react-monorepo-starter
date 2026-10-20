@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError } from '@/lib/api/api-error';
-import { userNotFound } from '@/test/error-fixtures';
+import { notFound } from '@/test/error-fixtures';
 import { ErrorState } from './error-state';
 
 describe('ErrorState', () => {
@@ -10,15 +10,15 @@ describe('ErrorState', () => {
       <ErrorState
         error={
           new ApiError({
-            status: userNotFound.statusCode,
-            code: userNotFound.code,
-            message: userNotFound.message,
+            status: notFound.statusCode,
+            code: notFound.code,
+            message: notFound.message,
           })
         }
       />,
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent('User not found');
+    expect(screen.getByRole('alert')).toHaveTextContent('Resource not found');
   });
 
   // It replaces the page, so its title is the page's only heading.

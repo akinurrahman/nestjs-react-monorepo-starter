@@ -16,10 +16,10 @@ export const notFound = {
   message: 'Resource not found',
 } satisfies ErrorResponse;
 
-export const userNotFound = {
+export const domainNotFound = {
   statusCode: 404,
-  code: 'USER_NOT_FOUND',
-  message: 'User not found',
+  code: 'THING_NOT_FOUND',
+  message: 'Thing not found',
 } satisfies ErrorResponse;
 
 export const csrfRejected = {
