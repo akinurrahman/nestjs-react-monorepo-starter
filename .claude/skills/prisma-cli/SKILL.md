@@ -7,6 +7,19 @@ metadata:
   version: "7.9.1"
 ---
 
+## This repo differs from the examples below
+
+- Config is `apps/api/prisma7.config.ts`. A new `prisma.config.ts` is silently ignored.
+  Wherever this skill says `prisma.config.ts`, read `prisma7.config.ts`.
+- `schema: 'prisma'` is a folder (`schema.prisma` plus `models/`), not one file.
+- Seed is `nest start --entryFile seed`, running `src/seed.ts` as a compiled Nest app
+  context through repositories. Never `tsx`, never `new PrismaClient()`: esbuild drops the
+  decorator metadata Nest's injection needs.
+- Seed code reads config through ConfigService like the app, never `process.env`.
+- `shadowDatabaseUrl` is set only when `SHADOW_DATABASE_URL` exists (the e2e drift check).
+
+This skill is vendored from Prisma. If it is updated, re-add this section.
+
 # Prisma ORM 7 CLI reference
 
 These commands and examples apply to **Prisma ORM 7** only. For setup, connection repair, or a Prisma 8 application, load [prisma-orm-setup](../prisma-orm-setup/SKILL.md).
