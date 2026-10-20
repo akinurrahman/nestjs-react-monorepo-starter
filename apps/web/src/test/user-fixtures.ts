@@ -5,6 +5,7 @@ import {
   setPasswordSchema,
   updateUserSchema,
   USER_ERROR_CODES,
+  userIdParamSchema,
   type ApiResponse,
   type ErrorResponse,
   type PublicUser,
@@ -140,7 +141,16 @@ export function serveUsers(initial: PublicUser[] = defaultUsers()) {
     });
   };
 
-  const find = (id: unknown) => state.users.find((user) => user.id === id);
+  const find = (id: string) => state.users.find((user) => user.id === id);
+
+  // The user, or the response the api sends: a 400 on `id`, or a 404.
+  const lookUp = (params: Record<string, unknown>): PublicUser | Response => {
+    const parsed = userIdParamSchema.safeParse(params);
+    if (!parsed.success) return validationFailed(parsed.error);
+    return (
+      find(parsed.data.id) ?? HttpResponse.json(userNotFound, { status: 404 })
+    );
+  };
 
   const replace = (id: string, patch: Partial<PublicUser>) => {
     state.users = state.users.map((user) =>
@@ -170,10 +180,11 @@ export function serveUsers(initial: PublicUser[] = defaultUsers()) {
 
     http.get(`${USERS_PATH}/:id`, async ({ request, params }) => {
       await record(request);
-      const user = find(params.id);
-      return user
-        ? HttpResponse.json({ data: user } satisfies ApiResponse<PublicUser>)
-        : HttpResponse.json(userNotFound, { status: 404 });
+      const user = lookUp(params);
+      if (user instanceof Response) return user;
+      return HttpResponse.json({
+        data: user,
+      } satisfies ApiResponse<PublicUser>);
     }),
 
     http.post(USERS_PATH, async ({ request }) => {
@@ -196,16 +207,16 @@ export function serveUsers(initial: PublicUser[] = defaultUsers()) {
       );
     }),
 
-    // Like the api, a bad body answers 400 before the id is looked up.
+    // Like the api, a bad body answers 400 before the id is checked.
     http.patch(`${USERS_PATH}/:id`, async ({ request, params }) => {
       await record(request);
       const parsed = updateUserSchema.safeParse(await jsonBody(request));
       if (!parsed.success) return validationFailed(parsed.error);
-      const id = String(params.id);
-      if (!find(id)) return HttpResponse.json(userNotFound, { status: 404 });
+      const user = lookUp(params);
+      if (user instanceof Response) return user;
       const { email, name, role } = parsed.data;
       return HttpResponse.json({
-        data: replace(id, {
+        data: replace(user.id, {
           ...(email !== undefined && { email }),
           ...(name !== undefined && { name }),
           ...(role !== undefined && { role }),
@@ -215,29 +226,29 @@ export function serveUsers(initial: PublicUser[] = defaultUsers()) {
 
     http.post(`${USERS_PATH}/:id/disable`, async ({ request, params }) => {
       await record(request);
-      const id = String(params.id);
-      if (!find(id)) return HttpResponse.json(userNotFound, { status: 404 });
+      const user = lookUp(params);
+      if (user instanceof Response) return user;
       return HttpResponse.json({
-        data: replace(id, { isActive: false }),
+        data: replace(user.id, { isActive: false }),
       } satisfies ApiResponse<PublicUser>);
     }),
 
     http.post(`${USERS_PATH}/:id/enable`, async ({ request, params }) => {
       await record(request);
-      const id = String(params.id);
-      if (!find(id)) return HttpResponse.json(userNotFound, { status: 404 });
+      const user = lookUp(params);
+      if (user instanceof Response) return user;
       return HttpResponse.json({
-        data: replace(id, { isActive: true }),
+        data: replace(user.id, { isActive: true }),
       } satisfies ApiResponse<PublicUser>);
     }),
 
+    // Like the api, a bad body answers 400 before the id is checked.
     http.post(`${USERS_PATH}/:id/password`, async ({ request, params }) => {
       await record(request);
       const parsed = setPasswordSchema.safeParse(await jsonBody(request));
       if (!parsed.success) return validationFailed(parsed.error);
-      if (!find(params.id)) {
-        return HttpResponse.json(userNotFound, { status: 404 });
-      }
+      const user = lookUp(params);
+      if (user instanceof Response) return user;
       return new HttpResponse(null, { status: 204 });
     }),
   );

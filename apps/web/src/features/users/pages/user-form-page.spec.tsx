@@ -166,4 +166,15 @@ describe('edit user', () => {
       await within(document.body).findByText(/not found/i),
     ).toBeInTheDocument();
   });
+
+  // The api answers a malformed id with 400, not 404.
+  it('shows not found for a malformed id', async () => {
+    serveUsers();
+    renderApp(usersRoutes, '/users/not-a-uuid/edit');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Not found' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });
