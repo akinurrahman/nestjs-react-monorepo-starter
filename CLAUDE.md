@@ -102,8 +102,9 @@ Headlines:
   relative import.
 - Only repositories inject PrismaService. Services own the rules, throw AppError
   subclasses (never HttpException) and hand repositories data built field by field.
-- Controllers return plain values, the interceptor wraps. Lists take a query DTO whose
-  schema extends `paginationQuerySchema` and return `paginate(items, total, query, summary?)`.
+- Controllers return plain values, the interceptor wraps. Lists take `PaginationQueryDto`,
+  or a `List<Entities>QueryDto` extending `paginationQuerySchema` once filters arrive, and
+  return `paginate(items, total, query, summary?)`.
 - Request body schemas use `z.strictObject`.
 - `configureApp` is the only app setup. `main.ts` and every e2e spec use it. Nothing
   registers routes or middleware after it.
