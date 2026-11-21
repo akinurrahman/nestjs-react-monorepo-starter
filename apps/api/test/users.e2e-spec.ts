@@ -3,6 +3,7 @@ import type { Role } from '@starter/shared';
 import request from 'supertest';
 import { createSwaggerDocument } from './../src/config/swagger.config.js';
 import type { PrismaService } from './../src/database/prisma.service.js';
+import type { UsersTransaction } from './../src/users/users.repository.js';
 import {
   cookieHeader,
   createApp,
@@ -74,23 +75,66 @@ async function disableAfterRoleCheck(callerId: string) {
   });
 }
 
-// Holds the next two requests after the role check until both have passed
-// it, so they reach the service together. For the race tests.
-async function holdUntilBothPassRoleCheck() {
-  const { SessionsRepository } =
-    await import('./../src/auth/sessions.repository.js');
-  const sessions = app.get(SessionsRepository);
-  const findAccess = sessions.findAccess.bind(sessions);
-  let passed = 0;
+// Under the 5s test timeout, so a stuck hold fails with its own message.
+const HOLD_TIMEOUT_MS = 2000;
+
+// Holds the next two requests right after `read`, the pre-check the rule
+// under test reads, so both have read before either writes. For the race
+// tests. The auth and role checks run before it. It releases on either:
+// - both requests are at the hold: nothing kept them apart;
+// - one is at the hold and the other waits on a Postgres lock: the lock
+//   under test keeps the second out of the read, so waiting for both would
+//   hang. The lock wait is read from pg_stat_activity.
+// After the requests, call expectReleased(): a hold that neither condition
+// released gives up after HOLD_TIMEOUT_MS and fails the test there.
+async function holdAfterRead(read: 'findByEmail' | 'lockActiveAdminIds') {
+  const { UsersRepository } =
+    await import('./../src/users/users.repository.js');
+  const users = app.get(UsersRepository);
+  const transaction = users.transaction.bind(users);
+  let arrived = 0;
+  let timedOut = false;
   let release!: () => void;
-  const bothPassed = new Promise<void>((resolve) => (release = resolve));
-  vi.spyOn(sessions, 'findAccess').mockImplementation(async (id) => {
-    const access = await findAccess(id);
-    passed += 1;
-    if (passed === 2) release();
-    await bothPassed;
-    return access;
-  });
+  const released = new Promise<void>((resolve) => (release = resolve));
+
+  const releaseOnLockWait = async () => {
+    const deadline = Date.now() + HOLD_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`;
+      if (waiting > 0 || arrived === 2) return release();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    timedOut = true;
+    release();
+  };
+
+  const held = async <T>(result: Promise<T>): Promise<T> => {
+    const value = await result;
+    arrived += 1;
+    if (arrived === 2) release();
+    else void releaseOnLockWait();
+    await released;
+    return value;
+  };
+
+  const wrap = (tx: UsersTransaction): UsersTransaction =>
+    read === 'findByEmail'
+      ? { ...tx, findByEmail: (email) => held(tx.findByEmail(email)) }
+      : { ...tx, lockActiveAdminIds: () => held(tx.lockActiveAdminIds()) };
+
+  vi.spyOn(users, 'transaction').mockImplementation((run) =>
+    transaction((tx) => run(wrap(tx))),
+  );
+
+  return {
+    expectReleased: () =>
+      expect(
+        timedOut,
+        `hold after ${read} not released in ${HOLD_TIMEOUT_MS}ms: the second request neither reached it nor waited on a lock`,
+      ).toBe(false),
+  };
 }
 
 function expectNoSecrets(res: request.Response) {
@@ -311,17 +355,18 @@ describe('Admin routes with a stale access token', () => {
 
 // This guards the outcome: exactly one of two admins demoting each other
 // wins and the other gets LAST_ADMIN, in either order. It guards the outcome
-// and only sometimes catches a missing lock: the two requests have to
-// interleave inside the service for the race to show, and that is timing.
-// Both requests are held after the role check until both passed it, so the
-// role check cannot turn the loser into a 403 or 401 and hide the rule under
-// test. That hold is why it failed 20 of 20 runs with the transaction removed
-// on the machine that wrote it, but that is not a guarantee elsewhere.
+// and only sometimes catches a missing lock elsewhere: whether two requests
+// interleave inside the rule is timing. Here both are held right after the
+// active admin read (the lock), so both pass the role check before either
+// writes and the loser cannot turn into a 401 or 403. With the lock, the
+// second waits on it and the first is let go; without it, both read two
+// admins. On the machine that wrote it: failed 0 of 20 runs on the real
+// code, 20 of 20 with FOR UPDATE removed. Not a guarantee elsewhere.
 describe('Two admins demoting each other at once', () => {
   it('lets exactly one demotion through and answers LAST_ADMIN to the other', async () => {
     const a = await signInAdmin();
     const b = await signInAdmin();
-    await holdUntilBothPassRoleCheck();
+    const hold = await holdAfterRead('lockActiveAdminIds');
 
     const [aDemotesB, bDemotesA] = await Promise.all([
       api()
@@ -334,6 +379,7 @@ describe('Two admins demoting each other at once', () => {
         .send({ role: 'USER' }),
     ]);
 
+    hold.expectReleased();
     expect([aDemotesB.status, bDemotesA.status].sort((x, y) => x - y)).toEqual([
       200, 409,
     ]);
@@ -348,9 +394,9 @@ describe('Two admins demoting each other at once', () => {
 // it is a race by itself; the unique index is the real guard, answered with
 // CONFLICT, and either code is right. The requests are sent at once with no
 // hold: the password hash between the check and the write makes them overlap.
-// It guards the outcome and only sometimes catches a missing guard. With the
-// unique violation no longer mapped to 409 it failed 20 of 20 runs on the
-// machine that wrote it, which is not a guarantee elsewhere.
+// It guards the outcome and only sometimes catches a missing guard. On the
+// machine that wrote it: failed 0 of 20 runs on the real code, 20 of 20 with
+// the unique violation no longer mapped to 409. Not a guarantee elsewhere.
 describe('Two creates with one email at once', () => {
   it('stores one user and answers 409 to the other', async () => {
     const { headers } = await signInAdmin();
@@ -377,24 +423,24 @@ describe('Two creates with one email at once', () => {
 // service check reads, then writes; the unique index is the real guard,
 // answered with CONFLICT, and either code is right. Unlike the creates there
 // is no slow hash between the check and the write, so two requests sent at
-// once ran one after the other: both are held after the role check until
-// both passed it. It guards the outcome and only sometimes catches a missing
-// guard. With the unique violation no longer mapped to 409 it failed
-// 20 of 20 runs on the machine that wrote it, against 0 of 20 without the
-// hold, which is not a guarantee
-// elsewhere.
+// once ran one after the other: both are held right after the email check
+// read, so both find the email free before either writes. It guards the
+// outcome and only sometimes catches a missing guard. On the machine that
+// wrote it: failed 0 of 20 runs on the real code, 20 of 20 with the unique
+// violation no longer mapped to 409. Not a guarantee elsewhere.
 describe('Two updates to one email at once', () => {
   it('stores the email on one user and answers 409 to the other', async () => {
     const { headers } = await signInAdmin();
     const first = await createUser(prisma);
     const second = await createUser(prisma);
     const email = uniqueEmail();
-    await holdUntilBothPassRoleCheck();
+    const hold = await holdAfterRead('findByEmail');
     const update = (id: string) =>
       api().patch(`/api/users/${id}`).set(headers).send({ email });
 
     const [a, b] = await Promise.all([update(first.id), update(second.id)]);
 
+    hold.expectReleased();
     expect([a.status, b.status].sort((x, y) => x - y)).toEqual([200, 409]);
     const loser = a.status === 409 ? a : b;
     expect(['EMAIL_TAKEN', 'CONFLICT']).toContain(
