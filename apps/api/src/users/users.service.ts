@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
-  type CreateUserInput,
+  type CreateUserValues,
   type ListUsersQuery,
   type PublicUser,
-  type UpdateMeInput,
-  type UpdateUserInput,
+  type UpdateMeValues,
+  type UpdateUserValues,
   USER_ERROR_CODES,
 } from '@starter/shared';
 import { PasswordService } from '../auth/password.service.js';
@@ -56,7 +56,7 @@ export class UsersService {
 
   // The unique index still backs the email check: a concurrent create with
   // the same email ends in P2002, which the global filter answers with 409.
-  async create(input: CreateUserInput): Promise<PublicUser> {
+  async create(input: CreateUserValues): Promise<PublicUser> {
     if (await this.users.findByEmail(input.email)) throw emailTaken();
     const user = await this.users.create({
       email: input.email,
@@ -72,7 +72,7 @@ export class UsersService {
   async update(
     actor: AuthUser,
     id: string,
-    input: UpdateUserInput,
+    input: UpdateUserValues,
   ): Promise<PublicUser> {
     return this.users.transaction(async (tx) => {
       const user = await tx.findById(id);
@@ -163,7 +163,7 @@ export class UsersService {
   // verifies until it expires, but it changes nothing. The generic
   // UnauthorizedError code is load-bearing: the web refreshes its access
   // token only on UNAUTHORIZED, so do not give it a specific code.
-  async updateMe(actor: AuthUser, input: UpdateMeInput): Promise<PublicUser> {
+  async updateMe(actor: AuthUser, input: UpdateMeValues): Promise<PublicUser> {
     const user = await this.users.findById(actor.id);
     if (!user || !user.isActive) throw new UnauthorizedError();
     return toPublicUser(await this.users.update(user.id, { name: input.name }));

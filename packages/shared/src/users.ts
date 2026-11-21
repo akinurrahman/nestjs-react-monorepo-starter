@@ -80,6 +80,10 @@ export type UserErrorCode =
   (typeof USER_ERROR_CODES)[keyof typeof USER_ERROR_CODES];
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 export type CreateUserInput = z.input<typeof createUserSchema>;
+export type CreateUserValues = z.output<typeof createUserSchema>;
 export type UpdateUserInput = z.input<typeof updateUserSchema>;
+export type UpdateUserValues = z.output<typeof updateUserSchema>;
 export type UpdateMeInput = z.input<typeof updateMeSchema>;
+export type UpdateMeValues = z.output<typeof updateMeSchema>;
 export type SetPasswordInput = z.input<typeof setPasswordSchema>;
+export type SetPasswordValues = z.output<typeof setPasswordSchema>;

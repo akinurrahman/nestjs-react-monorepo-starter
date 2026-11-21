@@ -85,6 +85,8 @@ export const authResponseSchema = z.object({
 });
 
 export type LoginInput = z.input<typeof loginSchema>;
+export type LoginValues = z.output<typeof loginSchema>;
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
+export type ChangePasswordValues = z.output<typeof changePasswordSchema>;
 export type PublicUser = z.infer<typeof publicUserSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;

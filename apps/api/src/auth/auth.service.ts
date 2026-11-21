@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  type ChangePasswordInput,
+  type ChangePasswordValues,
   ERROR_CODES,
+  type LoginValues,
   type PublicUser,
 } from '@starter/shared';
 import { BadRequestError, UnauthorizedError } from '../common/errors/index.js';
@@ -28,11 +29,6 @@ export interface AuthResult {
   // Set when the client must store a new cookie. A refresh inside the grace
   // window answers without one, so the cookie the browser holds stays.
   refreshToken?: string;
-}
-
-interface LoginInput {
-  email: string;
-  password: string;
 }
 
 const invalidCredentials = () =>
@@ -81,7 +77,7 @@ export class AuthService {
 
   // Wrong email, wrong password and inactive account get the same error, and
   // an unknown email still pays for one argon2 verify.
-  async login(input: LoginInput, client: ClientInfo): Promise<AuthResult> {
+  async login(input: LoginValues, client: ClientInfo): Promise<AuthResult> {
     const user = await this.users.findByEmail(input.email);
     if (!user) {
       await this.passwords.verifyDummy(input.password);
@@ -185,7 +181,7 @@ export class AuthService {
   // the password it was opened with. The caller's own session stays.
   async changePassword(
     actor: AuthUser,
-    input: ChangePasswordInput,
+    input: ChangePasswordValues,
   ): Promise<void> {
     const user = await this.users.findById(actor.id);
     if (!user || !user.isActive) throw new UnauthorizedError();

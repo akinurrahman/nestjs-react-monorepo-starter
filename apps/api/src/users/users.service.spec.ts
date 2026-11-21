@@ -1,7 +1,7 @@
 import type {
-  CreateUserInput,
-  UpdateMeInput,
-  UpdateUserInput,
+  CreateUserValues,
+  UpdateMeValues,
+  UpdateUserValues,
 } from '@starter/shared';
 import type { AuthUser } from '../auth/auth.types.js';
 import type { PasswordService } from '../auth/password.service.js';
@@ -67,7 +67,7 @@ function setup(users: User[], activeAdminIds: string[]) {
 }
 
 describe('UsersService.create', () => {
-  const INPUT: CreateUserInput = {
+  const INPUT: CreateUserValues = {
     email: 'new@example.com',
     name: 'New',
     role: 'USER',
@@ -92,7 +92,7 @@ describe('UsersService.create', () => {
   it('hands the repository only the known fields and the hash', async () => {
     const { service, repository } = setup([ADMIN], [ADMIN.id]);
 
-    await service.create({ ...INPUT, isActive: false } as CreateUserInput);
+    await service.create({ ...INPUT, isActive: false } as CreateUserValues);
 
     expect(repository.create).toHaveBeenCalledWith({
       email: 'new@example.com',
@@ -141,7 +141,7 @@ describe('UsersService.updateMe', () => {
   it('writes only the name', async () => {
     const { service, tx } = setup([ADMIN, USER], [ADMIN.id]);
 
-    await service.updateMe(ME, { name: 'Me', role: 'ADMIN' } as UpdateMeInput);
+    await service.updateMe(ME, { name: 'Me', role: 'ADMIN' } as UpdateMeValues);
 
     expect(tx.update).toHaveBeenCalledWith(USER.id, { name: 'Me' });
   });
@@ -281,7 +281,7 @@ describe('UsersService.update', () => {
     await service.update(ACTOR, USER.id, {
       name: 'New',
       isActive: false,
-    } as UpdateUserInput);
+    } as UpdateUserValues);
     expect(tx.update).toHaveBeenCalledWith(USER.id, { name: 'New' }, {});
   });
 
