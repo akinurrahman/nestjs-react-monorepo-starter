@@ -631,6 +631,15 @@ function htmlText(value: string): string {
 // ----------------------------------------------------------------------------
 // Self-removal
 
+// The init script's override in .oxlintrc.json, as Prettier formats it.
+const INIT_OXLINT_OVERRIDE = `    {
+      "files": ["${INIT_PACKAGE_DIR}/**"],
+      "env": {
+        "node": true
+      }
+    },
+`;
+
 // The edits that take the init script out of the project once it is done.
 // Returns the source unchanged for every other file.
 export function removeInitScript(path: string, source: string): string {
@@ -645,17 +654,11 @@ export function removeInitScript(path: string, source: string): string {
       // Gone already is a rerun. Present in any other form is drift.
       if (!source.includes(INIT_PACKAGE_DIR)) return source;
       return replaceOnce(source, `  - ${INIT_PACKAGE_DIR}\n`, '');
-    case '.oxlintrc.json': {
-      const config = JSON.parse(source) as {
-        overrides?: { files: string[] }[];
-      };
-      const kept = config.overrides?.filter(
-        (o) => !o.files.some((f) => f.startsWith(`${INIT_PACKAGE_DIR}/`)),
-      );
-      if (!kept || kept.length === config.overrides!.length) return source;
-      config.overrides = kept;
-      return `${JSON.stringify(config, null, 2)}\n`;
-    }
+    case '.oxlintrc.json':
+      // As text, like the workspace entry: a JSON round trip reflows the
+      // rest of the file, which Prettier then keeps.
+      if (!source.includes(INIT_PACKAGE_DIR)) return source;
+      return replaceOnce(source, INIT_OXLINT_OVERRIDE, '');
     default:
       return source;
   }

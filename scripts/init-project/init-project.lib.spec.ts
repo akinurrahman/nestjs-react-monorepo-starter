@@ -792,6 +792,30 @@ describe('removeInitScript', () => {
     expect(out.overrides).toHaveLength(before.overrides.length - 1);
   });
 
+  it('removes only the override lines from .oxlintrc.json, the rest byte for byte', () => {
+    const lines = read('.oxlintrc.json').split('\n');
+    const files = lines.indexOf('      "files": ["scripts/init-project/**"],');
+    expect(lines.slice(files - 1, files + 5)).toEqual([
+      '    {',
+      '      "files": ["scripts/init-project/**"],',
+      '      "env": {',
+      '        "node": true',
+      '      }',
+      '    },',
+    ]);
+    const expected = lines.toSpliced(files - 1, 6).join('\n');
+    expect(removeInitScript('.oxlintrc.json', lines.join('\n'))).toBe(expected);
+  });
+
+  it('fails loudly when the oxlint override is not the block it removes', () => {
+    expect(() =>
+      removeInitScript(
+        '.oxlintrc.json',
+        '{ "overrides": [{ "files": ["scripts/init-project/**"] }] }\n',
+      ),
+    ).toThrow(/Expected to find/);
+  });
+
   it('is a no-op the second time and on other files', () => {
     for (const path of [
       'package.json',
