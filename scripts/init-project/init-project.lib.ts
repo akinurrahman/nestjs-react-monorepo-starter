@@ -372,6 +372,88 @@ export function parseRepoFlag(value: string): GitHubRepo | undefined {
   return match ? { owner: match[1]!, repo: match[2]! } : undefined;
 }
 
+// The template's GitHub repo under its name and its old one, which GitHub
+// still redirects. GitHub names are case-insensitive.
+export const TEMPLATE_REPOS: readonly GitHubRepo[] = [
+  parseGitHubRemote(TEMPLATE.repoUrl)!,
+  { owner: 'akinurrahman', repo: 'starter-react-nest' },
+];
+
+export function isTemplateRemote(url: string): boolean {
+  const repo = parseGitHubRemote(url);
+  return (
+    repo !== undefined &&
+    TEMPLATE_REPOS.some(
+      (t) =>
+        t.owner.toLowerCase() === repo.owner.toLowerCase() &&
+        t.repo.toLowerCase() === repo.repo.toLowerCase(),
+    )
+  );
+}
+
+// The project's own GitHub repo, from origin's url. A clone of the template
+// has the template as origin, which is not the project's repo.
+export function projectRepo(
+  originUrl: string | undefined,
+): GitHubRepo | undefined {
+  if (originUrl === undefined || isTemplateRemote(originUrl)) return undefined;
+  return parseGitHubRemote(originUrl);
+}
+
+// What origin becomes when it is the template: a fetch-only remote, so a
+// later `git push` cannot reach the template.
+export const TEMPLATE_REMOTE = 'template';
+export const NO_PUSH_URL = 'no_push';
+
+export type RemoteState = {
+  // remote.<name>.url as configured, undefined when the remote is missing.
+  originUrl: string | undefined;
+  templateUrl: string | undefined;
+  templatePushUrl: string | undefined;
+  // The current branch, undefined on a detached HEAD.
+  branch: string | undefined;
+  // branch.<branch>.remote, undefined when the branch tracks nothing.
+  upstreamRemote: string | undefined;
+};
+
+// The git commands that detach the template, in order. Idempotent: a rerun
+// after they ran returns []. Throws, before anything changes, when origin
+// is the template and a remote named "template" exists already.
+export function templateRemoteSteps(state: RemoteState): string[][] {
+  const steps: string[][] = [];
+  let upstream = state.upstreamRemote;
+  if (state.originUrl !== undefined && isTemplateRemote(state.originUrl)) {
+    if (state.templateUrl !== undefined) {
+      throw new Error(
+        `origin is the template, and a remote named "${TEMPLATE_REMOTE}" exists already. Remove or rename that remote, then run again.`,
+      );
+    }
+    steps.push(['remote', 'rename', 'origin', TEMPLATE_REMOTE]);
+    // git remote rename moves the branch's upstream along.
+    if (upstream === 'origin') upstream = TEMPLATE_REMOTE;
+  } else if (
+    state.templateUrl === undefined ||
+    !isTemplateRemote(state.templateUrl)
+  ) {
+    return [];
+  }
+  if (state.branch !== undefined && upstream === TEMPLATE_REMOTE) {
+    steps.push(['branch', '--unset-upstream']);
+  }
+  if (state.templatePushUrl !== NO_PUSH_URL) {
+    steps.push(['remote', 'set-url', '--push', TEMPLATE_REMOTE, NO_PUSH_URL]);
+  }
+  return steps;
+}
+
+// The closing lines once the template is a fetch-only remote.
+export function templateRemoteSummary(branch: string | undefined): string[] {
+  return [
+    `  origin pointed at the template. It is now the remote "${TEMPLATE_REMOTE}", fetch only.`,
+    `  Add your own: git remote add origin <url>, then git push -u origin ${branch ?? '<branch>'}`,
+  ];
+}
+
 // ----------------------------------------------------------------------------
 // File rewrites
 

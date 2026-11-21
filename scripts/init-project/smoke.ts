@@ -3,10 +3,10 @@
 //   pnpm --filter @starter/init-project smoke [--dir <folder>] [--down]
 //
 // Clones this repo, with the working tree's uncommitted changes, into a temp
-// folder, as a repo made from the template would be. There it runs a dry
-// run, then the real init as init-smoke on port 5439 with its commit made
-// to fail and finished by hand, then the full gate, and checks what is left
-// of the template.
+// folder, with the template as origin, as a plain `git clone` of it leaves
+// it. There it runs a dry run, then the real init as init-smoke on port 5439
+// with its commit made to fail and finished by hand, then the full gate, and
+// checks what is left of the template, the origin remote included.
 //
 // The init starts its own Postgres container, init-smoke-postgres-1, with
 // its own volume and port, so it never touches the dev database. It stays
@@ -28,7 +28,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { INIT_PACKAGE_DIR, isLeftAlone } from './init-project.lib.ts';
+import { INIT_PACKAGE_DIR, isLeftAlone, TEMPLATE } from './init-project.lib.ts';
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const NAME = 'init-smoke';
@@ -139,17 +139,39 @@ async function main(): Promise<void> {
   git(repo, 'config user.email smoke@example.invalid');
   git(repo, 'add -A');
   git(repo, 'commit --quiet --allow-empty -m "smoke: working tree"');
-  git(repo, `remote set-url origin https://github.com/example/${NAME}.git`);
+  // Origin as a plain `git clone` of the template leaves it. insteadOf
+  // sends its fetches to this repo, so `git fetch template` works offline
+  // and nothing ever reaches GitHub. The init reads the url as configured,
+  // before the rewrite.
+  git(repo, `remote set-url origin ${TEMPLATE.repoUrl}`);
+  git(
+    repo,
+    `config "url.${ROOT.replaceAll('\\', '/')}.insteadOf" ${TEMPLATE.repoUrl}`,
+  );
+  // The clone made it track origin, as on a real clone.
+  const branch = git(repo, 'symbolic-ref --short HEAD');
 
   // No --display-name: --yes derives "Init Smoke" from the name.
   const flags = `--name ${NAME} --admin-email admin@smoke.test --admin-name "Smoke Admin" --db-port ${PORT} --yes`;
   const env = { INIT_ADMIN_PASSWORD: ADMIN_PASSWORD };
 
-  const dry = run(repo, `pnpm init:project ${flags} --dry-run`, { env });
-  check('dry run succeeds', dry.ok);
+  const dry = run(repo, `pnpm init:project ${flags} --dry-run`, {
+    env,
+    quiet: true,
+  });
+  console.log(dry.stdout);
+  check('dry run succeeds', dry.ok, dry.ok ? undefined : dry.stderr);
   check(
     'dry run changes nothing',
-    git(repo, 'status --porcelain') === '' && !existsSync(join(repo, '.env')),
+    git(repo, 'status --porcelain') === '' &&
+      !existsSync(join(repo, '.env')) &&
+      git(repo, 'remote') === 'origin',
+  );
+  check(
+    'dry run takes the template origin for no project repo and plans its rename',
+    dry.stdout.includes('README repo: (none, a placeholder)') &&
+      dry.stdout.includes('git remote rename origin template') &&
+      dry.stdout.includes('git remote set-url --push template no_push'),
   );
 
   // A rename that stopped partway: one file renamed as the init would, the
@@ -261,6 +283,32 @@ async function main(): Promise<void> {
       readFileSync(join(repo, 'apps/api/.env'), 'utf8').includes(
         `localhost:${PORT}/init_smoke"`,
       ),
+  );
+  const readme = readFileSync(join(repo, 'README.md'), 'utf8');
+  check(
+    'the README clones the project, not the template',
+    readme.includes(
+      `git clone https://github.com/<owner>/${NAME}.git\ncd ${NAME}\n`,
+    ) && !readme.includes(TEMPLATE.repoUrl),
+  );
+  const push = run(repo, 'git push', { quiet: true });
+  // With a refspec, so git gets as far as the push url.
+  const pushTemplate = run(repo, 'git push template HEAD', { quiet: true });
+  check(
+    'origin is now a fetch-only "template" remote',
+    git(repo, 'remote') === 'template' &&
+      !run(repo, `git config --get branch.${branch}.remote`, { quiet: true })
+        .ok &&
+      !push.ok &&
+      // No upstream, and git refuses to guess one. With
+      // push.autoSetupRemote it picks template, whose push url refuses.
+      /no upstream branch|no configured push destination|no_push/i.test(
+        push.stderr,
+      ) &&
+      !pushTemplate.ok &&
+      pushTemplate.stderr.includes('no_push') &&
+      run(repo, 'git fetch --quiet template', { quiet: true }).ok,
+    `git push: ${push.stderr}\ngit push template HEAD: ${pushTemplate.stderr}`,
   );
   check(
     'a second run is refused',

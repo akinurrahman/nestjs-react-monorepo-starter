@@ -63,6 +63,8 @@ pnpm dev
 
 `pnpm init:project` asks for a project name and the first admin. It renames the packages (`@starter/*` becomes `@<name>/*`), the databases and the Docker Compose project, writes `.env` and `apps/api/.env` with a fresh `JWT_SECRET`, starts Postgres, applies the migrations, seeds the admin, and commits the result as `chore: initialize <name>`. Then it deletes itself and the template-only parts of this README.
 
+A plain `git clone` of the template works too. The script then renames `origin` to `template`, fetch only, so a push can't reach the template, and tells you how to add your own `origin`.
+
 It runs once. `pnpm init:project --help` lists a flag for every value, and `--dry-run` prints every change without making any. If a step fails, the script tells you how to finish.
 
 ### Without the init script

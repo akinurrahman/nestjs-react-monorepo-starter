@@ -35,16 +35,20 @@ import {
   displayNameGiven,
   finishCommands,
   initState,
+  isTemplateRemote,
   lineDiff,
   parseCli,
-  parseGitHubRemote,
   parsePort,
+  projectRepo,
   removeInitScript,
   renameAction,
   renderApiEnv,
   renderRootEnv,
   rewriteFile,
   stopHint,
+  TEMPLATE_REMOTE,
+  templateRemoteSteps,
+  templateRemoteSummary,
   validateAdminEmail,
   validateAdminName,
   validateAdminPassword,
@@ -55,6 +59,7 @@ import {
   type GitHubRepo,
   type InitStage,
   type Names,
+  type RemoteState,
 } from './init-project.lib.ts';
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -288,8 +293,29 @@ async function collectInputs(
 }
 
 function githubOrigin(): GitHubRepo | undefined {
-  const origin = run('git', ['remote', 'get-url', 'origin'], { quiet: true });
-  return origin.ok ? parseGitHubRemote(origin.stdout) : undefined;
+  return projectRepo(gitConfig('remote.origin.url'));
+}
+
+// The value as configured, before any url.<base>.insteadOf rewrite, which
+// `git remote get-url` would apply. Undefined when unset.
+function gitConfig(key: string): string | undefined {
+  const result = run('git', ['config', '--get', key], { quiet: true });
+  return result.ok && result.stdout !== '' ? result.stdout : undefined;
+}
+
+function remoteState(): RemoteState {
+  const head = run('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], {
+    quiet: true,
+  });
+  const branch = head.ok && head.stdout !== '' ? head.stdout : undefined;
+  return {
+    originUrl: gitConfig('remote.origin.url'),
+    templateUrl: gitConfig(`remote.${TEMPLATE_REMOTE}.url`),
+    templatePushUrl: gitConfig(`remote.${TEMPLATE_REMOTE}.pushurl`),
+    branch,
+    upstreamRemote:
+      branch === undefined ? undefined : gitConfig(`branch.${branch}.remote`),
+  };
 }
 
 // ----------------------------------------------------------------------------
@@ -549,6 +575,15 @@ async function main(): Promise<void> {
   // missing Docker or a taken port never throws the answers away.
   if (!opts.dryRun) preflight(opts);
   const port = await resolvePort(opts, resume);
+  // A plain clone of the template has it as origin, where a later push
+  // would go. Planned here: a clash with an existing "template" remote
+  // stops the run before any prompt or change.
+  const remotes = remoteState();
+  const remoteSteps = templateRemoteSteps(remotes);
+  const templateDetached =
+    remoteSteps.length > 0 ||
+    (remotes.templateUrl !== undefined &&
+      isTemplateRemote(remotes.templateUrl));
 
   const inputs = await collectInputs(opts, opts.name, port, resume);
   const { names } = inputs;
@@ -565,6 +600,7 @@ async function main(): Promise<void> {
   const env = planEnvFiles(inputs, renamed);
 
   const commands = [
+    ...remoteSteps.map((args) => `git ${args.join(' ')}`),
     'pnpm install --no-frozen-lockfile',
     'docker compose up -d --wait --wait-timeout 120',
     `pnpm --filter ${api} db:deploy`,
@@ -592,6 +628,8 @@ async function main(): Promise<void> {
       console.log(`Wrote ${file.path}`);
     }
   }
+
+  for (const args of remoteSteps) mustRun('git', args);
 
   mustRun('pnpm', ['install', '--no-frozen-lockfile']);
   mustRun('docker', ['compose', 'up', '-d', '--wait', '--wait-timeout', '120']);
@@ -630,6 +668,9 @@ async function main(): Promise<void> {
   }
   console.log('  Start it: pnpm dev');
   if (!opts.commit) console.log('  The changes are not committed.');
+  if (templateDetached) {
+    for (const line of templateRemoteSummary(remotes.branch)) console.log(line);
+  }
 }
 
 try {

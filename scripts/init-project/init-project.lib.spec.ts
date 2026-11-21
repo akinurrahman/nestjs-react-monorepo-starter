@@ -16,11 +16,13 @@ import {
   firstFreePort,
   initState,
   isLeftAlone,
+  isTemplateRemote,
   lineDiff,
   NAME_MAX_LENGTH,
   parseCli,
   parseGitHubRemote,
   parsePort,
+  projectRepo,
   quoteEnvValue,
   removeInitScript,
   removeTemplateBlocks,
@@ -37,7 +39,9 @@ import {
   validateAdminName,
   validateAdminPassword,
   validateDisplayName,
+  templateRemoteSteps,
   validateName,
+  type RemoteState,
   type RewriteContext,
 } from './init-project.lib.ts';
 
@@ -394,6 +398,150 @@ describe('parseGitHubRemote', () => {
     'https://github.com/acme',
   ])('returns undefined for %j', (url) => {
     expect(parseGitHubRemote(url)).toBeUndefined();
+  });
+});
+
+describe('projectRepo', () => {
+  it.each([
+    'https://github.com/akinurrahman/nestjs-react-monorepo-starter.git',
+    'https://github.com/akinurrahman/nestjs-react-monorepo-starter',
+    'https://github.com/akinurrahman/nestjs-react-monorepo-starter/',
+    'https://token@github.com/akinurrahman/nestjs-react-monorepo-starter.git',
+    'git@github.com:akinurrahman/nestjs-react-monorepo-starter.git',
+    'git@github.com:akinurrahman/nestjs-react-monorepo-starter',
+    'ssh://git@github.com/akinurrahman/nestjs-react-monorepo-starter.git',
+    'https://github.com/AkinurRahman/NestJS-React-Monorepo-Starter.git',
+    'https://github.com/akinurrahman/starter-react-nest.git',
+    'https://github.com/akinurrahman/starter-react-nest',
+    'git@github.com:akinurrahman/starter-react-nest.git',
+    'git@github.com:akinurrahman/starter-react-nest',
+    'ssh://git@github.com/akinurrahman/starter-react-nest',
+  ])('takes the template remote %j for no project repo', (url) => {
+    expect(isTemplateRemote(url)).toBe(true);
+    expect(projectRepo(url)).toBeUndefined();
+  });
+
+  it.each([
+    ['https://github.com/acme/crm.git', { owner: 'acme', repo: 'crm' }],
+    [
+      'git@github.com:akinurrahman/acme-hr.git',
+      { owner: 'akinurrahman', repo: 'acme-hr' },
+    ],
+    // A fork keeps the name but is someone's own repo.
+    [
+      'https://github.com/acme/nestjs-react-monorepo-starter.git',
+      { owner: 'acme', repo: 'nestjs-react-monorepo-starter' },
+    ],
+  ])('keeps the project remote %j', (url, repo) => {
+    expect(isTemplateRemote(url)).toBe(false);
+    expect(projectRepo(url)).toEqual(repo);
+  });
+
+  it('has no project repo without a GitHub origin', () => {
+    expect(projectRepo(undefined)).toBeUndefined();
+    expect(projectRepo('https://gitlab.com/acme/crm.git')).toBeUndefined();
+    expect(projectRepo('D:/work/crm')).toBeUndefined();
+  });
+});
+
+describe('templateRemoteSteps', () => {
+  const template = TEMPLATE.repoUrl;
+  const rename = ['remote', 'rename', 'origin', 'template'];
+  const unsetUpstream = ['branch', '--unset-upstream'];
+  const noPush = ['remote', 'set-url', '--push', 'template', 'no_push'];
+  const clone: RemoteState = {
+    originUrl: template,
+    templateUrl: undefined,
+    templatePushUrl: undefined,
+    branch: 'main',
+    upstreamRemote: 'origin',
+  };
+
+  it('renames a template origin, drops the upstream and blocks pushes', () => {
+    expect(templateRemoteSteps(clone)).toEqual([rename, unsetUpstream, noPush]);
+  });
+
+  it('knows the template by its old name over ssh', () => {
+    expect(
+      templateRemoteSteps({
+        ...clone,
+        originUrl: 'git@github.com:akinurrahman/starter-react-nest.git',
+      }),
+    ).toEqual([rename, unsetUpstream, noPush]);
+  });
+
+  it('leaves the upstream alone when the branch tracks nothing, or on a detached HEAD', () => {
+    expect(
+      templateRemoteSteps({ ...clone, upstreamRemote: undefined }),
+    ).toEqual([rename, noPush]);
+    expect(
+      templateRemoteSteps({
+        ...clone,
+        branch: undefined,
+        upstreamRemote: undefined,
+      }),
+    ).toEqual([rename, noPush]);
+  });
+
+  it('does nothing for a project origin, or none', () => {
+    expect(
+      templateRemoteSteps({
+        ...clone,
+        originUrl: 'https://github.com/acme/crm.git',
+      }),
+    ).toEqual([]);
+    expect(
+      templateRemoteSteps({
+        ...clone,
+        originUrl: undefined,
+        upstreamRemote: undefined,
+      }),
+    ).toEqual([]);
+  });
+
+  it('is a no-op once it ran', () => {
+    expect(
+      templateRemoteSteps({
+        originUrl: undefined,
+        templateUrl: template,
+        templatePushUrl: 'no_push',
+        branch: 'main',
+        upstreamRemote: undefined,
+      }),
+    ).toEqual([]);
+  });
+
+  it('finishes a rename that stopped before the guards', () => {
+    expect(
+      templateRemoteSteps({
+        originUrl: undefined,
+        templateUrl: template,
+        templatePushUrl: undefined,
+        branch: 'main',
+        upstreamRemote: 'template',
+      }),
+    ).toEqual([unsetUpstream, noPush]);
+  });
+
+  it('leaves a "template" remote alone that is not the template', () => {
+    expect(
+      templateRemoteSteps({
+        originUrl: 'https://github.com/acme/crm.git',
+        templateUrl: 'https://github.com/acme/other.git',
+        templatePushUrl: undefined,
+        branch: 'main',
+        upstreamRemote: 'template',
+      }),
+    ).toEqual([]);
+  });
+
+  it('refuses before any change when a "template" remote exists already', () => {
+    expect(() =>
+      templateRemoteSteps({
+        ...clone,
+        templateUrl: 'https://github.com/acme/other.git',
+      }),
+    ).toThrow(/remote named "template" exists already/);
   });
 });
 
