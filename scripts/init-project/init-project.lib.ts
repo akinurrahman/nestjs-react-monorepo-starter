@@ -18,8 +18,6 @@ export const TEMPLATE = {
 // Tracked files that keep "starter" on purpose. The smoke test allows these
 // and nothing else.
 export const LEAVE_ALONE = [
-  // Arbitrary fixture names for the _test guard.
-  'apps/api/test/test-db.spec.ts',
   // Prisma's own docs ("a starter model").
   '.claude/skills/prisma-cli/',
 ] as const;

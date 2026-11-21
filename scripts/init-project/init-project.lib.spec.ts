@@ -621,7 +621,6 @@ describe('rewriteFile', () => {
   it('leaves the allowlisted files, the lockfile and the init script alone', () => {
     const source = "'@starter/shared' starter_test";
     for (const path of [
-      'apps/api/test/test-db.spec.ts',
       '.claude/skills/prisma-cli/references/init.md',
       'pnpm-lock.yaml',
       'scripts/init-project/package.json',

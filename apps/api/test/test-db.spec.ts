@@ -82,10 +82,10 @@ const url = (name: string) =>
 
 describe('assertTestDatabaseUrl', () => {
   it('accepts a database whose name ends in _test', () => {
-    expect(assertTestDatabaseUrl(url('starter_test'))).toBe('starter_test');
+    expect(assertTestDatabaseUrl(url('app_test'))).toBe('app_test');
   });
 
-  it.each(['starter', 'starter_test_copy', 'test', 'starter-test', ''])(
+  it.each(['app', 'app_test_copy', 'test', 'app-test', ''])(
     'refuses %j',
     (name) => {
       expect(() => assertTestDatabaseUrl(url(name))).toThrow(
@@ -114,7 +114,7 @@ describe('truncateAppTables', () => {
   // connection error instead of the guard's message.
   it('refuses a non _test database before connecting', async () => {
     await expect(
-      truncateAppTables('postgresql://postgres:postgres@127.0.0.1:1/starter'),
+      truncateAppTables('postgresql://postgres:postgres@127.0.0.1:1/app'),
     ).rejects.toThrow(/must end in "_test"/);
   });
 });
