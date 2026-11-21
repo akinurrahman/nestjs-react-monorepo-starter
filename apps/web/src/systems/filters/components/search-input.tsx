@@ -27,8 +27,9 @@ type Sent = { value: string | undefined };
  * pause.
  *
  * A new value from outside (a reset, a link, a navigation to this list with a
- * different search) replaces the text. Filter writes replace the history
- * entry, so Back never steps through earlier searches. This
+ * different search) replaces the text. Mark the field `typed` in its filter
+ * spec: a typed write replaces the history entry, so Back never steps
+ * through earlier searches, while other filter writes push. This
  * box's own write coming back does not: the URL can land after the person has
  * typed more, and copying it in then would eat those keystrokes. Any other
  * value that arrives is treated as outside.

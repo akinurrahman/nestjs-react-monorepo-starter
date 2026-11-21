@@ -284,6 +284,100 @@ describe('user list', () => {
     expect(popup.queryByText('OWNER')).toBeNull();
   });
 
+  describe('back and forward', () => {
+    const go = (
+      router: ReturnType<typeof renderApp>['router'],
+      delta: number,
+    ) =>
+      act(async () => {
+        await router.navigate(delta);
+      });
+    const statusControl = () =>
+      screen.getByRole('combobox', { name: 'Status' });
+
+    it('restores the status filter, its control and its rows', async () => {
+      serveUsers();
+      const user = userEvent.setup();
+      const { router } = renderApp(usersRoutes, '/users');
+      await findUserRow('Linus User');
+
+      await user.click(statusControl());
+      await user.click(await screen.findByRole('option', { name: 'Disabled' }));
+      await waitFor(() => expect(screen.queryByText('Linus User')).toBeNull());
+
+      await go(router, -1);
+      expect(router.state.location.search).toBe('');
+      expect(await findUserRow('Linus User')).toBeInTheDocument();
+      expect(statusControl()).not.toHaveTextContent('Disabled');
+
+      await go(router, 1);
+      expect(router.state.location.search).toBe('?status=disabled');
+      await waitFor(() => expect(screen.queryByText('Linus User')).toBeNull());
+      expect(await findUserRow('Dora Disabled')).toBeInTheDocument();
+      expect(statusControl()).toHaveTextContent('Disabled');
+    });
+
+    it('restores the role filter applied from the popover', async () => {
+      serveUsers();
+      const { router } = renderApp(usersRoutes, '/users');
+      await findUserRow('Linus User');
+      const { user, popup } = await openRoleFilter();
+      await user.click(popup.getByRole('combobox', { name: 'Role' }));
+      await user.click(await screen.findByRole('option', { name: 'Admin' }));
+      await user.keyboard('{Escape}');
+      await user.click(popup.getByRole('button', { name: 'Apply' }));
+      await waitFor(() => expect(screen.queryByText('Linus User')).toBeNull());
+
+      await go(router, -1);
+      expect(router.state.location.search).toBe('');
+      expect(await findUserRow('Linus User')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Filters' })).toBeVisible();
+
+      await go(router, 1);
+      expect(router.state.location.search).toBe('?role=ADMIN');
+      await waitFor(() => expect(screen.queryByText('Linus User')).toBeNull());
+      expect(
+        screen.getByRole('button', { name: 'Filters, 1 applied' }),
+      ).toBeVisible();
+    });
+
+    // A typed search gets no Back row: it replaces the entry instead.
+    it('replaces the history entry for a typed search', async () => {
+      serveUsers();
+      const user = userEvent.setup();
+      const { router } = renderApp(usersRoutes, '/users');
+      await findUserRow('Linus User');
+
+      await user.type(
+        screen.getByRole('searchbox', { name: 'Search name or email' }),
+        'linus',
+      );
+
+      await waitFor(() =>
+        expect(router.state.location.search).toBe('?search=linus'),
+      );
+      expect(router.state.historyAction).toBe('REPLACE');
+    });
+
+    it('moves between pages', async () => {
+      serveUsers(people(25));
+      const user = userEvent.setup();
+      const { router } = renderApp(usersRoutes, '/users');
+      await findUserRow('Person 20');
+      await user.click(screen.getByRole('button', { name: 'Next page' }));
+      await findUserRow('Person 25');
+
+      await go(router, -1);
+      expect(router.state.location.search).toBe('');
+      expect(await findUserRow('Person 1')).toBeInTheDocument();
+      expect(screen.queryByText('Person 25')).toBeNull();
+
+      await go(router, 1);
+      expect(router.state.location.search).toBe('?page=2');
+      expect(await findUserRow('Person 25')).toBeInTheDocument();
+    });
+  });
+
   it('shows the empty state with no users, and a clear action when filtered', async () => {
     serveUsers([]);
     const user = userEvent.setup();

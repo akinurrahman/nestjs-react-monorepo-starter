@@ -12,7 +12,7 @@ export const USER_KEYS = {
 };
 
 export const USER_FILTER_SPEC = defineUrlFilters<UserFilters>({
-  search: { maxLength: USER_SEARCH_MAX_LENGTH },
+  search: { maxLength: USER_SEARCH_MAX_LENGTH, typed: true },
   role: { kind: 'list', values: userRoleLookup.values },
   status: { values: userStatusLookup.values },
   ...pagingSpec(DEFAULT_PAGE_LIMIT),

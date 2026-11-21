@@ -12,7 +12,7 @@ type Filters = {
 };
 
 const SPEC = defineUrlFilters<Filters>({
-  search: {},
+  search: { typed: true },
   status: { values: ['ACTIVE', 'INACTIVE'], defaultValue: 'ACTIVE' },
   tags: { param: 'tag', kind: 'list', values: ['a', 'b', 'c'] },
   sort: { values: ['NEW', 'OLD'], defaultValue: 'NEW', view: true },
@@ -169,14 +169,98 @@ describe('writing', () => {
     expect(searchParams().get('search')).toBe('foo');
   });
 
-  it('writes the page as a replace, not a new history entry', () => {
+  it('writes the page as a push, a new history entry', () => {
     const { result, router } = setup('/?search=foo');
 
     act(() => {
       result.current.setFilter('page', 2);
     });
 
+    expect(router.state.historyAction).toBe('PUSH');
+  });
+});
+
+type Hook = ReturnType<typeof setup>['result']['current'];
+
+describe('history', () => {
+  it.each<[string, (hook: Hook) => void]>([
+    ['a page size', (hook) => hook.setFilter('limit', 50)],
+    ['a discrete filter', (hook) => hook.setFilter('status', 'INACTIVE')],
+    ['a list filter', (hook) => hook.setFilter('tags', ['a'])],
+    ['a view field', (hook) => hook.setFilter('sort', 'OLD')],
+    [
+      'a typed search mixed with a discrete filter',
+      (hook) => hook.setFilters({ search: 'bar', status: 'INACTIVE' }),
+    ],
+    ['a reset', (hook) => hook.resetFilters()],
+    ['a preset', (hook) => hook.applyCriteria({ status: 'INACTIVE' })],
+  ])('pushes a new entry for %s', (_, write) => {
+    const { result, router } = setup('/?search=foo');
+
+    act(() => write(result.current));
+
+    expect(router.state.historyAction).toBe('PUSH');
+  });
+
+  it('replaces the entry for a typed search', () => {
+    const { result, router } = setup('/?search=foo');
+
+    act(() => {
+      result.current.setFilter('search', 'bar');
+    });
+
     expect(router.state.historyAction).toBe('REPLACE');
+  });
+
+  it('replaces the entry when a typed search is cleared', () => {
+    const { result, router, searchParams } = setup('/?search=foo');
+
+    act(() => {
+      result.current.setFilter('search', null);
+    });
+
+    expect(router.state.historyAction).toBe('REPLACE');
+    expect(searchParams().has('search')).toBe(false);
+  });
+
+  it('replaces the entry for a typed search together with the page it resets', async () => {
+    const { result, searchParams, navigate } = setup('/');
+    await navigate('/?page=3');
+
+    act(() => {
+      result.current.setFilter('search', 'bar');
+    });
+    expect(searchParams().toString()).toBe('search=bar');
+
+    // The page=3 entry was replaced, so Back skips past it.
+    await navigate(-1);
+    expect(searchParams().toString()).toBe('');
+  });
+
+  it('pushes one entry for a discrete filter and the page it resets', async () => {
+    const { result, searchParams, navigate } = setup('/?page=3');
+
+    act(() => {
+      result.current.setFilter('status', 'INACTIVE');
+    });
+    expect(searchParams().toString()).toBe('status=INACTIVE');
+
+    await navigate(-1);
+    expect(searchParams().toString()).toBe('page=3');
+  });
+
+  it('restores the earlier filter on Back and the later one on Forward', async () => {
+    const { result, searchParams, navigate } = setup('/?status=INACTIVE');
+
+    act(() => {
+      result.current.setFilter('status', 'ACTIVE');
+    });
+    await navigate(-1);
+    expect(result.current.filters.status).toBe('INACTIVE');
+
+    await navigate(1);
+    expect(result.current.filters.status).toBe('ACTIVE');
+    expect(searchParams().toString()).toBe('status=ACTIVE');
   });
 });
 

@@ -274,7 +274,7 @@ export type PreviewFilters = {
 };
 
 export const PREVIEW_FILTER_SPEC = defineUrlFilters<PreviewFilters>({
-  search: {},
+  search: { typed: true },
   status: { values: previewStatusLookup.values },
   manager: {},
   departments: {

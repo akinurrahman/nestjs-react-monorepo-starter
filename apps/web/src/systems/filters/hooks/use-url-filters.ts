@@ -18,6 +18,10 @@ type UrlFilterFieldBase = {
   // The page cursor. Any write that narrows the results clears it, so a new
   // filter never lands on an empty page 7.
   pager?: boolean;
+  // Free text typed into a SearchInput. A write of typed fields only
+  // replaces the history entry, so Back never steps through earlier terms.
+  // Every other write pushes one entry.
+  typed?: boolean;
 };
 
 // A thunk resolves once per mount, for a default like "today" that must not
@@ -172,8 +176,10 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
     pendingRef.current = null;
   }, [params]);
 
+  // Pushes a history entry unless told to replace. Which writes replace is
+  // decided here in the hook, never by a page.
   const write = useCallback(
-    (mutate: (next: URLSearchParams) => void) => {
+    (mutate: (next: URLSearchParams) => void, replace = false) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(pendingRef.current ?? prev);
@@ -181,7 +187,7 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
           pendingRef.current = next;
           return next;
         },
-        { replace: true },
+        { replace },
       );
     },
     [setParams],
@@ -257,10 +263,17 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
     return parsed as T;
   }, [params, fields, defaults]);
 
-  // Several fields in one navigation, so a range edit is one URL write. Like
-  // every write here it replaces the history entry instead of adding one.
+  // Several fields in one navigation, so a range edit is one URL write and
+  // one history entry. A patch of typed fields only (a search) replaces the
+  // entry, the page reset it causes included; any other patch, a typed field
+  // mixed with a discrete one too, pushes.
   const setFilters = useCallback(
     (patch: Patch<T>) => {
+      const keys = Object.keys(patch);
+      const typedOnly =
+        keys.length > 0 &&
+        keys.every((key) => Boolean(spec[key as keyof T]?.typed));
+
       write((next) => {
         Object.entries(patch as Record<string, UrlFilterValue>).forEach(
           ([key, value]) => {
@@ -292,7 +305,7 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
             if (field.pager) next.delete(field.param);
           });
         }
-      });
+      }, typedOnly);
     },
     [write, spec, fields],
   );
@@ -303,8 +316,8 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
     [setFilters],
   );
 
-  // A whole preset in one navigation. The spec's own fields it does not name
-  // are dropped.
+  // A whole preset in one navigation and one pushed entry. The spec's own
+  // fields it does not name are dropped.
   const applyCriteria = useCallback(
     (criteria: C) => {
       write((next) => {
@@ -325,6 +338,7 @@ export function useUrlFilters<T extends object, C = Omit<T, 'page' | 'limit'>>(
     [write, spec, fields],
   );
 
+  // One pushed entry, so Back returns to the filters that were cleared.
   const resetFilters = useCallback(
     () => write((next) => clearOwnParams(next, fields)),
     [write, fields],
