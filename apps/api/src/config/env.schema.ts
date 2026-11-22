@@ -49,7 +49,16 @@ export const envSchema = z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
     SWAGGER_ENABLED: z.stringbool().optional(),
-    SWAGGER_USER: z.string().min(1).optional(),
+    // Basic auth splits user and password at the first colon, so a user
+    // with one could never log in.
+    SWAGGER_USER: z
+      .string()
+      .min(1)
+      .refine((value) => !value.includes(':'), {
+        error:
+          'Must not contain ":" (Basic auth splits user and password at the first colon)',
+      })
+      .optional(),
     // The docs login has no rate limit, so a short password could be
     // guessed online.
     SWAGGER_PASSWORD: z

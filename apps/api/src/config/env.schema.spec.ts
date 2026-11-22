@@ -246,4 +246,29 @@ describe('SWAGGER_USER / SWAGGER_PASSWORD', () => {
     ).toMatch(/at least 16 characters/);
     expect(issuePaths(CREDENTIALS)).toEqual([]);
   });
+
+  // Basic auth splits user and password at the first colon, so a user with
+  // one could never log in. A colon in the password is fine.
+  it('rejects a user containing a colon', () => {
+    const result = envSchema.safeParse({
+      ...base,
+      ...CREDENTIALS,
+      SWAGGER_USER: 'docs:team',
+    });
+    expect(
+      result.error?.issues.map((i) => ({
+        path: i.path.join('.'),
+        message: i.message,
+      })),
+    ).toEqual([
+      {
+        path: 'SWAGGER_USER',
+        message:
+          'Must not contain ":" (Basic auth splits user and password at the first colon)',
+      },
+    ]);
+    expect(
+      issuePaths({ ...CREDENTIALS, SWAGGER_PASSWORD: `a:${PASSWORD}` }),
+    ).toEqual([]);
+  });
 });
