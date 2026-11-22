@@ -9,16 +9,3 @@ onlyBuiltDependencies:
 
 # In minutes (14 days). Applies to every resolution, transitive deps included.
 minimumReleaseAge: 20160
-
-# Temporary: these were already locked at versions under 14 days old when the
-# release age rule landed. pnpm 10.18 matches by name only, so every version
-# of these is exempt while listed. Remove on or after 2026-10-21.
-minimumReleaseAgeExclude:
-  - oxlint
-  - '@oxlint/binding-*'
-  - turbo
-  - '@turbo/*'
-  - rolldown
-  - '@rolldown/binding-*'
-  - pg-cloudflare
-  - '@inquirer/*'
