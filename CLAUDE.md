@@ -5,8 +5,9 @@ Every rule here is decided. If something seems wrong, ask before working around 
 
 ## Stack
 
-Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 with
-@prisma/adapter-pg, Postgres 18.6 in Docker, Zod 4 + nestjs-zod, nestjs-pino, Vitest 4, Oxlint.
+Node 26 (24 supported), pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM),
+Prisma 7.10 with @prisma/adapter-pg, Postgres 18.6 in Docker, Zod 4 + nestjs-zod,
+nestjs-pino, Vitest 4, Oxlint.
 
 - Prisma 7 and Turbo 2 may differ from your training data. Read `.claude/skills/prisma-*`
   or the installed docs before changing Prisma code or config. Don't upgrade Prisma to 8.
@@ -24,6 +25,9 @@ Node 24, pnpm 10.18, Turborepo 2.11, TypeScript 6, NestJS 12 (ESM), Prisma 7.10 
 - Temporary: the nestjs-zod peer rules (`pnpm.peerDependencyRules.allowedVersions` for
   `@nestjs/common` and `@nestjs/swagger`) in the root package.json go once nestjs-zod
   declares Nest 12.
+- `@types/node` stays on 24 on purpose, so code can't use 26-only APIs. Don't bump it.
+- Turbo's cache ignores the Node version. Use `--force` when comparing results across
+  Node versions, or a run replays the other version's results.
 
 ## Commands
 

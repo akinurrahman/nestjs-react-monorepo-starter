@@ -17,7 +17,7 @@ Create a repo from the template, run one command, and start on features.
 
 [![CI](https://github.com/akinurrahman/nestjs-react-monorepo-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/akinurrahman/nestjs-react-monorepo-starter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Node 24](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](.nvmrc)
+[![Node 26 | 24](https://img.shields.io/badge/node-26%20%7C%2024-339933?logo=node.js&logoColor=white)](.nvmrc)
 
 [Quick start](#quick-start) · [What's inside](#whats-inside) · [Why](#why-this-starter) · [Commands](#commands) · [Structure](#project-structure)
 
@@ -43,7 +43,11 @@ Create a repo from the template, run one command, and start on features.
 
 ## Quick start
 
-**You'll need:** Node 24 (see `.nvmrc`), pnpm 10, and Docker Desktop running.
+**You'll need:** Node 26 (see `.nvmrc`, 24 also works), pnpm 10, and Docker Desktop running.
+
+Node 25 and later don't bundle corepack, so install pnpm 10 yourself: `npm i -g pnpm@10.18.0`.
+
+On Node 26, `pnpm install` shows a Prisma 7.10 banner saying it only supports Node 20, 22 and 24. It's a warning only.
 
 On Windows, keep the clone's path under about 150 characters: `pnpm lint` runs a tool from deep inside `node_modules`, and it fails to start past Windows' 260-character path limit.
 
