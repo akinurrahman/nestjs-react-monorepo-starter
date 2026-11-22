@@ -411,9 +411,10 @@ function removeEmptyParents(path: string): void {
 
 function preflight(opts: CliOptions): void {
   const major = Number(process.versions.node.split('.')[0]);
-  if (major < 24) {
+  // Keep in sync with engines.node in the root package.json.
+  if (major !== 24 && major !== 26) {
     throw new StepError(
-      `Node 24 or newer is required, this is ${process.versions.node}`,
+      `Node 24 or 26 is required, this is ${process.versions.node}`,
     );
   }
   if (!run('pnpm', ['--version'], { quiet: true }).ok) {
