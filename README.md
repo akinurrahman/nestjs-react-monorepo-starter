@@ -251,3 +251,5 @@ The full rules live in `CLAUDE.md`. The ones you'll meet first:
 [MIT](LICENSE) © Akinur Rahman
 
 <!-- template:end -->
+
+Test line one for the PR skill.
