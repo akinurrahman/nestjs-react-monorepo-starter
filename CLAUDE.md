@@ -176,11 +176,13 @@ Headlines:
 
 ## Git
 
-- Conventional commits, one reason per commit. Each commit must pass format:check, lint,
-  typecheck and tests.
+- Don't commit until told "commit". Never push unless told.
+- One reason per commit, conventional commits. Each commit passes kit:verify on its own.
+  Run kit:verify before proposing a commit or a PR.
+- Ask before doing anything outside the task. Report anything you did that wasn't asked for.
 - Formatting and lint config live at the root only (`.prettierrc`, `.prettierignore`,
   `.oxlintrc.json`). Don't add per-package configs. Package-specific lint rules go in an
   `overrides` entry, and an override that changes a plugin's rules must list that plugin.
-- Don't commit until told "commit". Never push unless told.
-- Ask before doing anything outside the task. Report anything you did that wasn't asked for.
 - LF line endings everywhere (`.editorconfig`, `.gitattributes`).
+- Branches, commit format, PRs, merges and releases: the kit:git-conventions skill. Load
+  it before staging, committing, branching or opening a PR.
