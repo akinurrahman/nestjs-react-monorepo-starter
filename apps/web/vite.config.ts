@@ -32,6 +32,9 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       include: ['src/**/*.spec.{ts,tsx}'],
       setupFiles: ['./src/test/setup.ts'],
+      // Node 25+ has its own localStorage global. It hides jsdom's and is
+      // undefined without --localstorage-file. Node 24 accepts the flag too.
+      execArgv: ['--no-experimental-webstorage'],
     },
   };
 });
