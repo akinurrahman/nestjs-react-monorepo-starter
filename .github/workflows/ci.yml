@@ -16,9 +16,42 @@ permissions:
   contents: read
 
 jobs:
+  # A job name cannot read a file, so this reads .nvmrc for the gate matrix.
+  # .nvmrc stays the only place the default Node version is set.
+  node-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.read.outputs.full }}
+      major: ${{ steps.read.outputs.major }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .nvmrc
+          sparse-checkout-cone-mode: false
+
+      - id: read
+        run: |
+          full="$(tr -d '[:space:]' < .nvmrc)"
+          full="${full#v}"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "major=${full%%.*}" >> "$GITHUB_OUTPUT"
+
+  # The .nvmrc version, plus Node 24, which engines.node still supports.
+  # The name carries the major only, so a patch bump keeps the check names.
   gate:
+    name: gate (Node ${{ matrix.node }})
+    needs: node-version
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: ${{ needs.node-version.outputs.major }}
+            version: ${{ needs.node-version.outputs.full }}
+          - node: '24'
+            version: '24'
 
     services:
       # Same image as docker-compose.yml. apps/api/.env.test hardcodes
@@ -46,7 +79,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.version }}
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
